@@ -1,0 +1,122 @@
+// ⚠️ DISABLED 2026-04-20 — Uses Legacy Google Places API which caused $2,263 overage.
+// Rewrite to Places API New (X-Goog-FieldMask, Basic tier) before re-enabling.
+// See: ~/empire/empire-seeding/scripts/seed-config.ts for the correct pattern.
+// To restore: remove this header and rename .legacy-disabled → .ts
+
+import * as dotenv from "dotenv";
+import { resolve } from "path";
+dotenv.config({ path: resolve(process.cwd(), ".env.local") });
+
+import { createClient } from "@supabase/supabase-js";
+
+const GOOGLE_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!GOOGLE_API_KEY || !SUPABASE_URL || !SUPABASE_KEY) {
+  console.error("Missing env vars. Need: GOOGLE_PLACES_API_KEY, NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY");
+  process.exit(1);
+}
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const TABLE = "fla_listings";
+
+interface SearchQuery { query: string; type: string; region: string; }
+
+const SEARCHES: SearchQuery[] = [
+  { query: "family lawyer Toronto Ontario", type: "family-lawyer", region: "toronto" },
+  { query: "real estate lawyer Toronto Ontario", type: "real-estate-lawyer", region: "toronto" },
+  { query: "immigration lawyer Toronto Ontario", type: "immigration-lawyer", region: "toronto" },
+  { query: "criminal defence lawyer Toronto Ontario", type: "criminal-lawyer", region: "toronto" },
+  { query: "personal injury lawyer Toronto Ontario", type: "personal-injury-lawyer", region: "toronto" },
+  { query: "family lawyer Ottawa Ontario", type: "family-lawyer", region: "ottawa" },
+  { query: "real estate lawyer Ottawa Ontario", type: "real-estate-lawyer", region: "ottawa" },
+  { query: "family lawyer Mississauga Ontario", type: "family-lawyer", region: "mississauga" },
+  { query: "business lawyer Toronto Ontario", type: "business-lawyer", region: "toronto" },
+  { query: "employment lawyer Toronto Ontario", type: "employment-lawyer", region: "toronto" },
+  { query: "estate lawyer Toronto Ontario", type: "estate-lawyer", region: "toronto" },
+  { query: "immigration lawyer Ottawa Ontario", type: "immigration-lawyer", region: "ottawa" },
+  { query: "criminal lawyer Hamilton Ontario", type: "criminal-lawyer", region: "hamilton" },
+  { query: "family lawyer London Ontario", type: "family-lawyer", region: "london" },
+  { query: "real estate lawyer Mississauga Ontario", type: "real-estate-lawyer", region: "mississauga" },
+];
+
+function slugify(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").slice(0, 100);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function fetchPlaces(query: string): Promise<any[]> {
+  const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${GOOGLE_API_KEY}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if (data.status !== "OK") { console.warn(`  Search failed for "${query}": ${data.status}`); return []; }
+  return data.results || [];
+}
+
+async function fetchDetails(placeId: string): Promise<{ phone?: string; website?: string }> {
+  const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=formatted_phone_number,website&key=${GOOGLE_API_KEY}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if (data.status !== "OK") return {};
+  return { phone: data.result?.formatted_phone_number, website: data.result?.website };
+}
+
+async function main() {
+  let totalSeeded = 0;
+  let detailRequests = 0;
+  const MAX_DETAILS = 100;
+
+  console.log(`Starting seed with ${SEARCHES.length} queries into ${TABLE}...\n`);
+
+  for (const search of SEARCHES) {
+    console.log(`Searching: "${search.query}"`);
+    const places = await fetchPlaces(search.query);
+    console.log(`  Found ${places.length} results`);
+    await sleep(1000);
+
+    for (const place of places) {
+      const placeId = place.place_id;
+      if (!placeId) continue;
+
+      const { data: existing } = await supabase.from(TABLE).select("id").eq("google_place_id", placeId).maybeSingle();
+      if (existing) { console.log(`  Skip (duplicate): ${place.name}`); continue; }
+
+      let phone: string | undefined;
+      let website: string | undefined;
+      if (detailRequests < MAX_DETAILS) {
+        const details = await fetchDetails(placeId);
+        phone = details.phone;
+        website = details.website;
+        detailRequests++;
+        await sleep(1000);
+      }
+
+      const slug = slugify(place.name);
+      const city = place.formatted_address?.split(",")[1]?.trim() || undefined;
+
+      const { error } = await supabase.from(TABLE).insert({
+        slug, name: place.name, short_description: place.formatted_address,
+        type: search.type, region: search.region, city,
+        province_state: "Ontario", country: "CA",
+        latitude: place.geometry?.location?.lat, longitude: place.geometry?.location?.lng,
+        phone, website, google_place_id: placeId,
+        google_rating: place.rating || null, google_review_count: place.user_ratings_total || null,
+      });
+
+      if (error) {
+        if (error.code === "23505") { console.log(`  Skip (slug exists): ${place.name}`); }
+        else { console.error(`  Error: ${place.name}:`, error.message); }
+        continue;
+      }
+      totalSeeded++;
+      console.log(`  Seeded: ${place.name} in ${search.region} (${search.type})`);
+    }
+  }
+  console.log(`\nDone! Total seeded: ${totalSeeded} | Detail requests: ${detailRequests}/${MAX_DETAILS}`);
+}
+
+main().catch(console.error);
