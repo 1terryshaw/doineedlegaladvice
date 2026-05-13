@@ -3,66 +3,92 @@ import {
   PROVINCE_MAP,
   getCityBySlug as _getCityBySlug,
 } from "./shared/cities";
+import verticalConfig from "./vertical.config";
 
-// Ontario regions
+// US states (50 + DC). slug = lowercase 2-letter code, used at /[region].
+// CITIES below still uses the CA canonical catalog until a US city harvest
+// lands; /[region]/[city] will resolve CA city slugs only for now.
 export const REGIONS = [
-  { name: "Toronto", slug: "toronto", province: "ON" },
-  { name: "Ottawa", slug: "ottawa", province: "ON" },
-  { name: "Mississauga", slug: "mississauga", province: "ON" },
-  { name: "Hamilton", slug: "hamilton", province: "ON" },
-  { name: "London", slug: "london", province: "ON" },
-  { name: "Brampton", slug: "brampton", province: "ON" },
-  { name: "Kitchener", slug: "kitchener", province: "ON" },
-  { name: "Windsor", slug: "windsor", province: "ON" },
-  { name: "Oshawa", slug: "oshawa", province: "ON" },
-  { name: "Barrie", slug: "barrie", province: "ON" },
-  { name: "Kingston", slug: "kingston", province: "ON" },
-  { name: "Guelph", slug: "guelph", province: "ON" },
-  { name: "Thunder Bay", slug: "thunder-bay", province: "ON" },
-  { name: "Sudbury", slug: "sudbury", province: "ON" },
-  { name: "Burlington", slug: "burlington", province: "ON" },
-  { name: "Oakville", slug: "oakville", province: "ON" },
-  { name: "Markham", slug: "markham", province: "ON" },
-  { name: "Vaughan", slug: "vaughan", province: "ON" },
-  { name: "Richmond Hill", slug: "richmond-hill", province: "ON" },
-  { name: "Whitby", slug: "whitby", province: "ON" },
-  { name: "Newmarket", slug: "newmarket", province: "ON" },
-  { name: "Cambridge", slug: "cambridge", province: "ON" },
-  { name: "Waterloo", slug: "waterloo", province: "ON" },
-  { name: "Brantford", slug: "brantford", province: "ON" },
-  { name: "St. Catharines", slug: "st-catharines", province: "ON" },
+  { name: "Alabama", slug: "al", province: "AL" },
+  { name: "Alaska", slug: "ak", province: "AK" },
+  { name: "Arizona", slug: "az", province: "AZ" },
+  { name: "Arkansas", slug: "ar", province: "AR" },
+  { name: "California", slug: "ca", province: "CA" },
+  { name: "Colorado", slug: "co", province: "CO" },
+  { name: "Connecticut", slug: "ct", province: "CT" },
+  { name: "Delaware", slug: "de", province: "DE" },
+  { name: "Florida", slug: "fl", province: "FL" },
+  { name: "Georgia", slug: "ga", province: "GA" },
+  { name: "Hawaii", slug: "hi", province: "HI" },
+  { name: "Idaho", slug: "id", province: "ID" },
+  { name: "Illinois", slug: "il", province: "IL" },
+  { name: "Indiana", slug: "in", province: "IN" },
+  { name: "Iowa", slug: "ia", province: "IA" },
+  { name: "Kansas", slug: "ks", province: "KS" },
+  { name: "Kentucky", slug: "ky", province: "KY" },
+  { name: "Louisiana", slug: "la", province: "LA" },
+  { name: "Maine", slug: "me", province: "ME" },
+  { name: "Maryland", slug: "md", province: "MD" },
+  { name: "Massachusetts", slug: "ma", province: "MA" },
+  { name: "Michigan", slug: "mi", province: "MI" },
+  { name: "Minnesota", slug: "mn", province: "MN" },
+  { name: "Mississippi", slug: "ms", province: "MS" },
+  { name: "Missouri", slug: "mo", province: "MO" },
+  { name: "Montana", slug: "mt", province: "MT" },
+  { name: "Nebraska", slug: "ne", province: "NE" },
+  { name: "Nevada", slug: "nv", province: "NV" },
+  { name: "New Hampshire", slug: "nh", province: "NH" },
+  { name: "New Jersey", slug: "nj", province: "NJ" },
+  { name: "New Mexico", slug: "nm", province: "NM" },
+  { name: "New York", slug: "ny", province: "NY" },
+  { name: "North Carolina", slug: "nc", province: "NC" },
+  { name: "North Dakota", slug: "nd", province: "ND" },
+  { name: "Ohio", slug: "oh", province: "OH" },
+  { name: "Oklahoma", slug: "ok", province: "OK" },
+  { name: "Oregon", slug: "or", province: "OR" },
+  { name: "Pennsylvania", slug: "pa", province: "PA" },
+  { name: "Rhode Island", slug: "ri", province: "RI" },
+  { name: "South Carolina", slug: "sc", province: "SC" },
+  { name: "South Dakota", slug: "sd", province: "SD" },
+  { name: "Tennessee", slug: "tn", province: "TN" },
+  { name: "Texas", slug: "tx", province: "TX" },
+  { name: "Utah", slug: "ut", province: "UT" },
+  { name: "Vermont", slug: "vt", province: "VT" },
+  { name: "Virginia", slug: "va", province: "VA" },
+  { name: "Washington", slug: "wa", province: "WA" },
+  { name: "West Virginia", slug: "wv", province: "WV" },
+  { name: "Wisconsin", slug: "wi", province: "WI" },
+  { name: "Wyoming", slug: "wy", province: "WY" },
+  { name: "District of Columbia", slug: "dc", province: "DC" },
 ];
-// Cities sourced from canonical shared list
+
 export const CITIES = CANONICAL_CITIES.map((c) => ({
   name: c.name,
   slug: c.slug,
   province: c.province,
 }));
 
-
-
-// Lawyer practice areas
 export const LISTING_TYPES = [
   { name: "Family Lawyer", slug: "family-lawyer", description: "Divorce, custody, child support" },
-  { name: "Real Estate Lawyer", slug: "real-estate-lawyer", description: "Property transactions, closings, disputes" },
-  { name: "Immigration Lawyer", slug: "immigration-lawyer", description: "Visas, citizenship, refugee claims" },
-  { name: "Criminal Lawyer", slug: "criminal-lawyer", description: "Criminal defence, DUI, assault charges" },
-  { name: "Personal Injury Lawyer", slug: "personal-injury-lawyer", description: "Accidents, slip and fall, medical malpractice" },
-  { name: "Business Lawyer", slug: "business-lawyer", description: "Incorporations, contracts, commercial disputes" },
-  { name: "Employment Lawyer", slug: "employment-lawyer", description: "Wrongful dismissal, workplace disputes" },
-  { name: "Estate Lawyer", slug: "estate-lawyer", description: "Wills, probate, estate planning" },
-  { name: "Tax Lawyer", slug: "tax-lawyer", description: "Tax disputes, CRA audits, tax planning" },
-  { name: "Intellectual Property Lawyer", slug: "intellectual-property-lawyer", description: "Patents, trademarks, copyright" },
+  { name: "Immigration Lawyer", slug: "immigration-lawyer", description: "Green card, citizenship, asylum, deportation defense" },
+  { name: "Criminal Defense Lawyer", slug: "criminal-lawyer", description: "DUI, felony, misdemeanor defense" },
+  { name: "Personal Injury Lawyer", slug: "personal-injury-lawyer", description: "Auto accidents, slip and fall, medical malpractice" },
+  { name: "Estate Planning Lawyer", slug: "estate-lawyer", description: "Wills, trusts, probate" },
+  { name: "Real Estate Lawyer", slug: "real-estate-lawyer", description: "Closings, title disputes, property transactions" },
+  { name: "Business Lawyer", slug: "business-lawyer", description: "Formation, contracts, commercial disputes" },
+  { name: "Employment Lawyer", slug: "employment-lawyer", description: "Wrongful termination, discrimination, wage disputes" },
+  { name: "Bankruptcy Lawyer", slug: "bankruptcy-lawyer", description: "Chapter 7, Chapter 13, debt relief" },
+  { name: "Tax Lawyer", slug: "tax-lawyer", description: "IRS disputes, tax court, planning" },
 ];
 
 export const BRAND = {
-  siteName: "FreeLawyerAdvice.ca",
-  siteUrl: "https://freelawyeradvice.ca",
-  supportEmail: "hello@freelawyeradvice.ca",
+  siteName: verticalConfig.name,
+  siteUrl: `https://${verticalConfig.domain}`,
+  supportEmail: verticalConfig.supportEmail,
 };
 
 export function getRegionBySlug(slug: string) {
-  return REGIONS.find((r) => r.slug === slug) || null;
+  return REGIONS.find((r) => r.slug === slug.toLowerCase()) || null;
 }
 
 export function getListingTypeBySlug(slug: string) {

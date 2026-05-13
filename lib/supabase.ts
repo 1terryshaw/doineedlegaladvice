@@ -96,14 +96,20 @@ export async function getListings(regionSlug?: string): Promise<Listing[]> {
     let query = supabaseAdmin
       .from(LISTINGS_TABLE)
       .select("*")
-      .eq("country", "CA")
+      .eq("country", verticalConfig.defaultCountry)
       .order("tier_priority", { ascending: false, nullsFirst: false })
       .order("featured", { ascending: false })
       .order("google_rating", { ascending: false, nullsFirst: false })
       .order("name", { ascending: true }).limit(200);
 
     if (regionSlug) {
-      query = query.eq("region", regionSlug);
+      // Two-letter slug → state_province match (US states, CA provinces).
+      // Longer slugs → legacy `region` column (city-as-region).
+      if (regionSlug.length === 2) {
+        query = query.eq("state_province", regionSlug.toUpperCase());
+      } else {
+        query = query.eq("region", regionSlug);
+      }
     }
 
     return query as unknown as PromiseLike<{ data: Listing[] | null; error: unknown }>;
@@ -121,14 +127,18 @@ export async function getFilteredListings(filters: ListingFilters): Promise<List
     let query = supabaseAdmin
       .from(LISTINGS_TABLE)
       .select("*")
-      .eq("country", "CA")
+      .eq("country", verticalConfig.defaultCountry)
       .order("tier_priority", { ascending: false, nullsFirst: false })
       .order("featured", { ascending: false })
       .order("google_rating", { ascending: false, nullsFirst: false })
       .order("name", { ascending: true }).limit(200);
 
     if (filters.region) {
-      query = query.eq("region", filters.region);
+      if (filters.region.length === 2) {
+        query = query.eq("state_province", filters.region.toUpperCase());
+      } else {
+        query = query.eq("region", filters.region);
+      }
     }
     if (filters.listing_type) {
       query = query.eq("listing_type", filters.listing_type);
@@ -150,7 +160,7 @@ export async function getListingsByCity(provinceCode: string, citySlug: string):
     const query = supabaseAdmin
       .from(LISTINGS_TABLE)
       .select("*")
-      .eq("country", "CA")
+      .eq("country", verticalConfig.defaultCountry)
       .eq("province_state", provinceCode.toUpperCase())
       .eq("region_slug", citySlug)
       .order("tier_priority", { ascending: false, nullsFirst: false })
@@ -165,7 +175,7 @@ export async function getListing(slug: string): Promise<Listing | null> {
   const { data, error } = await supabaseAdmin
     .from(LISTINGS_TABLE)
     .select("*")
-    .eq("country", "CA")
+    .eq("country", verticalConfig.defaultCountry)
     .eq("slug", slug)
     .single();
 
@@ -186,7 +196,7 @@ export async function getAllListingsForSitemap(regionSlug?: string): Promise<Lis
     let query = supabaseAdmin
       .from(LISTINGS_TABLE)
       .select("*")
-      .eq("country", "CA");
+      .eq("country", verticalConfig.defaultCountry);
     if (regionSlug) {
       query = query.eq("region_slug", regionSlug);
     }

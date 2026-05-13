@@ -6,6 +6,8 @@ import { getRegionBySlug, REGIONS } from "@/lib/constants";
 import ListingCard from "@/components/ListingCard";
 import ShareButtons from "@/components/pizzazz/ShareButtons";
 
+export const dynamic = "force-dynamic";
+
 interface Props {
   params: Promise<{ region: string }>;
 }
