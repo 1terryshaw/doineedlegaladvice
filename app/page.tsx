@@ -1,7 +1,7 @@
 import Link from "next/link";
 import verticalConfig from "@/lib/vertical.config";
 import { REGIONS, LISTING_TYPES } from "@/lib/constants";
-import AIChatAdvisor from "@/components/AIChatAdvisor";
+import TriageChat from "@/components/TriageChat";
 import SearchBar from "@/components/SearchBar";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
 import FadeIn from "@/components/pizzazz/FadeIn";
@@ -49,11 +49,12 @@ export default async function HomePage() {
         </div>
         <div className="max-w-3xl mx-auto text-center text-white mb-8 relative">
           <h1 className="text-4xl md:text-5xl font-bold mb-4 animate-fade-up">
-            Describe Your Legal Situation — Get Free Guidance
+            Tell us your situation. We&apos;ll find the right lawyer.
           </h1>
           <p className="text-lg opacity-90 animate-fade-up" style={{ animationDelay: "0.1s" }}>
-            Our AI assistant will help you understand your options and find the right type of
-            lawyer. This is not legal advice.
+            Our AI triage helper asks a few quick questions, then matches you to the right type
+            of attorney in your state. Information only &mdash; this is not legal advice and no
+            attorney-client relationship is formed.
           </p>
         </div>
 
@@ -62,7 +63,7 @@ export default async function HomePage() {
         </div>
 
         <div className="max-w-3xl mx-auto">
-          <AIChatAdvisor />
+          <TriageChat />
         </div>
 
         <div className="max-w-3xl mx-auto mt-6">
@@ -87,7 +88,7 @@ export default async function HomePage() {
 
       {/* HeroSearch band (replaces LocationPicker top-of-page — TDL #138) */}
       <HeroSearch
-        vertical="fla"
+        vertical="legal"
         provinces={PROVINCES_LIST}
         cities={CANONICAL_CITIES}
         accentClass="bg-[#3B82F6] hover:bg-[#306bca]"
@@ -117,7 +118,7 @@ export default async function HomePage() {
       {/* Browse by Area (replaces LocationPicker — TDL #138) */}
       <FadeIn as="div" delay={100}>
         <BrowseByArea
-          vertical="fla"
+          vertical="legal"
           accentTextClass="text-[#3B82F6] hover:text-[#306bca]"
         />
       </FadeIn>

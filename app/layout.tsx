@@ -3,6 +3,7 @@ import "./globals.css";
 import verticalConfig from "@/lib/vertical.config";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import Disclaimer from "@/components/Disclaimer";
 
 export const metadata: Metadata = {
   title: {
@@ -23,6 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen flex flex-col font-sans">
+        <Disclaimer />
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
