@@ -147,8 +147,8 @@ export async function POST(request: NextRequest) {
   }
 
   // CC admin (skip if owner IS admin to avoid duplicate)
-  if (businessEmail !== "1terryshaw@gmail.com") {
-    await sendInquiryNotification("1terryshaw@gmail.com", listing.name, {
+  if (businessEmail !== "terry@doineedapro.com") {
+    await sendInquiryNotification("terry@doineedapro.com", listing.name, {
       name,
       email,
       phone,
