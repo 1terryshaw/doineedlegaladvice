@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
+import { can } from '@/lib/tier-capabilities';
 
 interface ReviewShowcaseProps {
   googlePlaceId: string;
-  subscriptionTier: 'free' | 'lead_boost' | 'reviews' | 'website' | 'growth';
+  subscriptionTier: string;
   fallbackRating?: number;
   fallbackCount?: number;
 }
@@ -14,8 +15,10 @@ export default async function ReviewShowcase({
   fallbackCount,
 }: ReviewShowcaseProps) {
 
-  // Free / lead_boost: bare star rating only (no full reviews carousel)
-  if (subscriptionTier === 'free' || subscriptionTier === 'lead_boost') {
+  // Reviews carousel is gated by the reviews_display capability.
+  // Tiers without it (free / seed) get a bare star rating only.
+  // can() resolves the legacy "reviews" alias of lead_boost.
+  if (!can(subscriptionTier, 'reviews_display')) {
     if (!fallbackRating || !fallbackCount) return null;
     return (
       <div className="flex items-center gap-2 text-sm">
@@ -25,7 +28,7 @@ export default async function ReviewShowcase({
     );
   }
 
-  // Paid tier (reviews/website/growth): fetch cached reviews
+  // Tier has reviews_display: fetch cached reviews
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!

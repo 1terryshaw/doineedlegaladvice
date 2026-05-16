@@ -17,6 +17,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
 import verticalConfig from "@/lib/vertical.config";
+import { can } from "@/lib/tier-capabilities";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -32,7 +33,6 @@ const PLACES_FIELD_MASK = [
   "reviews.authorAttribution.displayName",
 ].join(",");
 
-const PAID_TIERS = new Set(["reviews", "website", "growth"]);
 const TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const MANUAL_RATE_LIMIT_MS = 24 * 60 * 60 * 1000;
 
@@ -99,10 +99,11 @@ export async function POST(
     return NextResponse.json({ error: "Listing has no google_place_id" }, { status: 400 });
   }
 
-  // Eligible if EITHER tier or subscription_tier is a paid tier (handles legacy out-of-sync data)
+  // Eligible if EITHER tier or subscription_tier grants reviews_display.
+  // can() resolves the legacy "reviews" alias and is null-safe.
   const isEligible =
-    PAID_TIERS.has(listing.tier as string) ||
-    PAID_TIERS.has(listing.subscription_tier as string);
+    can(listing.tier as string, "reviews_display") ||
+    can(listing.subscription_tier as string, "reviews_display");
   if (!isEligible) {
     return NextResponse.json(
       {

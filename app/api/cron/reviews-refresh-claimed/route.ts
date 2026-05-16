@@ -2,7 +2,7 @@
  * GET /api/cron/reviews-refresh-claimed
  *
  * Weekly cron — refreshes Google Reviews cache for paid-tier listings only.
- * Eligibility: tier IN (reviews | website | growth) AND google_place_id IS NOT NULL.
+ * Eligibility: tier IN (reviews | lead_boost | website | growth) AND google_place_id IS NOT NULL.
  *
  * Auth: Authorization: Bearer ${CRON_SECRET}
  *
@@ -37,7 +37,9 @@ const PLACES_FIELD_MASK = [
   "reviews.authorAttribution.displayName",
 ].join(",");
 
-const PAID_TIERS = ["reviews", "website", "growth"];
+// Tiers whose listings display full reviews (lib/tier-capabilities: reviews_display).
+// "reviews" = legacy alias of lead_boost still present on un-migrated rows.
+const PAID_TIERS = ["reviews", "lead_boost", "website", "growth"];
 const TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const INTER_CALL_DELAY_MS = 100;
 
