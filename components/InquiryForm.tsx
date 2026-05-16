@@ -20,6 +20,7 @@ export default function InquiryForm({ listingSlug }: { listingSlug: string }) {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">(
     "idle"
   );
+  const [errorMsg, setErrorMsg] = useState("Failed to send. Please try again.");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,9 +43,14 @@ export default function InquiryForm({ listingSlug }: { listingSlug: string }) {
           serviceNeeded: "",
         });
       } else {
+        // Surface the server's specific message (e.g. the email-format gate)
+        // instead of the generic failure copy when one is provided.
+        const data = await res.json().catch(() => null);
+        setErrorMsg(data?.error || "Failed to send. Please try again.");
         setStatus("error");
       }
     } catch {
+      setErrorMsg("Failed to send. Please try again.");
       setStatus("error");
     }
   }
@@ -134,7 +140,7 @@ export default function InquiryForm({ listingSlug }: { listingSlug: string }) {
         />
       </div>
       {status === "error" && (
-        <p className="text-red-600 text-sm">Failed to send. Please try again.</p>
+        <p className="text-red-600 text-sm">{errorMsg}</p>
       )}
       <button
         type="submit"

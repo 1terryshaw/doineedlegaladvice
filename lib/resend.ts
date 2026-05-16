@@ -89,3 +89,59 @@ export async function sendLeadForwardEmail(
     return { success: false, error: err.message };
   }
 }
+
+
+/**
+ * Branded confirmation email sent to the prospect (visitor) after they submit
+ * an inquiry on a Reviews Plus listing. Reassures them the inquiry reached the
+ * business and carries the directory's name + styling.
+ */
+export async function sendInquiryConfirmation(
+  data: LeadEmailData
+): Promise<{ success: boolean; error?: string }> {
+  const directoryName = verticalConfig.name;
+  const domain = verticalConfig.domain;
+
+  const html = `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;">
+  <div style="background:${verticalConfig.primaryColor};padding:20px 24px;border-radius:8px 8px 0 0;">
+    <h1 style="color:#fff;margin:0;font-size:20px;">${directoryName}</h1>
+    <p style="color:rgba(255,255,255,0.85);margin:4px 0 0;font-size:13px;">${domain}</p>
+  </div>
+  <div style="border:1px solid #e5e7eb;border-top:none;padding:24px;border-radius:0 0 8px 8px;">
+    <p style="margin:0 0 16px;font-size:15px;">Hi <strong>${data.visitorName}</strong>,</p>
+    <p style="margin:0 0 16px;font-size:14px;line-height:1.5;">Thanks for reaching out through ${directoryName}. Your inquiry has been sent to <strong>${data.businessName}</strong> — they'll be in touch with you directly.</p>
+
+    <div style="margin:16px 0;padding:12px 16px;background:#f9fafb;border-left:3px solid ${verticalConfig.primaryColor};border-radius:4px;font-size:14px;line-height:1.5;">
+      <p style="margin:0 0 8px;font-weight:600;color:#374151;">What you sent</p>
+      ${data.serviceNeeded ? `<p style="margin:0 0 4px;"><span style="color:#6b7280;">Service:</span> ${data.serviceNeeded}</p>` : ""}
+      ${data.message ? `<p style="margin:0;"><span style="color:#6b7280;">Message:</span> ${data.message}</p>` : ""}
+    </div>
+
+    <p style="margin:16px 0 0;font-size:13px;color:#6b7280;">If you don't hear back soon, just reply to this email and we'll follow up.</p>
+
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0 12px;" />
+    <p style="font-size:11px;color:#9ca3af;margin:0;">Sent via ${directoryName} (${domain}). You received this because you submitted an inquiry on our directory.</p>
+  </div>
+</div>`;
+
+  try {
+    const resend = getResend();
+    const { error } = await resend.emails.send({
+      from: `${directoryName} <${FROM_ADDRESS}>`,
+      to: data.visitorEmail,
+      ...(data.businessEmail ? { replyTo: data.businessEmail } : {}),
+      subject: `Your inquiry to ${data.businessName} has been sent`,
+      html,
+    });
+
+    if (error) {
+      console.error("Resend error (inquiry confirmation):", error);
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (err: any) {
+    console.error("Resend exception (inquiry confirmation):", err);
+    return { success: false, error: err.message };
+  }
+}

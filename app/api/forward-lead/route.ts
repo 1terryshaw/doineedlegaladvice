@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin, LISTINGS_TABLE, INQUIRIES_TABLE } from "@/lib/supabase";
 import { sendInquiryNotification } from "@/lib/email";
-import { sendLeadForwardEmail } from "@/lib/resend";
+import { sendLeadForwardEmail, sendInquiryConfirmation } from "@/lib/resend";
 import { sendLeadForwardSMS } from "@/lib/twilio";
 import { can } from "@/lib/tier-capabilities";
 import verticalConfig from "@/lib/vertical.config";
@@ -10,6 +10,13 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 const VALID_URGENCY = ["emergency", "urgent", "flexible"] as const;
+
+// Server-side email-format gate. The form has a client-side check, but a
+// malformed address that slips through would silently produce an
+// undeliverable lead and a bounced prospect confirmation. Reject it here so
+// the visitor gets a clean 400. Standard "looks like an email" shape:
+// non-empty local part, "@", non-empty domain with a dot.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: NextRequest) {
   let body: {
@@ -36,6 +43,13 @@ export async function POST(request: NextRequest) {
   if (!listingSlug || !name || !email || !message) {
     return NextResponse.json(
       { error: "Required fields: listingSlug, name, email, message" },
+      { status: 400 }
+    );
+  }
+
+  if (!EMAIL_RE.test(email.trim())) {
+    return NextResponse.json(
+      { error: "Please enter a valid email address." },
       { status: 400 }
     );
   }
@@ -76,6 +90,18 @@ export async function POST(request: NextRequest) {
       businessPhone
         ? sendLeadForwardSMS(businessPhone, name, listing.name)
         : Promise.resolve({ success: false, error: "no_phone" }),
+      // Branded confirmation to the prospect (Reviews Plus feature) — result
+      // intentionally not destructured; best-effort, never blocks the lead.
+      sendInquiryConfirmation({
+        businessName: listing.name,
+        businessEmail,
+        visitorName: name,
+        visitorEmail: email,
+        visitorPhone: phone,
+        message,
+        serviceNeeded,
+        urgency,
+      }),
     ]);
 
     const emailOk =
