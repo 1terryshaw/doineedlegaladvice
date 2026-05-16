@@ -3,6 +3,9 @@ import { Metadata } from "next";
 import { verifyOwnerAccess } from "@/lib/auth";
 import OwnerDashboard from "@/components/OwnerDashboard";
 import ReviewShowcase from "@/components/ReviewShowcase";
+import HealthScore from "@/components/HealthScore";
+import { listPhotosForListing } from "@/lib/listing-photos";
+import { computeListingHealth } from "@/lib/listing-health";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -42,9 +45,14 @@ export default async function OwnerDashboardPage({ params }: Props) {
     />
   ) : null;
 
+  const { photos } = await listPhotosForListing(listing.id);
+  const healthSlot = (
+    <HealthScore health={computeListingHealth(listing, photos.length)} />
+  );
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
-      <OwnerDashboard listing={listing} reviewSlot={reviewSlot} />
+      <OwnerDashboard listing={listing} reviewSlot={reviewSlot} healthSlot={healthSlot} />
     </div>
   );
 }

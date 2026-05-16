@@ -41,7 +41,7 @@ function formatPrice(tier: TierSlug | null): string {
   return "";
 }
 
-export default function OwnerDashboard({ listing, reviewSlot }: { listing: Listing; reviewSlot?: ReactNode }) {
+export default function OwnerDashboard({ listing, reviewSlot, healthSlot }: { listing: Listing; reviewSlot?: ReactNode; healthSlot?: ReactNode }) {
   const tier = (listing.tier || listing.subscription_tier || "free") as TierSlug;
   const tierLabel = getTierDisplayName(tier);
   const nextTier = getNextTier(tier);
@@ -221,6 +221,9 @@ export default function OwnerDashboard({ listing, reviewSlot }: { listing: Listi
 
       {/* Recent Leads — lead_boost+ tiers */}
       {can(tier, "lead_forwarding") && <RecentLeads />}
+
+      {/* Listing health score — paid tiers (Reviews Plus feature) */}
+      {can(tier, "analytics") && healthSlot}
 
       {/* SiteForge section — website + growth tiers */}
       {can(tier, "siteforge") && (
