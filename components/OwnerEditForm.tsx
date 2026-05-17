@@ -17,6 +17,8 @@ import HoursEditor from "@/components/owner-edit/HoursEditor";
 import PhotoUploader from "@/components/owner-edit/PhotoUploader";
 import LogoUploader from "@/components/owner-edit/LogoUploader";
 import { photoLimitForTier } from "@/lib/photo-limits";
+import HeroUploader from "@/components/owner-edit/HeroUploader";
+import { can } from "@/lib/tier-capabilities";
 
 interface Props {
   listing: Listing;
@@ -84,6 +86,9 @@ export default function OwnerEditForm({
 
   const [photos, setPhotos] = useState<ListingPhoto[]>(initialPhotos);
   const [logo, setLogo] = useState<ListingPhoto | null>(initialLogo);
+  const [heroUrl, setHeroUrl] = useState<string | null>(
+    (listing as { hero_image_url?: string | null }).hero_image_url ?? null
+  );
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string>("");
 
@@ -245,6 +250,10 @@ export default function OwnerEditForm({
           onDeleted={(id) => setPhotos((prev) => prev.filter((x) => x.id !== id))}
           max={photoLimitForTier(listing.tier || listing.subscription_tier)}
         />
+
+        {can(listing.tier || listing.subscription_tier, "reviews_display") && (
+          <HeroUploader heroUrl={heroUrl} onChange={setHeroUrl} />
+        )}
 
         <TagListInput
           label="Services"

@@ -57,7 +57,11 @@ export default async function ListingPage({ params }: Props) {
     lst.social_facebook,
     lst.social_linkedin,
   ].filter((u): u is string => Boolean(u && u.trim()));
-  const heroPhoto = photos[0];
+  const heroColumnUrl =
+    (listing as { hero_image_url?: string | null }).hero_image_url ?? null;
+  // Dedicated hero set -> all photos go to the gallery; else photos[0] is the hero.
+  const heroImageUrl = heroColumnUrl ?? photos[0]?.public_url ?? null;
+  const galleryPhotos = heroColumnUrl ? photos : photos.slice(1);
 
 
   const tier = (listing.tier as string | null) ?? (listing.subscription_tier as string | null) ?? 'seed';
@@ -118,10 +122,10 @@ export default async function ListingPage({ params }: Props) {
         </Link>
 
 
-        {heroPhoto && (
+        {heroImageUrl && (
           <div className="mb-6 rounded-xl overflow-hidden bg-gray-100 max-h-[420px]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={heroPhoto.public_url} alt={listing.name} className="w-full h-auto object-cover" />
+            <img src={heroImageUrl} alt={listing.name} className="w-full h-auto object-cover" />
           </div>
         )}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -229,11 +233,11 @@ export default async function ListingPage({ params }: Props) {
             )}
 
             {/* Photo gallery */}
-            {photos.length > 1 && (
+            {galleryPhotos.length > 0 && (
               <div className="mt-8 border-t pt-6">
                 <h3 className="font-semibold mb-3">Photos</h3>
                 <ListingGallery
-                  photos={photos.slice(1).map((p) => ({ id: p.id, public_url: p.public_url }))}
+                  photos={galleryPhotos.map((p) => ({ id: p.id, public_url: p.public_url }))}
                 />
               </div>
             )}
