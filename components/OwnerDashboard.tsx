@@ -25,7 +25,7 @@ function tierPillStyle(tier: string): TierPillColors {
       return { bg: "#fff7ed", text: "#9a3412", border: "#fed7aa" };
     case "website":
       return { bg: "#f5f3ff", text: "#6d28d9", border: "#ddd6fe" };
-    case "lead_boost":
+    case "reviews_plus":
       return { bg: "#eff6ff", text: "#1d4ed8", border: "#bfdbfe" };
     case "payment_error_review":
       return { bg: "#fef2f2", text: "#991b1b", border: "#fecaca" };
@@ -35,7 +35,7 @@ function tierPillStyle(tier: string): TierPillColors {
 }
 
 function formatPrice(tier: TierSlug | null): string {
-  if (tier === "lead_boost") return "$9 USD/mo";
+  if (tier === "reviews_plus") return "$9 USD/mo";
   if (tier === "website") return "$29 USD/mo";
   if (tier === "growth") return "$97 USD/mo";
   return "";
@@ -146,7 +146,7 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot }: { li
       {(tier === "free" || tier === "seed") && (
         <div className="border-2 border-blue-300 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6">
           <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Upgrade</p>
-          <h2 className="text-xl font-bold mt-1">Unlock Leads Boost — $9 USD/mo</h2>
+          <h2 className="text-xl font-bold mt-1">Unlock Reviews Plus — $9 USD/mo</h2>
           <ul className="mt-3 space-y-1.5 text-sm text-gray-700">
             <li>✓ Leads forwarded to you via email + SMS within seconds</li>
             <li>✓ Full Google review display on your listing</li>
@@ -160,19 +160,19 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot }: { li
             className="inline-block mt-4 px-5 py-2.5 rounded-lg text-white text-sm font-semibold"
             style={{ backgroundColor: CTA_COLOR }}
           >
-            Upgrade to Leads Boost →
+            Upgrade to Reviews Plus →
           </Link>
         </div>
       )}
 
-      {/* Lead Boost tier — Upgrade to Website teaser (includes SiteForge info panel) */}
-      {tier === "lead_boost" && (
+      {/* Reviews Plus tier — Upgrade to Website teaser (includes SiteForge info panel) */}
+      {tier === "reviews_plus" && (
         <div className="border-2 border-purple-300 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-6">
           <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Upgrade</p>
           <h2 className="text-xl font-bold mt-1">Unlock Website tier — $29 USD/mo</h2>
           <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
             <ul className="space-y-1.5 text-sm text-gray-700">
-              <li>✓ Everything in Leads Boost</li>
+              <li>✓ Everything in Reviews Plus</li>
               <li>✓ Professional SiteForge website</li>
               <li>✓ Featured badge on listing + homepage</li>
               <li>✓ Priority placement in search</li>
@@ -219,7 +219,7 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot }: { li
       {/* Optional review slot (vertical-customized review section) — see TDL #254 */}
       {reviewSlot}
 
-      {/* Recent Leads — lead_boost+ tiers */}
+      {/* Recent Leads — reviews_plus+ tiers */}
       {can(tier, "lead_forwarding") && <RecentLeads />}
 
       {/* Listing health score — paid tiers (Reviews Plus feature) */}

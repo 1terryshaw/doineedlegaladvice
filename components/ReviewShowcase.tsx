@@ -17,7 +17,7 @@ export default async function ReviewShowcase({
 
   // Reviews carousel is gated by the reviews_display capability.
   // Tiers without it (free / seed) get a bare star rating only.
-  // can() resolves the legacy "reviews" alias of lead_boost.
+  // can() resolves the legacy "reviews" alias of reviews_plus.
   if (!can(subscriptionTier, 'reviews_display')) {
     if (!fallbackRating || !fallbackCount) return null;
     return (

@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
   const { data: listings, error: listErr } = await supabaseAdmin
     .from(LISTINGS_TABLE)
     .select("id, name, owner_email, tier, subscription_tier")
-    .in("tier", ["lead_boost", "website", "growth"])
+    .in("tier", ["reviews_plus", "website", "growth"])
     .not("owner_email", "is", null);
 
   if (listErr || !listings || listings.length === 0) {

@@ -150,14 +150,14 @@ export default async function ListingPage({ params }: Props) {
                   )}
                 </div>
               </div>
-              {listing.claimed && tier !== 'lead_boost' && tier !== 'website' && tier !== 'growth' && (
+              {listing.claimed && tier !== 'reviews_plus' && tier !== 'website' && tier !== 'growth' && (
                 <span className="text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-800">
                   ✓ Claimed
                 </span>
               )}
-              {listing.claimed && (tier === 'lead_boost' || tier === 'website' || tier === 'growth') && (
+              {listing.claimed && (tier === 'reviews_plus' || tier === 'website' || tier === 'growth') && (
                 <span className="text-xs font-medium px-2 py-1 rounded-full text-white" style={{ backgroundColor: verticalConfig.primaryColor }}>
-                  {tier === 'lead_boost' ? 'Lead Boost' : tier === 'website' ? 'Website' : 'Growth'}
+                  {tier === 'reviews_plus' ? 'Reviews Plus' : tier === 'website' ? 'Website' : 'Growth'}
                 </span>
               )}
               {listing.featured && (
@@ -322,15 +322,15 @@ export default async function ListingPage({ params }: Props) {
       <UpgradeModal
         listingSlug={listing.slug}
         priceIds={{
-          lead_boost_monthly: process.env.STRIPE_PRICE_REVIEWS_MONTHLY || "",
-          lead_boost_annual: process.env.STRIPE_PRICE_REVIEWS_ANNUAL || "",
+          reviews_plus_monthly: process.env.STRIPE_PRICE_REVIEWS_MONTHLY || "",
+          reviews_plus_annual: process.env.STRIPE_PRICE_REVIEWS_ANNUAL || "",
           website_monthly: process.env.STRIPE_PRICE_WEBSITE_MONTHLY || "",
           website_annual: process.env.STRIPE_PRICE_WEBSITE_ANNUAL || "",
           growth_monthly: process.env.STRIPE_PRICE_GROWTH_MONTHLY || "",
           growth_annual: process.env.STRIPE_PRICE_GROWTH_ANNUAL || "",
         }}
         currentTier={
-          listing.tier === 'lead_boost' || listing.tier === 'website' || listing.tier === 'growth'
+          listing.tier === 'reviews_plus' || listing.tier === 'website' || listing.tier === 'growth'
             ? listing.tier
             : null
         }

@@ -43,12 +43,12 @@ export default function ListingCard({ listing }: { listing: Listing }) {
             </div>
           )}
         </div>
-        {listing.claimed && !['lead_boost', 'website', 'growth'].includes((listing.tier || listing.subscription_tier || '') as string) && (
+        {listing.claimed && !['reviews_plus', 'website', 'growth'].includes((listing.tier || listing.subscription_tier || '') as string) && (
           <span className="text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-800">
             ✓ Verified
           </span>
         )}
-        {(listing.featured || ['lead_boost', 'reviews'].includes((listing.tier || listing.subscription_tier || '') as string)) && (
+        {(listing.featured || ['reviews_plus', 'reviews'].includes((listing.tier || listing.subscription_tier || '') as string)) && (
           <span
             className="text-xs font-medium px-2 py-1 rounded-full text-white"
             style={{ backgroundColor: verticalConfig.primaryColor }}

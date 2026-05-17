@@ -14,8 +14,8 @@ export interface PricingTier {
 
 export const PRICING_TIERS: PricingTier[] = [
   {
-    name: "Leads Boost",
-    slug: "lead_boost",
+    name: "Reviews Plus",
+    slug: "reviews_plus",
     monthlyPrice: 9,
     annualPrice: 90,
     stripePriceIdMonthly: "price_1TWCWhB4nhVx1nmU7e5wn3EI",
@@ -38,7 +38,7 @@ export const PRICING_TIERS: PricingTier[] = [
     stripePriceIdMonthly: "price_1TWCWiB4nhVx1nmUlQWuYxkF",
     stripePriceIdAnnual: "price_1TWCWiB4nhVx1nmUtHQuD2co",
     features: [
-      "Everything in Leads Boost tier",
+      "Everything in Reviews Plus tier",
       "Full custom website built from your content",
       "Deployed in 7 days",
       "Or drop-in landing page for existing sites",

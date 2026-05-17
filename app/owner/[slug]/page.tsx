@@ -35,7 +35,7 @@ export default async function OwnerDashboardPage({ params }: Props) {
       subscriptionTier={
         (listing.subscription_tier || listing.tier || "free") as
           | "free"
-          | "lead_boost"
+          | "reviews_plus"
           | "reviews"
           | "website"
           | "growth"

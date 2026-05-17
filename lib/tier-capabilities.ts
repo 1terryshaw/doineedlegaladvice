@@ -7,7 +7,7 @@
 export type TierSlug =
   | "seed"
   | "free"
-  | "lead_boost"
+  | "reviews_plus"
   | "website"
   | "growth"
   | "payment_error_review";
@@ -42,7 +42,7 @@ export const TIER_CAPABILITIES: Record<TierSlug, CapabilityMap> = {
     siteforge: false,
     custom_domain: false,
   },
-  lead_boost: {
+  reviews_plus: {
     lead_forwarding: true,
     reviews_display: true,
     featured: false,
@@ -86,7 +86,7 @@ export const TIER_CAPABILITIES: Record<TierSlug, CapabilityMap> = {
  */
 // Backward compat: DB may still have "reviews" until CHECK constraint is updated
 const TIER_ALIASES: Record<string, TierSlug> = {
-  reviews: "lead_boost",
+  reviews: "reviews_plus",
   claimed: "free",
 };
 
@@ -107,11 +107,11 @@ export function can(
  */
 export function getTierDisplayName(
   tier: TierSlug | string | null | undefined
-): "Free" | "Lead Boost" | "Website" | "Growth" {
+): "Free" | "Reviews Plus" | "Website" | "Growth" {
   const t = TIER_ALIASES[tier as string] || tier;
   switch (t) {
-    case "lead_boost":
-      return "Lead Boost";
+    case "reviews_plus":
+      return "Reviews Plus";
     case "website":
       return "Website";
     case "growth":
@@ -134,15 +134,15 @@ export function getNextTier(
     case "seed":
     case "free":
     case "payment_error_review":
-      return "lead_boost";
-    case "lead_boost":
+      return "reviews_plus";
+    case "reviews_plus":
       return "website";
     case "website":
       return "growth";
     case "growth":
       return null;
     default:
-      return "lead_boost";
+      return "reviews_plus";
   }
 }
 
@@ -159,7 +159,7 @@ export function getTierPriority(
       return 4;
     case "website":
       return 3;
-    case "lead_boost":
+    case "reviews_plus":
       return 2;
     case "free":
     case "payment_error_review":
