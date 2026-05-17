@@ -29,7 +29,7 @@ export async function POST() {
     vertical: process.env.BILLING_VERTICAL_SLUG!,
     listing_slug: auth.slug,
     owner_email: ownerEmail,
-    tier: 'lead_boost', // placeholder — portal doesn't use tier
+    tier: 'reviews_plus', // placeholder — portal doesn't use tier
     cycle: 'monthly', // placeholder — portal doesn't use cycle
   });
 

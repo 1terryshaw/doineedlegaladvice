@@ -6,8 +6,9 @@ export const dynamic = 'force-dynamic';
 
 type Body = {
   listingSlug?: string;
-  tier?: 'lead_boost' | 'website' | 'growth';
+  tier?: 'reviews_plus' | 'website' | 'growth';
   cycle?: 'monthly' | 'annual';
+  mode?: 'trial' | 'direct';
 };
 
 export async function POST(request: NextRequest) {
@@ -15,16 +16,20 @@ export async function POST(request: NextRequest) {
   try { body = await request.json(); }
   catch { return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 }); }
 
-  const { listingSlug, tier, cycle } = body;
+  const { listingSlug, tier, cycle, mode } = body;
   if (!listingSlug || !tier || !cycle) {
     return NextResponse.json({ error: 'Missing listingSlug, tier, or cycle' }, { status: 400 });
   }
-  if (!['lead_boost', 'website', 'growth'].includes(tier)) {
+  if (!['reviews_plus', 'website', 'growth'].includes(tier)) {
     return NextResponse.json({ error: 'Invalid tier' }, { status: 400 });
   }
   if (!['monthly', 'annual'].includes(cycle)) {
     return NextResponse.json({ error: 'Invalid cycle' }, { status: 400 });
   }
+  // 'trial' is only meaningful for the reviews_plus first-time upgrade.
+  // Anything else (or absent) bills immediately.
+  const checkoutMode: 'trial' | 'direct' =
+    mode === 'trial' && tier === 'reviews_plus' ? 'trial' : 'direct';
 
   const access = await verifyOwnerAccess(listingSlug);
   if (!access) {
@@ -47,6 +52,7 @@ export async function POST(request: NextRequest) {
       listing_slug: listingSlug,
       owner_email: ownerEmail,
       tier, cycle,
+      mode: checkoutMode,
     });
   } catch (e: any) {
     return NextResponse.json({ error: 'Billing handoff signing failed' }, { status: 500 });
@@ -58,7 +64,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'BILLING_SERVICE_URL not set' }, { status: 500 });
   }
 
-  // Call billing service server-side and forward the response
+  // Call billing service server-side and forward the response.
+  // `mode` travels inside the signed handoff token — empire-billing reads it
+  // from the verified payload, so it cannot be tampered with in transit.
   const url = `${billingBase}/api/checkout?token=${encodeURIComponent(token)}&vertical=${encodeURIComponent(vertical)}`;
   try {
     const billingRes = await fetch(url, { method: 'GET' });

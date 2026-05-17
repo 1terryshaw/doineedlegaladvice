@@ -4,8 +4,11 @@ export type HandoffPayload = {
   vertical: string;
   listing_slug: string;
   owner_email: string;
-  tier: 'lead_boost' | 'website' | 'growth';
+  tier: 'reviews_plus' | 'website' | 'growth';
   cycle: 'monthly' | 'annual';
+  /** Checkout intent. 'trial' → 30-day Stripe trial; 'direct' → bill now.
+   *  Optional for backward compatibility; empire-billing defaults to 'direct'. */
+  mode?: 'trial' | 'direct';
 };
 
 const TOKEN_TTL_SECONDS = 5 * 60;
