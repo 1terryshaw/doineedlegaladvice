@@ -26,10 +26,12 @@ export async function POST(request: NextRequest) {
   if (!['monthly', 'annual'].includes(cycle)) {
     return NextResponse.json({ error: 'Invalid cycle' }, { status: 400 });
   }
-  // 'trial' is only meaningful for the reviews_plus first-time upgrade.
-  // Anything else (or absent) bills immediately.
+  // 'trial' is offered on reviews_plus and website only. Growth is
+  // direct-purchase only; anything else (or absent) bills immediately.
   const checkoutMode: 'trial' | 'direct' =
-    mode === 'trial' && tier === 'reviews_plus' ? 'trial' : 'direct';
+    mode === 'trial' && (tier === 'reviews_plus' || tier === 'website')
+      ? 'trial'
+      : 'direct';
 
   const access = await verifyOwnerAccess(listingSlug);
   if (!access) {

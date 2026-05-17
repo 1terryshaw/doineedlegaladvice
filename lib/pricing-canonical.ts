@@ -109,7 +109,8 @@ export const TIERS: Record<TierId, Tier> = {
       'Monthly site updates',
       'SEO-optimized for your city + service',
     ],
-    cta: { label: 'Get Website', mode: 'direct' },
+    cta: { label: 'Start 30-Day Free Trial', mode: 'trial' },
+    secondaryCta: { label: 'Skip trial, pay now — $29/mo', mode: 'direct' },
     anchored: false,
   },
   growth: {
