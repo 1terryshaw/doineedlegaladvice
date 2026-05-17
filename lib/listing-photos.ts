@@ -52,7 +52,10 @@ export async function listPhotosForListing(listingId: string): Promise<{
   return { photos, logo };
 }
 
-export async function nextPhotoSlot(listingId: string): Promise<number | null> {
+export async function nextPhotoSlot(
+  listingId: string,
+  limit: number = MAX_PHOTOS
+): Promise<number | null> {
   const { data, error } = await supabaseAdmin
     .from("listing_photos")
     .select("display_order")
@@ -63,7 +66,7 @@ export async function nextPhotoSlot(listingId: string): Promise<number | null> {
     .order("display_order", { ascending: true });
   if (error) return null;
   const used = new Set((data ?? []).map((r) => r.display_order));
-  for (let i = 0; i < MAX_PHOTOS; i++) {
+  for (let i = 0; i < limit; i++) {
     if (!used.has(i)) return i;
   }
   return null;

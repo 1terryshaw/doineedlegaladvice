@@ -1,21 +1,22 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ListingPhoto, ACCEPTED_MIME, MAX_PHOTO_BYTES, MAX_PHOTOS } from "@/lib/listing-extras";
+import { ListingPhoto, ACCEPTED_MIME, MAX_PHOTO_BYTES } from "@/lib/listing-extras";
 
 interface Props {
   photos: ListingPhoto[];
   onUploaded: (photo: ListingPhoto) => void;
   onDeleted: (id: string) => void;
+  max: number;
 }
 
-export default function PhotoUploader({ photos, onUploaded, onDeleted }: Props) {
+export default function PhotoUploader({ photos, onUploaded, onDeleted, max }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [drag, setDrag] = useState(false);
 
-  const slotsLeft = MAX_PHOTOS - photos.length;
+  const slotsLeft = max - photos.length;
 
   async function uploadFile(file: File) {
     if (!ACCEPTED_MIME.includes(file.type)) {
@@ -83,10 +84,10 @@ export default function PhotoUploader({ photos, onUploaded, onDeleted }: Props) 
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">
-        Photos ({photos.length}/{MAX_PHOTOS})
+        Photos ({photos.length}/{max})
       </label>
       <small className="block text-gray-500 mb-2">
-        First photo is your hero image. Up to 3, max 5MB each. JPEG, PNG, or WebP.
+        First photo is your hero image. Up to {max}, max 5MB each. JPEG, PNG, or WebP.
       </small>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

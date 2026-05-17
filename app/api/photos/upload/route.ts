@@ -8,7 +8,6 @@ import { canonical } from "@/lib/vertical-canonical";
 import {
   ACCEPTED_MIME,
   MAX_PHOTO_BYTES,
-  MAX_PHOTOS,
 } from "@/lib/listing-extras";
 import {
   PHOTO_BUCKET,
@@ -19,6 +18,7 @@ import {
   existingLogoId,
   type PhotoKind,
 } from "@/lib/listing-photos";
+import { photoLimitForTier } from "@/lib/photo-limits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
 
   const { data: listing, error: fetchError } = await supabaseAdmin
     .from(LISTINGS_TABLE)
-    .select("id, slug, owner_auth_token, owner_email")
+    .select("id, slug, owner_auth_token, owner_email, tier, subscription_tier")
     .eq("slug", auth.slug)
     .eq("owner_auth_token", auth.token)
     .single();
@@ -72,10 +72,11 @@ export async function POST(request: NextRequest) {
   let displayOrder = 0;
 
   if (kind === "photo") {
-    const slot = await nextPhotoSlot(listingId);
+    const photoLimit = photoLimitForTier(listing.tier || listing.subscription_tier);
+    const slot = await nextPhotoSlot(listingId, photoLimit);
     if (slot === null) {
       return NextResponse.json(
-        { error: `Maximum ${MAX_PHOTOS} photos.` },
+        { error: `Maximum ${photoLimit} photos.` },
         { status: 400 }
       );
     }

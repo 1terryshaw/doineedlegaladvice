@@ -16,6 +16,7 @@ import UrlInput from "@/components/owner-edit/UrlInput";
 import HoursEditor from "@/components/owner-edit/HoursEditor";
 import PhotoUploader from "@/components/owner-edit/PhotoUploader";
 import LogoUploader from "@/components/owner-edit/LogoUploader";
+import { photoLimitForTier } from "@/lib/photo-limits";
 
 interface Props {
   listing: Listing;
@@ -242,6 +243,7 @@ export default function OwnerEditForm({
           photos={photos}
           onUploaded={(p) => setPhotos((prev) => [...prev, p])}
           onDeleted={(id) => setPhotos((prev) => prev.filter((x) => x.id !== id))}
+          max={photoLimitForTier(listing.tier || listing.subscription_tier)}
         />
 
         <TagListInput
