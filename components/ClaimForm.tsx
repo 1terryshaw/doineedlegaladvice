@@ -19,15 +19,25 @@ export default function ClaimForm({ listingSlug, listingName }: { listingSlug: s
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slug: listingSlug, email, name }),
       });
-      if (res.ok) {
+      let data: { success?: boolean; error?: string; userMessage?: string } | null = null;
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
+
+      if (res.ok && data?.success) {
         setStatus("sent");
       } else {
-        const data = await res.json();
-        setErrorMsg(data.error || "Failed to submit claim");
+        setErrorMsg(
+          data?.userMessage ||
+            data?.error ||
+            "We couldn't process your claim right now. Please try again in a moment."
+        );
         setStatus("error");
       }
     } catch {
-      setErrorMsg("Network error. Please try again.");
+      setErrorMsg("Network error. Please check your connection and try again.");
       setStatus("error");
     }
   }
