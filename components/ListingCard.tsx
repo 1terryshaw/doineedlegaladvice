@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Listing } from "@/lib/supabase";
 import verticalConfig from "@/lib/vertical.config";
+import TierBadge from "@/components/TierBadge";
 
 function renderStars(rating: number) {
   const full = Math.floor(rating);
@@ -43,19 +44,12 @@ export default function ListingCard({ listing }: { listing: Listing }) {
             </div>
           )}
         </div>
-        {listing.claimed && !['reviews_plus', 'website', 'growth'].includes((listing.tier || listing.subscription_tier || '') as string) && (
-          <span className="text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-800">
-            ✓ Verified
-          </span>
-        )}
-        {(listing.featured || ['reviews_plus', 'reviews'].includes((listing.tier || listing.subscription_tier || '') as string)) && (
-          <span
-            className="text-xs font-medium px-2 py-1 rounded-full text-white"
-            style={{ backgroundColor: verticalConfig.primaryColor }}
-          >
-            Featured
-          </span>
-        )}
+        <TierBadge
+          tier={listing.tier}
+          subscription_tier={listing.subscription_tier}
+          featured={listing.featured}
+          is_claimed={listing.claimed}
+        />
         {listing.now_hiring && (
           <span className="bg-green-600 text-white text-xs font-medium px-2 py-0.5 rounded-full ml-2">Now Hiring</span>
         )}

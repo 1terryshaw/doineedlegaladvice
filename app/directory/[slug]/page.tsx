@@ -18,6 +18,8 @@ import {
 } from "@/lib/listing-extras";
 import { canonical } from "@/lib/vertical-canonical";
 import ListingGallery from "@/components/ListingGallery";
+import TierBadge from "@/components/TierBadge";
+import ReviewShowcase from "@/components/ReviewShowcase";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -65,6 +67,8 @@ export default async function ListingPage({ params }: Props) {
 
 
   const tier = (listing.tier as string | null) ?? (listing.subscription_tier as string | null) ?? 'seed';
+  const placeId =
+    (listing as typeof listing & { google_place_id?: string }).google_place_id ?? null;
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -150,24 +154,12 @@ export default async function ListingPage({ params }: Props) {
                   )}
                 </div>
               </div>
-              {listing.claimed && tier !== 'reviews_plus' && tier !== 'website' && tier !== 'growth' && (
-                <span className="text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-800">
-                  ✓ Claimed
-                </span>
-              )}
-              {listing.claimed && (tier === 'reviews_plus' || tier === 'website' || tier === 'growth') && (
-                <span className="text-xs font-medium px-2 py-1 rounded-full text-white" style={{ backgroundColor: verticalConfig.primaryColor }}>
-                  {tier === 'reviews_plus' ? 'Reviews Plus' : tier === 'website' ? 'Website' : 'Growth'}
-                </span>
-              )}
-              {listing.featured && (
-                <span
-                  className="text-xs font-medium px-2 py-1 rounded-full text-white"
-                  style={{ backgroundColor: verticalConfig.primaryColor }}
-                >
-                  Featured
-                </span>
-              )}
+              <TierBadge
+                tier={listing.tier}
+                subscription_tier={listing.subscription_tier}
+                featured={listing.featured}
+                is_claimed={listing.claimed}
+              />
               {listing.now_hiring && (
                 <span className="bg-green-600 text-white text-xs font-medium px-2 py-0.5 rounded-full ml-2">Now Hiring</span>
               )}
@@ -195,6 +187,19 @@ export default async function ListingPage({ params }: Props) {
             <div className="prose max-w-none">
               <p>{listing.description}</p>
             </div>
+
+            {/* Customer reviews — full carousel for tiers with reviews_display */}
+            {can(tier, "reviews_display") && placeId && (
+              <div className="mt-8 border-t pt-6">
+                <h3 className="font-semibold mb-3">Customer Reviews</h3>
+                <ReviewShowcase
+                  googlePlaceId={placeId}
+                  subscriptionTier={tier}
+                  fallbackRating={listing.google_rating}
+                  fallbackCount={listing.google_review_count}
+                />
+              </div>
+            )}
 
 
             {/* Services */}
