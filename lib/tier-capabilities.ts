@@ -45,9 +45,9 @@ export const TIER_CAPABILITIES: Record<TierSlug, CapabilityMap> = {
   reviews_plus: {
     lead_forwarding: true,
     reviews_display: true,
-    featured: false,
+    featured: true,
     analytics: true,
-    priority_search: false,
+    priority_search: true,
     siteforge: false,
     custom_domain: false,
   },
