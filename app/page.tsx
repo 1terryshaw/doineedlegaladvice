@@ -6,8 +6,6 @@ import SearchBar from "@/components/SearchBar";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
 import FadeIn from "@/components/pizzazz/FadeIn";
 import ShareButtons from "@/components/pizzazz/ShareButtons";
-import { CANONICAL_CITIES, PROVINCES as PROVINCES_LIST } from "@/lib/shared/cities";
-import { HeroSearch } from "@/components/hero-search";
 import { BrowseByArea } from "@/components/browse-by-area";
 
 export const dynamic = "force-dynamic";
@@ -85,15 +83,6 @@ export default async function HomePage() {
             </span>
           </div>
       </section>
-
-      {/* HeroSearch band (replaces LocationPicker top-of-page — TDL #138) */}
-      <HeroSearch
-        vertical="legal"
-        provinces={PROVINCES_LIST}
-        cities={CANONICAL_CITIES}
-        accentClass="bg-[#3B82F6] hover:bg-[#306bca]"
-      />
-
       {/* SECTION 2: Browse Directory */}
 
       {/* Browse by Practice Area */}
