@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import verticalConfig from "@/lib/vertical.config";
-import { getFilteredListings } from "@/lib/supabase";
+import { getFilteredListings , getDirectoryRegions, type DirectoryRegion } from "@/lib/supabase";
 import { LISTING_TYPES, REGIONS } from "@/lib/constants";
 import ListingCard from "@/components/ListingCard";
 import SearchBar from "@/components/SearchBar";
@@ -19,11 +19,23 @@ export default async function DirectoryPage({
   searchParams: Promise<{ q?: string; search?: string; city?: string; s?: string; listing_type?: string; region?: string }>;
 }) {
   const params = await searchParams;
-  const q = params.q || params.search || params.city || params.s || "";
-  const listing_type = params.listing_type || "";
   const region = params.region || "";
+  // FIX-EMPIRE-F7-SWEEP — when `region` is present, `city` is the
+  // cascading-dropdown filter (slug). When no region, legacy `?city=`
+  // stays a free-text name search alias.
+  const cityFilter = region ? params.city || "" : "";
+  const q = params.q || params.search || params.s || (region ? "" : params.city || "");
+  const listing_type = params.listing_type || "";
 
-  const listings = await getFilteredListings({ q, listing_type, region });
+
+  let runtimeRegions: DirectoryRegion[] = [];
+  try {
+    runtimeRegions = await getDirectoryRegions();
+  } catch (err) {
+    console.error("getDirectoryRegions failed; falling back:", err);
+  }
+
+  const listings = await getFilteredListings({ q, listing_type, region, city: cityFilter });
   const hasFilters = !!(q || listing_type || region);
 
   const typeName = listing_type ? LISTING_TYPES.find((t) => t.slug === listing_type)?.name : null;
@@ -40,7 +52,7 @@ export default async function DirectoryPage({
       </div>
 
       <div className="mb-6">
-        <SearchBar variant="directory" defaultQ={q} defaultType={listing_type} defaultRegion={region} />
+        <SearchBar variant="directory" defaultQ={q} defaultType={listing_type} defaultRegion={region} defaultCity={cityFilter} regions={runtimeRegions.length > 0 ? runtimeRegions : undefined} />
       </div>
 
       <p className="text-gray-600 mb-4">

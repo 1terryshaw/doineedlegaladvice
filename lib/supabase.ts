@@ -120,6 +120,7 @@ export interface ListingFilters {
   q?: string;
   listing_type?: string;
   region?: string;
+  city?: string;
 }
 
 export async function getFilteredListings(filters: ListingFilters): Promise<Listing[]> {
@@ -202,4 +203,89 @@ export async function getAllListingsForSitemap(regionSlug?: string): Promise<Lis
     }
     return query as unknown as PromiseLike<{ data: Listing[] | null; error: unknown }>;
   });
+}
+
+// FIX-EMPIRE-F7-SWEEP — runtime regions facets for cascading dropdowns.
+// DISTINCT (province_state, city) filtered to canonical 64 codes. 5-min cache.
+export interface DirectoryRegion {
+  slug: string;
+  name: string;
+  province: string;
+}
+
+const CANONICAL_PROVINCE_CODES = [
+  "AB","BC","MB","NB","NL","NS","NT","NU","ON","PE","QC","SK","YT",
+  "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA",
+  "KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ",
+  "NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT",
+  "VA","WA","WV","WI","WY","DC",
+];
+
+function slugifyCityName(s: string): string {
+  return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+function titleCaseCity(s: string): string {
+  return s.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+let _directoryRegionsCache: { ts: number; data: DirectoryRegion[] } | null = null;
+const DIRECTORY_REGIONS_TTL_MS = 5 * 60 * 1000;
+
+export async function getDirectoryRegions(): Promise<DirectoryRegion[]> {
+  if (_directoryRegionsCache && Date.now() - _directoryRegionsCache.ts < DIRECTORY_REGIONS_TTL_MS) {
+    return _directoryRegionsCache.data;
+  }
+
+  const rows = await paginateAll<{ province_state: string | null; city: string | null }>(() => {
+    return supabaseAdmin
+      .from(LISTINGS_TABLE)
+      .select("province_state, city")
+      .in("country", ["CA", "US"])
+      .in("province_state", CANONICAL_PROVINCE_CODES)
+      .not("city", "is", null)
+      .neq("city", "") as unknown as PromiseLike<{
+        data: { province_state: string | null; city: string | null }[] | null;
+        error: unknown;
+      }>;
+  });
+
+  const seen = new Map<string, { name: string; province: string }>();
+  for (const r of rows) {
+    if (!r.city || !r.province_state) continue;
+    const cleaned = r.city.trim();
+    if (!cleaned) continue;
+    const baseSlug = slugifyCityName(cleaned);
+    if (!baseSlug) continue;
+    const key = `${r.province_state}::${baseSlug}`;
+    if (!seen.has(key)) {
+      const name = cleaned === cleaned.toLowerCase() ? titleCaseCity(cleaned) : cleaned;
+      seen.set(key, { name, province: r.province_state });
+    }
+  }
+
+  const slugProvinces = new Map<string, Set<string>>();
+  Array.from(seen.keys()).forEach((key) => {
+    const [prov, baseSlug] = key.split("::");
+    if (!slugProvinces.has(baseSlug)) slugProvinces.set(baseSlug, new Set());
+    slugProvinces.get(baseSlug)!.add(prov);
+  });
+
+  const out: DirectoryRegion[] = [];
+  Array.from(seen.entries()).forEach(([key, val]) => {
+    const [, baseSlug] = key.split("::");
+    const slug =
+      (slugProvinces.get(baseSlug)?.size ?? 0) > 1
+        ? `${baseSlug}-${val.province.toLowerCase()}`
+        : baseSlug;
+    out.push({ slug, name: val.name, province: val.province });
+  });
+
+  out.sort(
+    (a, b) =>
+      a.province.localeCompare(b.province) || a.name.localeCompare(b.name)
+  );
+
+  _directoryRegionsCache = { ts: Date.now(), data: out };
+  return out;
 }
