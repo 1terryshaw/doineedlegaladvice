@@ -324,7 +324,7 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot }: { li
         <div className="border rounded-lg p-6">
           <h3 className="font-semibold mb-2">Google reviews</h3>
           <p className="text-xs text-gray-600 mb-3">
-            Reviews auto-refresh every 24 hours. You can force a refresh manually.
+            Click below to refresh your Google reviews.
           </p>
           <button
             onClick={handleRefreshReviews}
