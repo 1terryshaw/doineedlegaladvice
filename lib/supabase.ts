@@ -239,7 +239,7 @@ export async function getDirectoryRegions(): Promise<DirectoryRegion[]> {
 
   const rows = await paginateAll<{ province_state: string | null; city: string | null }>(() => {
     return supabaseAdmin
-      .from(LISTINGS_TABLE)
+      .from(`mv_${LISTINGS_TABLE}_cities`)
       .select("province_state, city")
       .in("country", ["CA", "US"])
       .in("province_state", CANONICAL_PROVINCE_CODES)
