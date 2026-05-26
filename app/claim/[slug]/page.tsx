@@ -9,6 +9,7 @@ interface Props {
 
 export const metadata: Metadata = {
   title: "Claim Listing",
+  robots: { index: false, follow: false },
 };
 
 export default async function ClaimPage({ params }: Props) {
