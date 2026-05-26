@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
 
   const directoryName = verticalConfig.name;
   const domain = verticalConfig.domain;
+  const displayDomain = verticalConfig.displayDomain;
   const vertical = verticalConfig.tablePrefix.replace(/_$/, "");
 
   // Get all paid-tier listings with owner email
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
 <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;">
   <div style="background:${verticalConfig.primaryColor};padding:20px 24px;border-radius:8px 8px 0 0;">
     <h1 style="color:#fff;margin:0;font-size:20px;">Weekly Lead Report</h1>
-    <p style="color:rgba(255,255,255,0.85);margin:4px 0 0;font-size:13px;">${directoryName} (${domain})</p>
+    <p style="color:rgba(255,255,255,0.85);margin:4px 0 0;font-size:13px;">${directoryName} (${displayDomain})</p>
   </div>
   <div style="border:1px solid #e5e7eb;border-top:none;padding:24px;border-radius:0 0 8px 8px;">
     <p style="font-size:15px;margin:0 0 16px;">Hi <strong>${listing.name}</strong>,</p>

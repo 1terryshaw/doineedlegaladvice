@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
         message: message || null,
         service_needed: serviceNeeded || null,
         urgency,
-        source_directory: verticalConfig.domain,
+        source_directory: verticalConfig.displayDomain,
         source_page: request.headers.get("referer") || null,
         visitor_ip: visitorIp,
         visitor_user_agent: visitorUserAgent,
