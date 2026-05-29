@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import verticalConfig from "@/lib/vertical.config";
+import { SITE_URL } from "@/lib/seo";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Disclaimer from "@/components/Disclaimer";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: verticalConfig.name,
     template: `%s | ${verticalConfig.name}`,

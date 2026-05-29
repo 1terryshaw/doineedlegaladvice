@@ -23,6 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${verticalConfig.listingNounPlural} in ${regionData.name}`,
     description: `Find the best ${verticalConfig.listingNounPlural} in ${regionData.name}, ${regionData.province}.`,
+    alternates: { canonical: `/${region}` },
   };
 }
 

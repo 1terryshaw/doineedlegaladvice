@@ -27,6 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `Professionals in ${cityData.name}, ${provinceName}`,
     description: `Find professionals in ${cityData.name}, ${provinceName}. Browse our directory of trusted professionals.`,
+    alternates: { canonical: `/${region}/${city}` },
   };
 }
 

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import verticalConfig from "@/lib/vertical.config";
 import { REGIONS, LISTING_TYPES } from "@/lib/constants";
@@ -9,6 +10,10 @@ import ShareButtons from "@/components/pizzazz/ShareButtons";
 import { BrowseByArea } from "@/components/browse-by-area";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 const PRACTICE_AREA_ICONS: Record<string, string> = {
   "family-lawyer": "\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67",

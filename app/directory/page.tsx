@@ -11,6 +11,7 @@ import ShareButtons from "@/components/pizzazz/ShareButtons";
 export const metadata: Metadata = {
   title: `Browse Directory`,
   description: `Browse all ${verticalConfig.listingNounPlural} in the ${verticalConfig.name} directory.`,
+  alternates: { canonical: "/directory" },
 };
 
 export default async function DirectoryPage({
