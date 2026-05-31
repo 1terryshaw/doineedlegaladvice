@@ -8,6 +8,7 @@ import LegalDisclaimer from "@/components/LegalDisclaimer";
 import FadeIn from "@/components/pizzazz/FadeIn";
 import ShareButtons from "@/components/pizzazz/ShareButtons";
 import { BrowseByArea } from "@/components/browse-by-area";
+import { websiteSearchSchema } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,10 @@ const PRACTICE_AREA_ICONS: Record<string, string> = {
 export default async function HomePage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSearchSchema()) }}
+      />
       {/* SECTION 1: AI Triage Chat */}
       <section
         className="py-16 px-4 relative overflow-hidden"

@@ -5,6 +5,7 @@ import { getListings } from "@/lib/supabase";
 import { getRegionBySlug, REGIONS } from "@/lib/constants";
 import ListingCard from "@/components/ListingCard";
 import ShareButtons from "@/components/pizzazz/ShareButtons";
+import { regionBreadcrumbSchema, regionCollectionPageSchema } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,8 @@ export default async function RegionPage({ params }: Props) {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(regionBreadcrumbSchema(region, regionData.name)) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(regionCollectionPageSchema(region, regionData.name, listings.length)) }} />
       <h1 className="text-3xl font-bold mb-2">
         {verticalConfig.listingNounPlural} in {regionData.name}
       </h1>
