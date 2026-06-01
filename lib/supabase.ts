@@ -276,6 +276,41 @@ export async function getActiveLicenseStates(): Promise<string[]> {
   return Array.from(set).sort();
 }
 
+// Distinct (province_state, region_slug) city pages in the consumer-visible US
+// set — drives the /{state}/{city} sitemap entries. MUST paginate (not a raw
+// .limit() select): there are ~234K populated rows but only ~1.6K distinct city
+// pages, and an unranged select silently truncated at the PostgREST cap, dropping
+// the long-tail of rare cities from the sitemap. Self-maintaining as rows fill.
+// (TDL #464 Phase 4.)
+export async function getCityPageSlugs(): Promise<
+  { province_state: string; region_slug: string }[]
+> {
+  const rows = await paginateAll<{
+    province_state: string | null;
+    region_slug: string | null;
+  }>(() => {
+    return supabaseAdmin
+      .from(LISTINGS_TABLE)
+      .select("province_state, region_slug")
+      .eq("country", verticalConfig.defaultCountry)
+      .not("province_state", "is", null)
+      .not("region_slug", "is", null) as unknown as PromiseLike<{
+        data: { province_state: string | null; region_slug: string | null }[] | null;
+        error: unknown;
+      }>;
+  });
+  const seen = new Set<string>();
+  const out: { province_state: string; region_slug: string }[] = [];
+  for (const r of rows) {
+    if (!r.province_state || !r.region_slug) continue;
+    const key = `${r.province_state}/${r.region_slug}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ province_state: r.province_state, region_slug: r.region_slug });
+  }
+  return out;
+}
+
 // Real total for a filtered view (decision #3): the directory/region pages cap
 // their rendered cards at 200 but must DISPLAY the true count — "200 lawyers"
 // when CA alone has 187K is a credibility leak. Mirrors getFilteredListings'

@@ -7,8 +7,7 @@ import { REGIONS } from "@/lib/constants";
 import {
   getListingsRange,
   getActiveLicenseStates,
-  supabaseAdmin,
-  LISTINGS_TABLE,
+  getCityPageSlugs,
 } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -77,25 +76,22 @@ export async function GET(
     for (const region of activeRegions) {
       parts.push(urlEntry(`${baseUrl}/${region.slug}`, now, "daily", "0.8"));
     }
-    // City pages (/{province_state}/{region_slug}) — only rows that carry both
-    // (legal: EOIR location set). Country-scoped to avoid CA leakage into the
-    // US sitemap. Server-side filter returns the small populated subset.
-    const { data: cityRows } = await supabaseAdmin
-      .from(LISTINGS_TABLE)
-      .select("province_state, region_slug")
-      .eq("country", verticalConfig.defaultCountry)
-      .not("province_state", "is", null)
-      .not("region_slug", "is", null)
-      .limit(1000000);
-    const seenCity = new Set<string>();
-    for (const row of cityRows ?? []) {
-      const ps = (row as { province_state: string | null }).province_state;
-      const rs = (row as { region_slug: string | null }).region_slug;
-      if (!ps || !rs) continue;
-      const key = `${ps}/${rs}`;
-      if (seenCity.has(key)) continue;
-      seenCity.add(key);
-      parts.push(urlEntry(`${baseUrl}/${ps}/${rs}`, now, "weekly", "0.7"));
+    // City pages (/{state}/{city}) — every US row that carries both
+    // province_state + region_slug (EOIR location set + the bar city backfill,
+    // TDL #464). Via getCityPageSlugs (paginated, NOT a capped .limit() select)
+    // so the long-tail of rare cities isn't truncated at the PostgREST cap.
+    // State lowercased to match the lowercase state-page URLs (/ca) and the
+    // city route's canonical form.
+    const cityPages = await getCityPageSlugs();
+    for (const { province_state, region_slug } of cityPages) {
+      parts.push(
+        urlEntry(
+          `${baseUrl}/${province_state.toLowerCase()}/${region_slug}`,
+          now,
+          "weekly",
+          "0.7"
+        )
+      );
     }
   }
 
