@@ -103,10 +103,11 @@ export async function getListings(regionSlug?: string): Promise<Listing[]> {
       .order("name", { ascending: true }).limit(200);
 
     if (regionSlug) {
-      // Two-letter slug → state_province match (US states, CA provinces).
-      // Longer slugs → legacy `region` column (city-as-region).
+      // TDL #458: state pages partition by license_state (bar-of-record), NOT
+      // state_province (physical location, ~all null for bar rows) — see #452.
+      // Two-letter slug → license_state match. Longer slugs → legacy `region`.
       if (regionSlug.length === 2) {
-        query = query.eq("state_province", regionSlug.toUpperCase());
+        query = query.eq("license_state", regionSlug.toUpperCase());
       } else {
         query = query.eq("region", regionSlug);
       }
@@ -135,8 +136,9 @@ export async function getFilteredListings(filters: ListingFilters): Promise<List
       .order("name", { ascending: true }).limit(200);
 
     if (filters.region) {
+      // TDL #458: bar-of-record via license_state, not state_province.
       if (filters.region.length === 2) {
-        query = query.eq("state_province", filters.region.toUpperCase());
+        query = query.eq("license_state", filters.region.toUpperCase());
       } else {
         query = query.eq("region", filters.region);
       }
@@ -203,6 +205,106 @@ export async function getAllListingsForSitemap(regionSlug?: string): Promise<Lis
     }
     return query as unknown as PromiseLike<{ data: Listing[] | null; error: unknown }>;
   });
+}
+
+// === TDL #457: chunked sitemap support ===
+// Total count of consumer-visible listings (country-scoped). Drives the
+// sitemap-index chunk math. head:true → no rows transferred.
+export async function getListingsCount(): Promise<number> {
+  const { count, error } = await supabaseAdmin
+    .from(LISTINGS_TABLE)
+    .select("id", { count: "exact", head: true })
+    .eq("country", verticalConfig.defaultCountry);
+  if (error) {
+    console.error("getListingsCount error:", error);
+    return 0;
+  }
+  return count || 0;
+}
+
+// Minimal-projection ranged fetch for sitemap chunks. Selects only the columns
+// the sitemap needs (slug, timestamps) — the old getAllListingsForSitemap did
+// select("*") over ~194K rows and timed the route out (TDL #457). Stable order
+// (slug is unique) so chunk boundaries don't drift between requests.
+export async function getListingsRange(
+  offset: number,
+  limit: number
+): Promise<Pick<Listing, "slug" | "updated_at" | "created_at">[]> {
+  if (limit <= 0) return [];
+  const all: Pick<Listing, "slug" | "updated_at" | "created_at">[] = [];
+  const end = offset + limit;
+  let from = offset;
+  while (from < end) {
+    const to = Math.min(from + PAGE_SIZE, end) - 1;
+    const { data, error } = await supabaseAdmin
+      .from(LISTINGS_TABLE)
+      .select("slug, updated_at, created_at")
+      .eq("country", verticalConfig.defaultCountry)
+      .order("slug", { ascending: true })
+      .range(from, to);
+    if (error) {
+      console.error("getListingsRange error:", error);
+      return all;
+    }
+    const page = (data || []) as Pick<Listing, "slug" | "updated_at" | "created_at">[];
+    all.push(...page);
+    const requested = to - from + 1;
+    if (page.length < requested) break;
+    from = to + 1;
+  }
+  return all;
+}
+
+// Distinct bar-of-record states present in the consumer-visible set. Used to
+// emit state-page sitemap entries ONLY for states with attorneys (TDL #458 +
+// criterion #3: no 404 URLs in the sitemap). Self-maintaining as bars load.
+export async function getActiveLicenseStates(): Promise<string[]> {
+  const rows = await paginateAll<{ license_state: string | null }>(() => {
+    return supabaseAdmin
+      .from(LISTINGS_TABLE)
+      .select("license_state")
+      .eq("country", verticalConfig.defaultCountry)
+      .not("license_state", "is", null) as unknown as PromiseLike<{
+        data: { license_state: string | null }[] | null;
+        error: unknown;
+      }>;
+  });
+  const set = new Set<string>();
+  for (const r of rows) {
+    if (r.license_state) set.add(r.license_state.toUpperCase());
+  }
+  return Array.from(set).sort();
+}
+
+// Real total for a filtered view (decision #3): the directory/region pages cap
+// their rendered cards at 200 but must DISPLAY the true count — "200 lawyers"
+// when CA alone has 187K is a credibility leak. Mirrors getFilteredListings'
+// predicates exactly; head:true so no rows are transferred.
+export async function getFilteredListingsCount(filters: ListingFilters): Promise<number> {
+  let query = supabaseAdmin
+    .from(LISTINGS_TABLE)
+    .select("id", { count: "exact", head: true })
+    .eq("country", verticalConfig.defaultCountry);
+  if (filters.region) {
+    if (filters.region.length === 2) {
+      query = query.eq("license_state", filters.region.toUpperCase());
+    } else {
+      query = query.eq("region", filters.region);
+    }
+  }
+  if (filters.listing_type) {
+    query = query.eq("listing_type", filters.listing_type);
+  }
+  if (filters.q) {
+    const term = filters.q.replace(/'/g, "''");
+    query = query.or(`name.ilike.%${term}%,city.ilike.%${term}%`);
+  }
+  const { count, error } = await query;
+  if (error) {
+    console.error("getFilteredListingsCount error:", error);
+    return 0;
+  }
+  return count || 0;
 }
 
 // FIX-EMPIRE-F7-SWEEP — runtime regions facets for cascading dropdowns.

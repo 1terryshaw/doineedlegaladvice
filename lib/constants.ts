@@ -101,3 +101,10 @@ export function getCityBySlug(provinceSlug: string, citySlug: string) {
 }
 
 export const PROVINCES: Record<string, string> = PROVINCE_MAP;
+
+// Locale-independent thousands separator. The Vercel Node runtime ships
+// without full-ICU, so Number.toLocaleString("en-US") returns no grouping —
+// format manually so counts render "187,864" not "187864" (#3 credibility).
+export function formatCount(n: number): string {
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}

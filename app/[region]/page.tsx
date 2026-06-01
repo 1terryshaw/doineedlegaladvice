@@ -1,8 +1,8 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import verticalConfig from "@/lib/vertical.config";
-import { getListings } from "@/lib/supabase";
-import { getRegionBySlug, REGIONS } from "@/lib/constants";
+import { getListings, getFilteredListingsCount } from "@/lib/supabase";
+import { getRegionBySlug, REGIONS, formatCount } from "@/lib/constants";
 import ListingCard from "@/components/ListingCard";
 import ShareButtons from "@/components/pizzazz/ShareButtons";
 import { regionBreadcrumbSchema, regionCollectionPageSchema } from "@/lib/seo";
@@ -33,12 +33,17 @@ export default async function RegionPage({ params }: Props) {
   const regionData = getRegionBySlug(region);
   if (!regionData) notFound();
 
-  const listings = await getListings(region);
+  // Cards capped at 200 (getListings); totalCount is the real DB count so the
+  // page shows "Browse 187,864 lawyers", not the rendered-array length (#3).
+  const [listings, totalCount] = await Promise.all([
+    getListings(region),
+    getFilteredListingsCount({ region }),
+  ]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(regionBreadcrumbSchema(region, regionData.name)) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(regionCollectionPageSchema(region, regionData.name, listings.length)) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(regionCollectionPageSchema(region, regionData.name, totalCount)) }} />
       <h1 className="text-3xl font-bold mb-2">
         {verticalConfig.listingNounPlural} in {regionData.name}
       </h1>
@@ -46,7 +51,7 @@ export default async function RegionPage({ params }: Props) {
         <ShareButtons variant="compact" title={`${verticalConfig.name} — Directory`} />
       </div>
       <p className="text-gray-600 mb-8">
-        Browse {listings.length} {listings.length === 1 ? verticalConfig.listingNoun : verticalConfig.listingNounPlural} in {regionData.name}, {regionData.province}.
+        Browse {formatCount(totalCount)} {totalCount === 1 ? verticalConfig.listingNoun : verticalConfig.listingNounPlural} in {regionData.name}, {regionData.province}.
       </p>
 
       {listings.length === 0 ? (

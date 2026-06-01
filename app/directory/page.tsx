@@ -1,8 +1,8 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import verticalConfig from "@/lib/vertical.config";
-import { getFilteredListings , getDirectoryRegions, type DirectoryRegion } from "@/lib/supabase";
-import { LISTING_TYPES, REGIONS } from "@/lib/constants";
+import { getFilteredListings , getFilteredListingsCount, getDirectoryRegions, type DirectoryRegion } from "@/lib/supabase";
+import { LISTING_TYPES, REGIONS, formatCount } from "@/lib/constants";
 import ListingCard from "@/components/ListingCard";
 import SearchBar from "@/components/SearchBar";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
@@ -36,7 +36,11 @@ export default async function DirectoryPage({
     console.error("getDirectoryRegions failed; falling back:", err);
   }
 
-  const listings = await getFilteredListings({ q, listing_type, region, city: cityFilter });
+  // Cards capped at 200; totalCount is the real DB count for honest display (#3).
+  const [listings, totalCount] = await Promise.all([
+    getFilteredListings({ q, listing_type, region, city: cityFilter }),
+    getFilteredListingsCount({ q, listing_type, region, city: cityFilter }),
+  ]);
   const hasFilters = !!(q || listing_type || region);
 
   const typeName = listing_type ? LISTING_TYPES.find((t) => t.slug === listing_type)?.name : null;
@@ -57,7 +61,7 @@ export default async function DirectoryPage({
       </div>
 
       <p className="text-gray-600 mb-4">
-        {listings.length} {listings.length === 1 ? verticalConfig.listingNoun : verticalConfig.listingNounPlural}
+        {formatCount(totalCount)} {totalCount === 1 ? verticalConfig.listingNoun : verticalConfig.listingNounPlural}
         {hasFilters ? " matching your filters" : " in our directory"}.
       </p>
 
