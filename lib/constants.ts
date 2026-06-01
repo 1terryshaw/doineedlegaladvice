@@ -1179,14 +1179,6 @@ export const US_CITIES = [
   { name: "Yulee", slug: "yulee", province: "FL", listing_count: 31 },
   { name: "Zellwood", slug: "zellwood", province: "FL", listing_count: 3 },
   { name: "Zephyrhills", slug: "zephyrhills", province: "FL", listing_count: 16 },
-  { name: "Suite 1000 Houston", slug: "suite-1000-houston", province: "TX", listing_count: 4 },
-  { name: "Suite 1500 Dallas", slug: "suite-1500-dallas", province: "TX", listing_count: 3 },
-  { name: "Suite 2900 Houston", slug: "suite-2900-houston", province: "TX", listing_count: 4 },
-  { name: "Suite 4200 Houston", slug: "suite-4200-houston", province: "TX", listing_count: 3 },
-  { name: "Suite 500 Dallas", slug: "suite-500-dallas", province: "TX", listing_count: 4 },
-  { name: "Suite 600 Houston", slug: "suite-600-houston", province: "TX", listing_count: 3 },
-  { name: "Suite 700 Dallas", slug: "suite-700-dallas", province: "TX", listing_count: 4 },
-  { name: "Suite 700 Fort Worth", slug: "suite-700-fort-worth", province: "TX", listing_count: 4 },
 ];
 
 export const CITIES = [...CANONICAL_CITIES, ...US_CITIES].map((c) => ({
