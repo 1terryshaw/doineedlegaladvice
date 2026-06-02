@@ -28,17 +28,17 @@ interface Props {
 
 const TRUST_DEFAULTS: Record<string, string> = {
   realestate: "Trusted by thousands of homeowners and homebuyers",
-  plumber: "Trusted by thousands of homeowners across Canada and the US",
-  caterer: "Trusted by event hosts across Canada",
+  plumber: "Trusted by thousands of homeowners",
+  caterer: "Trusted by event hosts",
   electrician: "Trusted by thousands of homeowners",
   hvac: "Trusted by thousands of homeowners",
   landscaper: "Trusted by homeowners and property managers",
   roofer: "Trusted by thousands of homeowners",
-  mechanic: "Trusted by drivers across Canada and the US",
+  mechanic: "Trusted by drivers",
   florist: "Trusted by event planners and gift-givers",
   photographer: "Trusted by couples, families, and businesses",
-  dentist: "Trusted by families across Canada and the US",
-  chiropractor: "Trusted by patients across Canada and the US",
+  dentist: "Trusted by families",
+  chiropractor: "Trusted by patients",
 };
 
 export default function HeroSearch({
