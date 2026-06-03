@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
       email,
       phone,
       message,
-    }).catch(() => {});
+    }, listingSlug).catch(() => {});
   }
 
   return NextResponse.json({

@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       name,
       email,
       phone,
-      message, replyToken: inquiry?.reply_token });
+      message, replyToken: inquiry?.reply_token }, listingSlug);
   }
 
   return NextResponse.json({ success: true });

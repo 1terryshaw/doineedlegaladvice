@@ -67,7 +67,8 @@ export async function sendClaimEmail(email: string, slug: string, token: string)
 export async function sendInquiryNotification(
   ownerEmail: string,
   listingName: string,
-  inquiry: { name: string; email: string; phone?: string; message: string; replyToken?: string }
+  inquiry: { name: string; email: string; phone?: string; message: string; replyToken?: string },
+  listingSlug?: string
 ) {
   // TDL #455 smoke suppression: never dispatch real mail for test traffic.
   if (/tdl455canary/i.test(inquiry.email || "") || process.env.SMOKE_TEST === "1") {
@@ -76,7 +77,11 @@ export async function sendInquiryNotification(
   }
   // Inquiry forwards go via the system Resend sender, NEVER the personal Gmail account.
   // Reply-To is the visitor's own address so a reply goes straight to the customer, not us.
-  // The directory name stays as the From display name.
+  // ONE canonical host for every link in this email (resolves the apex/www split).
+  const host = verticalConfig.domain;
+  const listingUrl = listingSlug
+    ? `https://${host}/directory/${listingSlug}`
+    : `https://${host}`;
   const { Resend } = await import("resend");
   const resend = new Resend(process.env.RESEND_API_KEY);
   const { error } = await resend.emails.send({
@@ -97,16 +102,19 @@ export async function sendInquiryNotification(
           <p style="margin: 0 0 12px 0; font-size: 13px; color: #475569;">
             After you reply to this inquiry, click the link below. Pros who respond quickly get a "Fast Responder" badge on their listing and rank higher in search results.
           </p>
-          <a href="https://${verticalConfig.domain}/api/inquiry/replied/${inquiry.replyToken}"
+          <a href="https://${host}/api/inquiry/replied/${inquiry.replyToken}"
              style="display: inline-block; padding: 10px 20px; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600;">
             Mark as Replied →
           </a>
-          <p style="margin: 8px 0 0 0; font-size: 11px; color: #94a3b8;">
-            Click after you actually send your reply. Your response time helps us match consumers with engaged pros.
-          </p>
         </div>` : ""}
         <hr />
-        <p style="color:#666;font-size:12px;">This inquiry was sent through ${verticalConfig.name}.</p>
+        <p style="font-size:13px;color:#374151;margin:0 0 8px;line-height:1.5;">
+          You're receiving this because <strong>${listingName}</strong> is listed on ${verticalConfig.name}.
+          <a href="${listingUrl}" style="color:#2563eb;text-decoration:underline;">View your listing →</a>
+        </p>
+        <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.5;">
+          Sent by Smart Website Management, operator of ${verticalConfig.name} (${host}), because your business is listed in our public directory.
+        </p>
       `,
   });
   if (error) {
