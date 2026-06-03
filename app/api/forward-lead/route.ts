@@ -172,16 +172,6 @@ export async function POST(request: NextRequest) {
     }).catch(() => {});
   }
 
-  // CC admin (skip if owner IS admin to avoid duplicate)
-  if (businessEmail !== "terry@doineedapro.com") {
-    await sendInquiryNotification("terry@doineedapro.com", listing.name, {
-      name,
-      email,
-      phone,
-      message,
-    }).catch(() => {});
-  }
-
   return NextResponse.json({
     success: true,
     forwarded: false,

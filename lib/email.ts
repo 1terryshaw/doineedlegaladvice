@@ -69,12 +69,22 @@ export async function sendInquiryNotification(
   listingName: string,
   inquiry: { name: string; email: string; phone?: string; message: string; replyToken?: string }
 ) {
-  try {
-    await getTransporter().sendMail({
-      from: getFromAddress(),
-      to: ownerEmail,
-      subject: `New inquiry for ${listingName} on ${verticalConfig.name}`,
-      html: `
+  // TDL #455 smoke suppression: never dispatch real mail for test traffic.
+  if (/tdl455canary/i.test(inquiry.email || "") || process.env.SMOKE_TEST === "1") {
+    console.log(`[SMOKE] would-send: sendInquiryNotification -> ${ownerEmail} (suppressed)`);
+    return;
+  }
+  // Inquiry forwards go via the system Resend sender, NEVER the personal Gmail account.
+  // Reply-To is the visitor's own address so a reply goes straight to the customer, not us.
+  // The directory name stays as the From display name.
+  const { Resend } = await import("resend");
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const { error } = await resend.emails.send({
+    from: `${verticalConfig.name} <notifications@smartwebsitemanagement.ca>`,
+    to: ownerEmail,
+    replyTo: inquiry.email,
+    subject: `New inquiry for ${listingName} on ${verticalConfig.name}`,
+    html: `
         <h2>New Inquiry for ${listingName}</h2>
         <p><strong>From:</strong> ${inquiry.name} (${inquiry.email}${inquiry.phone ? `, ${inquiry.phone}` : ""})</p>
         <p><strong>Message:</strong></p>
@@ -98,9 +108,9 @@ export async function sendInquiryNotification(
         <hr />
         <p style="color:#666;font-size:12px;">This inquiry was sent through ${verticalConfig.name}.</p>
       `,
-    });
-  } catch (err) {
-    console.error("sendInquiryNotification failed:", err);
-    throw err;
+  });
+  if (error) {
+    console.error("sendInquiryNotification (resend) failed:", error);
+    throw new Error(error.message);
   }
 }
