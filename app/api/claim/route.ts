@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
     const { data: listing, error } = await supabaseAdmin
       .from(LISTINGS_TABLE)
-      .select("id, claimed")
+      .select("id, claimed, name")
       .eq("slug", slug)
       .single();
 
@@ -34,6 +34,32 @@ export async function POST(request: NextRequest) {
         { success: false, error: "already_claimed", userMessage: "This listing has already been claimed." },
         { status: 400 }
       );
+    }
+
+    // TDL #510 P2.2: claim ownership verification — block free-email-domain claims on
+    // corporate/professional-named listings + 72h same-listing cooling-off. Allowlist first;
+    // fail-open on RPC error (don't block legit owners).
+    try {
+      const { data: cv } = await supabaseAdmin.rpc("abuse_claim_verdict", {
+        p_email: email,
+        p_listing_id: String(listing.id),
+        p_listing_name: listing.name,
+      });
+      const verdict = cv as { blocked?: boolean; reason?: string } | null;
+      if (verdict && verdict.blocked) {
+        const userMessage =
+          verdict.reason === "free_email_vs_corporate"
+            ? "This listing looks like a registered business. To claim it, use an email at the business's own domain — or contact support to verify by phone."
+            : verdict.reason === "cooling_off_72h"
+              ? "You recently contacted this listing. For security, claiming is paused for 72 hours after an inquiry. Please try again later, or contact support."
+              : "This claim can't be completed automatically. Please contact support.";
+        return NextResponse.json(
+          { success: false, error: "claim_blocked", reason: verdict.reason, userMessage },
+          { status: 403 }
+        );
+      }
+    } catch (e) {
+      console.error("[abuse] claim verdict failed (fail-open):", e instanceof Error ? e.message : e);
     }
 
     const token = generateToken();

@@ -74,6 +74,30 @@ export async function POST(request: NextRequest) {
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
   const visitorUserAgent = request.headers.get("user-agent") || null;
 
+  // TDL #510 P2.1: anti-abuse gate (legal-cluster shape — two forward paths, no status
+  // disposition). On a verdict hit: store the inquiry as spam_review and forward NOTHING.
+  // Allowlist consulted first; fail-open on RPC error.
+  try {
+    const { data: verdict } = await supabaseAdmin.rpc("abuse_inquiry_verdict", {
+      p_email: email,
+      p_ip: visitorIp,
+      p_message: message,
+    });
+    if (verdict && (verdict as { quarantine?: boolean }).quarantine) {
+      await supabaseAdmin.from(INQUIRIES_TABLE).insert({
+        listing_id: listing.id,
+        name,
+        email,
+        phone: phone || null,
+        message,
+        status: "spam_review",
+      });
+      return NextResponse.json({ success: true, forwarded: false });
+    }
+  } catch (e) {
+    console.error("[abuse] inquiry verdict failed (fail-open):", e instanceof Error ? e.message : e);
+  }
+
   // ── LEAD BOOST+ PATH: forward via Resend + Twilio ──────────────────
   if (can(tier, "lead_forwarding") && businessEmail) {
     const [emailResult, smsResult] = await Promise.allSettled([
