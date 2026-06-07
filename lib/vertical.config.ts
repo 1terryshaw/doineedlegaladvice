@@ -1,7 +1,7 @@
 const verticalConfig = {
   id: "doineedlegaladvice",
   name: "DoINeedLegalAdvice.com",
-  domain: "www.doineedlegaladvice.com",
+  domain: "doineedlegaladvice.com",
   displayDomain: "doineedlegaladvice.com",
   tagline: "Tell us your situation. We'll find the right lawyer.",
   description:
