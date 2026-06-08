@@ -66,19 +66,32 @@ export async function POST(request: NextRequest) {
 
     // Send the verification email FIRST — if it fails we don't leave an
     // orphan owner_auth_token / owner_email on the row.
+    const emailRedacted = String(email).replace(/(.{2}).+(@.+)/, "$1***$2");
+    const emailFailed = NextResponse.json(
+      {
+        success: false,
+        error: "email_send_failed",
+        userMessage:
+          "We're having trouble sending the verification email right now. Please try again in a few minutes.",
+      },
+      { status: 503 }
+    );
     try {
-      await sendClaimEmail(email, slug, token);
-    } catch (emailErr) {
-      console.error("[claim] email send failed:", emailErr instanceof Error ? emailErr.message : emailErr);
-      return NextResponse.json(
-        {
-          success: false,
-          error: "email_send_failed",
-          userMessage:
-            "We're having trouble sending the verification email right now. Please try again in a few minutes.",
-        },
-        { status: 503 }
+      const result = await sendClaimEmail(email, slug, token);
+      if (!result.ok) {
+        console.error(
+          JSON.stringify({ event: "claim_send_error", email_redacted: emailRedacted, slug, err: result.error })
+        );
+        return emailFailed;
+      }
+      console.log(
+        JSON.stringify({ event: "claim_send_ok", email_redacted: emailRedacted, slug, resend_id: result.id })
       );
+    } catch (emailErr) {
+      console.error(
+        JSON.stringify({ event: "claim_send_error", email_redacted: emailRedacted, slug, err: String(emailErr) })
+      );
+      return emailFailed;
     }
 
     const { error: updateError } = await supabaseAdmin

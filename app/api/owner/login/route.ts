@@ -22,11 +22,38 @@ export async function POST(request: NextRequest) {
 
   // Send magic link for the first claimed listing
   const listing = listings[0];
+  const emailRedacted = String(email).replace(/(.{2}).+(@.+)/, "$1***$2");
   try {
-    await sendMagicLink(email, listing.slug, listing.owner_auth_token);
+    const result = await sendMagicLink(email, listing.slug, listing.owner_auth_token);
+    if (result.ok) {
+      console.log(
+        JSON.stringify({
+          event: "owner_login_send_ok",
+          email_redacted: emailRedacted,
+          slug: listing.slug,
+          resend_id: result.id,
+        })
+      );
+    } else {
+      console.error(
+        JSON.stringify({
+          event: "owner_login_send_error",
+          email_redacted: emailRedacted,
+          slug: listing.slug,
+          err: result.error,
+        })
+      );
+    }
   } catch (err) {
-    console.error("Login email failed:", err);
-    return NextResponse.json({ error: "Failed to send email" }, { status: 500 });
+    console.error(
+      JSON.stringify({
+        event: "owner_login_send_error",
+        email_redacted: emailRedacted,
+        slug: listing.slug,
+        err: String(err),
+      })
+    );
   }
+  // Anti-enumeration: behavior to the user is unchanged regardless of send outcome.
   return NextResponse.json({ success: true });
 }

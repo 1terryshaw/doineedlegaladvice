@@ -6,6 +6,12 @@ function getResend(): Resend {
 }
 const FROM_ADDRESS = "notifications@smartwebsitemanagement.ca";
 
+// Transactional auth sender (owner login + claim verification). Distinct from the
+// notifications@ lead/inquiry sender. Migrated off Gmail SMTP — see lib/email.ts.
+const AUTH_FROM = "Smart Website Management <auth@smartwebsitemanagement.ca>";
+
+export type AuthSendResult = { ok: true; id: string } | { ok: false; error: string };
+
 interface LeadEmailData {
   businessName: string;
   businessEmail: string;
@@ -144,5 +150,75 @@ export async function sendInquiryConfirmation(
   } catch (err: any) {
     console.error("Resend exception (inquiry confirmation):", err);
     return { success: false, error: err.message };
+  }
+}
+
+
+/**
+ * Owner-login magic link. Transport-migrated from Gmail SMTP (old lib/email.ts) to
+ * Resend; subject + HTML body preserved verbatim — only the transport changed.
+ * Returns a structured result so callers can log the Resend id and never throw.
+ */
+export async function sendMagicLink(
+  email: string,
+  slug: string,
+  token: string
+): Promise<AuthSendResult> {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const magicLink = `${baseUrl}/api/owner/auth?token=${token}&slug=${slug}`;
+
+  try {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const { data, error } = await resend.emails.send({
+      from: AUTH_FROM,
+      to: email,
+      subject: `Your login link for ${verticalConfig.name}`,
+      html: `
+      <h2>Welcome back to ${verticalConfig.name}</h2>
+      <p>Click the link below to access your listing dashboard:</p>
+      <p><a href="${magicLink}" style="display:inline-block;padding:12px 24px;background:${verticalConfig.primaryColor};color:white;text-decoration:none;border-radius:6px;">Access Dashboard</a></p>
+      <p>Or copy this link: ${magicLink}</p>
+      <p>This link will log you in and is valid for 30 days.</p>
+      <p style="color:#666;font-size:12px;">If you didn't request this, you can safely ignore this email.</p>
+    `,
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, id: data?.id ?? "" };
+  } catch (err: any) {
+    return { ok: false, error: err?.message ?? String(err) };
+  }
+}
+
+/**
+ * Claim-verification email. Transport-migrated from Gmail SMTP (old lib/email.ts) to
+ * Resend; subject + HTML body + the /api/claim/verify link convention preserved verbatim.
+ * Returns a structured result so callers can log the Resend id and never throw.
+ */
+export async function sendClaimEmail(
+  email: string,
+  slug: string,
+  claimToken: string
+): Promise<AuthSendResult> {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const verifyLink = `${baseUrl}/api/claim/verify?token=${claimToken}&slug=${slug}`;
+
+  try {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const { data, error } = await resend.emails.send({
+      from: AUTH_FROM,
+      to: email,
+      subject: `Verify your claim on ${verticalConfig.name}`,
+      html: `
+      <h2>Claim Your Listing on ${verticalConfig.name}</h2>
+      <p>Click the link below to verify your ownership claim:</p>
+      <p><a href="${verifyLink}" style="display:inline-block;padding:12px 24px;background:${verticalConfig.primaryColor};color:white;text-decoration:none;border-radius:6px;">Verify Claim</a></p>
+      <p>Or copy this link: ${verifyLink}</p>
+      <p style="color:#666;font-size:12px;">If you didn't request this, you can safely ignore this email.</p>
+    `,
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, id: data?.id ?? "" };
+  } catch (err: any) {
+    return { ok: false, error: err?.message ?? String(err) };
   }
 }

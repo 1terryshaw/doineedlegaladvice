@@ -1,67 +1,27 @@
-import nodemailer from "nodemailer";
 import verticalConfig from "@/lib/vertical.config";
+import {
+  sendMagicLink as sendMagicLinkResend,
+  sendClaimEmail as sendClaimEmailResend,
+  type AuthSendResult,
+} from "@/lib/resend";
 
-function getTransporter() {
-  return nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_APP_PASSWORD,
-    },
-  });
+// Auth transactional email (owner login + claim verification) migrated off Gmail
+// SMTP to Resend (auth@smartwebsitemanagement.ca). These exports are thin delegates
+// to lib/resend.ts so existing call sites keep importing from @/lib/email.
+export async function sendMagicLink(
+  email: string,
+  slug: string,
+  token: string
+): Promise<AuthSendResult> {
+  return sendMagicLinkResend(email, slug, token);
 }
 
-function getFromAddress() {
-  return `"${verticalConfig.name}" <${process.env.GMAIL_USER}>`;
-}
-
-export async function sendMagicLink(email: string, slug: string, token: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  const magicLink = `${baseUrl}/api/owner/auth?token=${token}&slug=${slug}`;
-
-  try {
-    await getTransporter().sendMail({
-      from: getFromAddress(),
-      to: email,
-      subject: `Your login link for ${verticalConfig.name}`,
-      html: `
-        <h2>Welcome back to ${verticalConfig.name}</h2>
-        <p>Click the link below to access your listing dashboard:</p>
-        <p><a href="${magicLink}" style="display:inline-block;padding:12px 24px;background:${verticalConfig.primaryColor};color:white;text-decoration:none;border-radius:6px;">Access Dashboard</a></p>
-        <p>Or copy this link: ${magicLink}</p>
-        <p>This link will log you in and is valid for 30 days.</p>
-        <p style="color:#666;font-size:12px;">If you didn't request this, you can safely ignore this email.</p>
-      `,
-    });
-  } catch (err) {
-    console.error("sendMagicLink failed:", err);
-    throw err;
-  }
-}
-
-export async function sendClaimEmail(email: string, slug: string, token: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  const verifyLink = `${baseUrl}/api/claim/verify?token=${token}&slug=${slug}`;
-
-  try {
-    await getTransporter().sendMail({
-      from: getFromAddress(),
-      to: email,
-      subject: `Verify your claim on ${verticalConfig.name}`,
-      html: `
-        <h2>Claim Your Listing on ${verticalConfig.name}</h2>
-        <p>Click the link below to verify your ownership claim:</p>
-        <p><a href="${verifyLink}" style="display:inline-block;padding:12px 24px;background:${verticalConfig.primaryColor};color:white;text-decoration:none;border-radius:6px;">Verify Claim</a></p>
-        <p>Or copy this link: ${verifyLink}</p>
-        <p style="color:#666;font-size:12px;">If you didn't request this, you can safely ignore this email.</p>
-      `,
-    });
-  } catch (err) {
-    console.error("sendClaimEmail failed:", err);
-    throw err;
-  }
+export async function sendClaimEmail(
+  email: string,
+  slug: string,
+  token: string
+): Promise<AuthSendResult> {
+  return sendClaimEmailResend(email, slug, token);
 }
 
 export async function sendInquiryNotification(
