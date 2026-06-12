@@ -97,6 +97,7 @@ export async function getListings(regionSlug?: string): Promise<Listing[]> {
       .from(LISTINGS_TABLE)
       .select("*")
       .eq("country", verticalConfig.defaultCountry)
+      .neq("is_published", false)
       .order("tier_priority", { ascending: false, nullsFirst: false })
       .order("featured", { ascending: false })
       .order("google_rating", { ascending: false, nullsFirst: false })
@@ -130,6 +131,7 @@ export async function getFilteredListings(filters: ListingFilters): Promise<List
       .from(LISTINGS_TABLE)
       .select("*")
       .eq("country", verticalConfig.defaultCountry)
+      .neq("is_published", false)
       .order("tier_priority", { ascending: false, nullsFirst: false })
       .order("featured", { ascending: false })
       .order("google_rating", { ascending: false, nullsFirst: false })
@@ -164,6 +166,7 @@ export async function getListingsByCity(provinceCode: string, citySlug: string):
       .from(LISTINGS_TABLE)
       .select("*")
       .eq("country", verticalConfig.defaultCountry)
+      .neq("is_published", false)
       .eq("province_state", provinceCode.toUpperCase())
       .eq("region_slug", citySlug)
       .order("tier_priority", { ascending: false, nullsFirst: false })
@@ -179,6 +182,7 @@ export async function getListing(slug: string): Promise<Listing | null> {
     .from(LISTINGS_TABLE)
     .select("*")
     .eq("country", verticalConfig.defaultCountry)
+    .neq("is_published", false)
     .eq("slug", slug)
     .single();
 
@@ -199,7 +203,7 @@ export async function getAllListingsForSitemap(regionSlug?: string): Promise<Lis
     let query = supabaseAdmin
       .from(LISTINGS_TABLE)
       .select("*")
-      .eq("country", verticalConfig.defaultCountry);
+      .eq("country", verticalConfig.defaultCountry).neq("is_published", false);
     if (regionSlug) {
       query = query.eq("region_slug", regionSlug);
     }
@@ -214,7 +218,7 @@ export async function getListingsCount(): Promise<number> {
   const { count, error } = await supabaseAdmin
     .from(LISTINGS_TABLE)
     .select("id", { count: "exact", head: true })
-    .eq("country", verticalConfig.defaultCountry);
+    .eq("country", verticalConfig.defaultCountry).neq("is_published", false);
   if (error) {
     console.error("getListingsCount error:", error);
     return 0;
@@ -240,6 +244,7 @@ export async function getListingsRange(
       .from(LISTINGS_TABLE)
       .select("slug, updated_at, created_at")
       .eq("country", verticalConfig.defaultCountry)
+      .neq("is_published", false)
       .order("slug", { ascending: true })
       .range(from, to);
     if (error) {
@@ -264,6 +269,7 @@ export async function getActiveLicenseStates(): Promise<string[]> {
       .from(LISTINGS_TABLE)
       .select("license_state")
       .eq("country", verticalConfig.defaultCountry)
+      .neq("is_published", false)
       .not("license_state", "is", null) as unknown as PromiseLike<{
         data: { license_state: string | null }[] | null;
         error: unknown;
@@ -293,6 +299,7 @@ export async function getCityPageSlugs(): Promise<
       .from(LISTINGS_TABLE)
       .select("province_state, region_slug")
       .eq("country", verticalConfig.defaultCountry)
+      .neq("is_published", false)
       .not("province_state", "is", null)
       .not("region_slug", "is", null) as unknown as PromiseLike<{
         data: { province_state: string | null; region_slug: string | null }[] | null;
@@ -319,7 +326,7 @@ export async function getFilteredListingsCount(filters: ListingFilters): Promise
   let query = supabaseAdmin
     .from(LISTINGS_TABLE)
     .select("id", { count: "exact", head: true })
-    .eq("country", verticalConfig.defaultCountry);
+    .eq("country", verticalConfig.defaultCountry).neq("is_published", false);
   if (filters.region) {
     if (filters.region.length === 2) {
       query = query.eq("license_state", filters.region.toUpperCase());
@@ -379,6 +386,7 @@ export async function getDirectoryRegions(): Promise<DirectoryRegion[]> {
       .from(`mv_${LISTINGS_TABLE}_cities`)
       .select("province_state, city")
       .in("country", ["CA", "US"])
+      .neq("is_published", false)
       .in("province_state", CANONICAL_PROVINCE_CODES)
       .not("city", "is", null)
       .neq("city", "") as unknown as PromiseLike<{
