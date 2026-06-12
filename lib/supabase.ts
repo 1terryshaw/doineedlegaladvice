@@ -100,7 +100,7 @@ export async function getListings(regionSlug?: string): Promise<Listing[]> {
       .order("tier_priority", { ascending: false, nullsFirst: false })
       .order("featured", { ascending: false })
       .order("google_rating", { ascending: false, nullsFirst: false })
-      .order("name", { ascending: true }).limit(200);
+      .order("name_sortkey", { ascending: true }).limit(200);
 
     if (regionSlug) {
       // TDL #458: state pages partition by license_state (bar-of-record), NOT
@@ -133,7 +133,7 @@ export async function getFilteredListings(filters: ListingFilters): Promise<List
       .order("tier_priority", { ascending: false, nullsFirst: false })
       .order("featured", { ascending: false })
       .order("google_rating", { ascending: false, nullsFirst: false })
-      .order("name", { ascending: true }).limit(200);
+      .order("name_sortkey", { ascending: true }).limit(200);
 
     if (filters.region) {
       // TDL #458: bar-of-record via license_state, not state_province.
@@ -169,7 +169,7 @@ export async function getListingsByCity(provinceCode: string, citySlug: string):
       .order("tier_priority", { ascending: false, nullsFirst: false })
       .order("featured", { ascending: false })
       .order("google_rating", { ascending: false, nullsFirst: false })
-      .order("name", { ascending: true }).limit(200);
+      .order("name_sortkey", { ascending: true }).limit(200);
     return query as unknown as PromiseLike<{ data: Listing[] | null; error: unknown }>;
   }, { maxRows: USER_PAGE_MAX_ROWS });
 }
