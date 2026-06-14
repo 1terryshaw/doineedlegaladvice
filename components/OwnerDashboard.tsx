@@ -182,7 +182,7 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot }: { li
             <div className="bg-white/60 rounded-md p-4 text-xs text-gray-600 border border-purple-200">
               <p className="font-semibold text-purple-900 mb-1">What&apos;s a SiteForge website?</p>
               <p>A full professional site generated for your business — services, gallery,
-                contact form, Google reviews embed — delivered in 7 days. Your existing
+                contact form — delivered in 7 days. Your existing
                 website stays untouched.</p>
             </div>
           </div>

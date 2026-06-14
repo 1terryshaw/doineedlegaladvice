@@ -99,7 +99,6 @@ export const TIERS: Record<TierId, Tier> = {
       'SiteForge-built website at your domain',
       'Mobile-optimized, fast-loading',
       'Click-to-call header',
-      'Live Google reviews integration on your site',
       'Service pricing sections',
     ],
     expandedFeatures: [
