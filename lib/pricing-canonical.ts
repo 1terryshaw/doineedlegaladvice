@@ -70,7 +70,6 @@ export const TIERS: Record<TierId, Tier> = {
     visibleFeatures: [
       '"Featured" badge (vs Verified)',
       'Up to 10 photos + hero cover image',
-      'Your 3 most recent 5-star Google reviews displayed in full',
       'Top-of-browse placement in directory search',
       'Listing health score in your dashboard',
       '"Welcome to Reviews Plus" PDF playbook',
