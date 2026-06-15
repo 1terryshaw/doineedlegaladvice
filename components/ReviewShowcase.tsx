@@ -40,8 +40,10 @@ export default async function ReviewShowcase({
     .eq('google_place_id', googlePlaceId)
     .single();
 
-  // Fallback to bare rating if no cache yet
-  if (!cache || !cache.top_reviews || cache.top_reviews.length === 0) {
+  // Fallback to bare rating if no cache yet, or the cached row has expired.
+  // Legacy pre-#594 rows are kept as a forensic record but must not render once expired.
+  if (!cache || !cache.top_reviews || cache.top_reviews.length === 0 ||
+      (cache.expires_at && new Date(cache.expires_at) < new Date())) {
     return (
       <div className="flex items-center gap-2 text-sm">
         <span className="text-yellow-500">{'★'.repeat(Math.round(fallbackRating || 5))}</span>
