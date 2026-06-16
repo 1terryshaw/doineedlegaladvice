@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
-import { getTierByPriceId } from "@/lib/pricing";
+import { getTierByPriceId } from "@/lib/pricing-canonical";
 import Stripe from "stripe";
 
 export async function POST(request: NextRequest) {
@@ -37,8 +37,8 @@ export async function POST(request: NextRequest) {
           .update({
             stripe_customer_id: session.customer as string,
             stripe_subscription_id: session.subscription as string,
-            tier: matchedTier?.slug || "claimed",
-            subscription_tier: matchedTier?.slug || "free",
+            tier: matchedTier?.id || "claimed",
+            subscription_tier: matchedTier?.id || "free",
             updated_at: new Date().toISOString(),
           })
           .eq("slug", listingSlug);
@@ -52,8 +52,8 @@ export async function POST(request: NextRequest) {
       await supabaseAdmin
         .from(LISTINGS_TABLE)
         .update({
-          tier: tier?.slug || null,
-          subscription_tier: tier?.slug || "free",
+          tier: tier?.id || null,
+          subscription_tier: tier?.id || "free",
           updated_at: new Date().toISOString(),
         })
         .eq("stripe_subscription_id", subscription.id);

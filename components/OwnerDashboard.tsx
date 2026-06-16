@@ -6,6 +6,7 @@ import Link from "next/link";
 import verticalConfig from "@/lib/vertical.config";
 import { Listing } from "@/lib/supabase";
 import { can, getTierDisplayName, getNextTier, TierSlug } from "@/lib/tier-capabilities";
+import { TIERS } from "@/lib/pricing-canonical";
 import UpgradeReturnRefresher from "./UpgradeReturnRefresher";
 
 // Type-erase config for fields that only some verticals define
@@ -35,10 +36,10 @@ function tierPillStyle(tier: string): TierPillColors {
 }
 
 function formatPrice(tier: TierSlug | null): string {
-  if (tier === "reviews_plus") return "$9 USD/mo";
-  if (tier === "website") return "$29 USD/mo";
-  if (tier === "growth") return "$97 USD/mo";
-  return "";
+  const t = tier === "reviews_plus" || tier === "website" || tier === "growth"
+    ? TIERS[tier]
+    : null;
+  return t ? `$${t.priceMonthlyUSD} USD/mo` : "";
 }
 
 export default function OwnerDashboard({ listing, reviewSlot, healthSlot }: { listing: Listing; reviewSlot?: ReactNode; healthSlot?: ReactNode }) {
@@ -146,14 +147,11 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot }: { li
       {(tier === "free" || tier === "seed") && (
         <div className="border-2 border-blue-300 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6">
           <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Upgrade</p>
-          <h2 className="text-xl font-bold mt-1">Unlock Reviews Plus — $9 USD/mo</h2>
+          <h2 className="text-xl font-bold mt-1">Unlock Reviews Plus — ${TIERS.reviews_plus.priceMonthlyUSD} USD/mo</h2>
           <ul className="mt-3 space-y-1.5 text-sm text-gray-700">
-            <li>✓ Leads forwarded to you via email + SMS within seconds</li>
-            <li>✓ Full Google review display on your listing</li>
-            <li>✓ Priority placement in search results</li>
-            <li>✓ Cross-referral visibility across our network</li>
-            <li>✓ AI-powered review response drafts</li>
-            <li>✓ Automatic review request sequence</li>
+            {TIERS.reviews_plus.visibleFeatures.map((f, i) => (
+              <li key={i}>✓ {f}</li>
+            ))}
           </ul>
           <Link
             href={`/directory/${listing.slug}?upgrade=true`}
@@ -169,15 +167,12 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot }: { li
       {tier === "reviews_plus" && (
         <div className="border-2 border-purple-300 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-6">
           <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Upgrade</p>
-          <h2 className="text-xl font-bold mt-1">Unlock Website tier — $29 USD/mo</h2>
+          <h2 className="text-xl font-bold mt-1">Unlock Website tier — ${TIERS.website.priceMonthlyUSD} USD/mo</h2>
           <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
             <ul className="space-y-1.5 text-sm text-gray-700">
-              <li>✓ Everything in Reviews Plus</li>
-              <li>✓ Professional SiteForge website</li>
-              <li>✓ Featured badge on listing + homepage</li>
-              <li>✓ Priority placement in search</li>
-              <li>✓ Photo gallery up to 20 images</li>
-              <li>✓ Analytics dashboard</li>
+              {TIERS.website.visibleFeatures.map((f, i) => (
+                <li key={i}>✓ {f}</li>
+              ))}
             </ul>
             <div className="bg-white/60 rounded-md p-4 text-xs text-gray-600 border border-purple-200">
               <p className="font-semibold text-purple-900 mb-1">What&apos;s a SiteForge website?</p>
@@ -200,12 +195,11 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot }: { li
       {tier === "website" && (
         <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-lg p-5 mt-4">
           <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Upgrade</p>
-          <h2 className="text-xl font-bold mt-1">Unlock Growth tier — $97 USD/mo</h2>
+          <h2 className="text-xl font-bold mt-1">Unlock Growth tier — ${TIERS.growth.priceMonthlyUSD} USD/mo</h2>
           <ul className="mt-3 space-y-1 text-sm text-gray-700">
-            <li>✓ Everything in Website</li>
-            <li>✓ Monthly blog post published for you</li>
-            <li>✓ Review response drafts</li>
-            <li>✓ Priority support + custom domain</li>
+            {TIERS.growth.visibleFeatures.map((f, i) => (
+              <li key={i}>✓ {f}</li>
+            ))}
           </ul>
           <Link
             href={`/directory/${listing.slug}?upgrade=true`}
