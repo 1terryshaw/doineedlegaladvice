@@ -5,9 +5,9 @@ export default function LegalDisclaimer() {
         &#9888;&#65039;
       </span>
       <p className="text-sm text-amber-800">
-        <strong>Disclaimer:</strong> FreeLawyerAdvice.ca provides general legal information only.
-        This is not legal advice and does not create a lawyer-client relationship. Always consult
-        with a qualified lawyer for advice specific to your situation.
+        <strong>Disclaimer:</strong> DoINeedLegalAdvice.com provides general legal information only.
+        This is not legal advice and does not create an attorney-client relationship. Always consult
+        with a qualified attorney for advice specific to your situation.
       </p>
     </div>
   );

@@ -22,6 +22,8 @@ const SUBTITLE_BY_VERTICAL: Record<string, string> = {
   dentist: "Find a dentist in your area",
   chiropractor: "Find a chiropractor in your area",
   caterer_: "Find a caterer in your area",
+  legal: "Find a lawyer in your area",
+  lawyer: "Find a lawyer in your area",
 };
 
 export default function BrowseByArea({
