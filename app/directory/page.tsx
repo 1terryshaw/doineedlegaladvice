@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import verticalConfig from "@/lib/vertical.config";
 import { getFilteredListings , getFilteredListingsCount, getDirectoryRegions, type DirectoryRegion } from "@/lib/supabase";
+import { getUkCounties, getUkAllTownHubs } from "@/lib/uk-solicitors";
 import { LISTING_TYPES, REGIONS, formatCount } from "@/lib/constants";
 import ListingCard from "@/components/ListingCard";
 import SearchBar from "@/components/SearchBar";
@@ -36,6 +37,26 @@ export default async function DirectoryPage({
     console.error("getDirectoryRegions failed; falling back:", err);
   }
 
+  // UK cascade options — same is_published-gated views the /uk/ pages use, so every
+  // option resolves to a live page. Fail-open: on error the UK optgroup just won't show.
+  let ukCounties: { slug: string; name: string; count: number }[] = [];
+  let ukTowns: { countySlug: string; slug: string; name: string }[] = [];
+  try {
+    const [counties, townHubs] = await Promise.all([getUkCounties(), getUkAllTownHubs()]);
+    ukCounties = counties.map((c) => ({
+      slug: c.county_slug,
+      name: c.county,
+      count: Number(c.firm_count),
+    }));
+    ukTowns = townHubs.map((t) => ({
+      countySlug: t.county_slug,
+      slug: t.town_slug,
+      name: t.town,
+    }));
+  } catch (err) {
+    console.error("UK cascade geo fetch failed (UK optgroup hidden):", err);
+  }
+
   // Cards capped at 200; totalCount is the real DB count for honest display (#3).
   const [listings, totalCount] = await Promise.all([
     getFilteredListings({ q, listing_type, region, city: cityFilter }),
@@ -57,7 +78,7 @@ export default async function DirectoryPage({
       </div>
 
       <div className="mb-6">
-        <SearchBar variant="directory" defaultQ={q} defaultType={listing_type} defaultRegion={region} defaultCity={cityFilter} regions={runtimeRegions.length > 0 ? runtimeRegions : undefined} />
+        <SearchBar variant="directory" defaultQ={q} defaultType={listing_type} defaultRegion={region} defaultCity={cityFilter} regions={runtimeRegions.length > 0 ? runtimeRegions : undefined} ukCounties={ukCounties.length > 0 ? ukCounties : undefined} ukTowns={ukTowns.length > 0 ? ukTowns : undefined} />
       </div>
 
       <p className="text-gray-600 mb-4">
