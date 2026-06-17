@@ -2,6 +2,7 @@ import Link from "next/link";
 import verticalConfig from "@/lib/vertical.config";
 import { REGIONS } from "@/lib/constants";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
+import FooterTagline from "@/components/FooterTagline";
 import ShareButtons from "@/components/pizzazz/ShareButtons";
 
 export default function Footer() {
@@ -15,7 +16,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
             <h3 className="text-white font-bold text-lg mb-4">{verticalConfig.name}</h3>
-            <p className="text-sm">{verticalConfig.description}</p>
+            <p className="text-sm"><FooterTagline /></p>
           </div>
           <div>
             <h4 className="text-white font-semibold mb-4">Regions</h4>
