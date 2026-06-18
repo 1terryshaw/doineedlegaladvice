@@ -1,4 +1,5 @@
 import verticalConfig from "@/lib/vertical.config";
+import { regionCountryLabel } from "@/lib/region-scope";
 
 /**
  * Production canonical site URL. Reads NEXT_PUBLIC_BASE_URL env override first
@@ -70,15 +71,41 @@ export function websiteSearchSchema() {
 }
 
 /**
- * BreadcrumbList for region pages (F-α.1b Step 3). Home → {region}.
+ * BreadcrumbList for region pages. Home → {Country} → {region}. Country crumb
+ * (us+ca consolidation) derived from the region code so US pages read "United
+ * States" and CA pages "Canada"; the country crumb links to /directory (us+ca).
  */
 export function regionBreadcrumbSchema(regionSlug: string, regionName: string) {
+  const country = regionCountryLabel(regionSlug);
   return {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
-      { "@type": "ListItem", position: 2, name: regionName, item: `${SITE_URL}/${regionSlug}` },
+      { "@type": "ListItem", position: 2, name: country, item: `${SITE_URL}/directory` },
+      { "@type": "ListItem", position: 3, name: regionName, item: `${SITE_URL}/${regionSlug}` },
+    ],
+  };
+}
+
+/**
+ * BreadcrumbList for city pages. Home → {Country} → {region} → {city}.
+ */
+export function cityBreadcrumbSchema(
+  regionSlug: string,
+  regionName: string,
+  citySlug: string,
+  cityName: string,
+) {
+  const country = regionCountryLabel(regionSlug);
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+      { "@type": "ListItem", position: 2, name: country, item: `${SITE_URL}/directory` },
+      { "@type": "ListItem", position: 3, name: regionName, item: `${SITE_URL}/${regionSlug}` },
+      { "@type": "ListItem", position: 4, name: cityName, item: `${SITE_URL}/${regionSlug}/${citySlug}` },
     ],
   };
 }

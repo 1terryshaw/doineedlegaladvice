@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import verticalConfig from "@/lib/vertical.config";
+import { resolveRegionScope, DIRECTORY_COUNTRIES } from "@/lib/region-scope";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -96,22 +97,26 @@ export async function getListings(regionSlug?: string): Promise<Listing[]> {
     let query = supabaseAdmin
       .from(LISTINGS_TABLE)
       .select("*")
-      .eq("country", verticalConfig.defaultCountry)
       .neq("is_published", false)
       .order("tier_priority", { ascending: false, nullsFirst: false })
       .order("featured", { ascending: false })
       .order("google_rating", { ascending: false, nullsFirst: false })
       .order("name_sortkey", { ascending: true }).limit(200);
 
-    if (regionSlug) {
-      // TDL #458: state pages partition by license_state (bar-of-record), NOT
-      // state_province (physical location, ~all null for bar rows) — see #452.
-      // Two-letter slug → license_state match. Longer slugs → legacy `region`.
-      if (regionSlug.length === 2) {
-        query = query.eq("license_state", regionSlug.toUpperCase());
-      } else {
-        query = query.eq("region", regionSlug);
-      }
+    // US+CA (us+ca consolidation): derive country + region column from the
+    // disjoint region code. US -> license_state (bar-of-record, TDL #458);
+    // CA -> province_state (CA rows carry no license_state). No region ->
+    // browse both countries (D1). Longer slugs keep the legacy `region` column.
+    if (regionSlug && regionSlug.length === 2) {
+      const scope = resolveRegionScope(regionSlug);
+      const code = regionSlug.toUpperCase();
+      query = scope
+        ? query.eq("country", scope.country).eq(scope.column, code)
+        : query.in("country", DIRECTORY_COUNTRIES).eq("license_state", code);
+    } else if (regionSlug) {
+      query = query.in("country", DIRECTORY_COUNTRIES).eq("region", regionSlug);
+    } else {
+      query = query.in("country", DIRECTORY_COUNTRIES);
     }
 
     return query as unknown as PromiseLike<{ data: Listing[] | null; error: unknown }>;
@@ -130,20 +135,24 @@ export async function getFilteredListings(filters: ListingFilters): Promise<List
     let query = supabaseAdmin
       .from(LISTINGS_TABLE)
       .select("*")
-      .eq("country", verticalConfig.defaultCountry)
       .neq("is_published", false)
       .order("tier_priority", { ascending: false, nullsFirst: false })
       .order("featured", { ascending: false })
       .order("google_rating", { ascending: false, nullsFirst: false })
       .order("name_sortkey", { ascending: true }).limit(200);
 
-    if (filters.region) {
-      // TDL #458: bar-of-record via license_state, not state_province.
-      if (filters.region.length === 2) {
-        query = query.eq("license_state", filters.region.toUpperCase());
-      } else {
-        query = query.eq("region", filters.region);
-      }
+    // US+CA: country + region column derived from the disjoint region code
+    // (US -> license_state, CA -> province_state). No region -> both countries.
+    if (filters.region && filters.region.length === 2) {
+      const scope = resolveRegionScope(filters.region);
+      const code = filters.region.toUpperCase();
+      query = scope
+        ? query.eq("country", scope.country).eq(scope.column, code)
+        : query.in("country", DIRECTORY_COUNTRIES).eq("license_state", code);
+    } else if (filters.region) {
+      query = query.in("country", DIRECTORY_COUNTRIES).eq("region", filters.region);
+    } else {
+      query = query.in("country", DIRECTORY_COUNTRIES);
     }
     if (filters.listing_type) {
       query = query.eq("listing_type", filters.listing_type);
@@ -165,7 +174,9 @@ export async function getListingsByCity(provinceCode: string, citySlug: string):
     const query = supabaseAdmin
       .from(LISTINGS_TABLE)
       .select("*")
-      .eq("country", verticalConfig.defaultCountry)
+      // US+CA: city pages key on province_state for both countries; country is
+      // derived from the province code (CA province -> CA, US state -> US).
+      .eq("country", resolveRegionScope(provinceCode)?.country ?? "US")
       .neq("is_published", false)
       .eq("province_state", provinceCode.toUpperCase())
       .eq("region_slug", citySlug)
@@ -181,7 +192,8 @@ export async function getListing(slug: string): Promise<Listing | null> {
   const { data, error } = await supabaseAdmin
     .from(LISTINGS_TABLE)
     .select("*")
-    .eq("country", verticalConfig.defaultCountry)
+    // US+CA: slug is globally unique, so match by slug across both countries —
+    // this is what lets CA listing detail pages (the CTA card target) resolve.
     .neq("is_published", false)
     .eq("slug", slug)
     .single();
@@ -203,7 +215,7 @@ export async function getAllListingsForSitemap(regionSlug?: string): Promise<Lis
     let query = supabaseAdmin
       .from(LISTINGS_TABLE)
       .select("*")
-      .eq("country", verticalConfig.defaultCountry).neq("is_published", false);
+      .in("country", DIRECTORY_COUNTRIES).neq("is_published", false);
     if (regionSlug) {
       query = query.eq("region_slug", regionSlug);
     }
@@ -218,7 +230,7 @@ export async function getListingsCount(): Promise<number> {
   const { count, error } = await supabaseAdmin
     .from(LISTINGS_TABLE)
     .select("id", { count: "exact", head: true })
-    .eq("country", verticalConfig.defaultCountry).neq("is_published", false);
+    .in("country", DIRECTORY_COUNTRIES).neq("is_published", false);
   if (error) {
     console.error("getListingsCount error:", error);
     return 0;
@@ -243,7 +255,7 @@ export async function getListingsRange(
     const { data, error } = await supabaseAdmin
       .from(LISTINGS_TABLE)
       .select("slug, updated_at, created_at")
-      .eq("country", verticalConfig.defaultCountry)
+      .in("country", DIRECTORY_COUNTRIES)
       .neq("is_published", false)
       .order("slug", { ascending: true })
       .range(from, to);
@@ -268,7 +280,7 @@ export async function getActiveLicenseStates(): Promise<string[]> {
     return supabaseAdmin
       .from(LISTINGS_TABLE)
       .select("license_state")
-      .eq("country", verticalConfig.defaultCountry)
+      .eq("country", "US")
       .neq("is_published", false)
       .not("license_state", "is", null) as unknown as PromiseLike<{
         data: { license_state: string | null }[] | null;
@@ -278,6 +290,29 @@ export async function getActiveLicenseStates(): Promise<string[]> {
   const set = new Set<string>();
   for (const r of rows) {
     if (r.license_state) set.add(r.license_state.toUpperCase());
+  }
+  return Array.from(set).sort();
+}
+
+// CA region pages partition by province_state (CA rows have no license_state).
+// Distinct province_state present in the consumer-visible CA set — drives the
+// CA /{province} sitemap entries, only for provinces with rows (criterion #3:
+// no 404 URLs in the sitemap). Self-maintaining as CA rows load.
+export async function getActiveProvincesCA(): Promise<string[]> {
+  const rows = await paginateAll<{ province_state: string | null }>(() => {
+    return supabaseAdmin
+      .from(LISTINGS_TABLE)
+      .select("province_state")
+      .eq("country", "CA")
+      .neq("is_published", false)
+      .not("province_state", "is", null) as unknown as PromiseLike<{
+        data: { province_state: string | null }[] | null;
+        error: unknown;
+      }>;
+  });
+  const set = new Set<string>();
+  for (const r of rows) {
+    if (r.province_state) set.add(r.province_state.toUpperCase());
   }
   return Array.from(set).sort();
 }
@@ -298,7 +333,7 @@ export async function getCityPageSlugs(): Promise<
     return supabaseAdmin
       .from(LISTINGS_TABLE)
       .select("province_state, region_slug")
-      .eq("country", verticalConfig.defaultCountry)
+      .in("country", DIRECTORY_COUNTRIES)
       .neq("is_published", false)
       .not("province_state", "is", null)
       .not("region_slug", "is", null) as unknown as PromiseLike<{
@@ -326,13 +361,19 @@ export async function getFilteredListingsCount(filters: ListingFilters): Promise
   let query = supabaseAdmin
     .from(LISTINGS_TABLE)
     .select("id", { count: "exact", head: true })
-    .eq("country", verticalConfig.defaultCountry).neq("is_published", false);
-  if (filters.region) {
-    if (filters.region.length === 2) {
-      query = query.eq("license_state", filters.region.toUpperCase());
-    } else {
-      query = query.eq("region", filters.region);
-    }
+    .neq("is_published", false);
+  // US+CA: mirrors getFilteredListings' country/region resolution exactly so the
+  // displayed total matches the rendered set.
+  if (filters.region && filters.region.length === 2) {
+    const scope = resolveRegionScope(filters.region);
+    const code = filters.region.toUpperCase();
+    query = scope
+      ? query.eq("country", scope.country).eq(scope.column, code)
+      : query.in("country", DIRECTORY_COUNTRIES).eq("license_state", code);
+  } else if (filters.region) {
+    query = query.in("country", DIRECTORY_COUNTRIES).eq("region", filters.region);
+  } else {
+    query = query.in("country", DIRECTORY_COUNTRIES);
   }
   if (filters.listing_type) {
     query = query.eq("listing_type", filters.listing_type);

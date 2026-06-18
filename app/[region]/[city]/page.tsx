@@ -5,6 +5,7 @@ import { getCityBySlug, CITIES, PROVINCES } from "@/lib/constants";
 import ListingCard from "@/components/ListingCard";
 import verticalConfig from "@/lib/vertical.config";
 import ShareButtons from "@/components/pizzazz/ShareButtons";
+import { cityBreadcrumbSchema } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,14 @@ export default async function CityPage({ params }: Props) {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            cityBreadcrumbSchema(region, provinceName, city, cityData.name)
+          ),
+        }}
+      />
       <h1 className="text-3xl font-bold mb-2">
         Professionals in {cityData.name}
       </h1>

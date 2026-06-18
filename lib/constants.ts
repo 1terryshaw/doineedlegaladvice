@@ -60,6 +60,21 @@ export const REGIONS = [
   { name: "Wisconsin", slug: "wi", province: "WI" },
   { name: "Wyoming", slug: "wy", province: "WY" },
   { name: "District of Columbia", slug: "dc", province: "DC" },
+  // CA provinces (us+ca consolidation 2026-06-17). Routable /[region] pages; the
+  // data layer resolves CA codes to country='CA' + province_state via region-scope.
+  { name: "Alberta", slug: "ab", province: "AB" },
+  { name: "British Columbia", slug: "bc", province: "BC" },
+  { name: "Manitoba", slug: "mb", province: "MB" },
+  { name: "New Brunswick", slug: "nb", province: "NB" },
+  { name: "Newfoundland and Labrador", slug: "nl", province: "NL" },
+  { name: "Nova Scotia", slug: "ns", province: "NS" },
+  { name: "Northwest Territories", slug: "nt", province: "NT" },
+  { name: "Nunavut", slug: "nu", province: "NU" },
+  { name: "Ontario", slug: "on", province: "ON" },
+  { name: "Prince Edward Island", slug: "pe", province: "PE" },
+  { name: "Quebec", slug: "qc", province: "QC" },
+  { name: "Saskatchewan", slug: "sk", province: "SK" },
+  { name: "Yukon", slug: "yt", province: "YT" },
 ];
 
 export const US_CITIES = [

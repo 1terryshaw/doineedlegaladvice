@@ -1,9 +1,18 @@
 // TDL #457: chunked sitemap-index. Replaces the flat app/sitemap.ts that
 // select("*")'d ~194K rows and timed out. Children are served by
-// app/sitemap/[id]/route.ts. CHUNK_SIZE / STATIC_ENTRIES / active-state
-// region count MUST stay in lockstep with that file so chunk math agrees.
+// app/sitemap/[id]/route.ts. CHUNK_SIZE / STATIC_PATH_COUNT / region-header
+// count MUST stay in lockstep with that file so chunk math agrees.
+//
+// us+ca consolidation 2026-06-17: region headers = US active license_states
+// (REGIONS-filtered) + CA active provinces (REGIONS-filtered); listing
+// enumeration spans both countries via getListingsCount.
 import verticalConfig from "@/lib/vertical.config";
-import { getListingsCount, getActiveLicenseStates } from "@/lib/supabase";
+import { REGIONS } from "@/lib/constants";
+import {
+  getListingsCount,
+  getActiveLicenseStates,
+  getActiveProvincesCA,
+} from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -17,13 +26,21 @@ export async function GET() {
   const baseUrl =
     process.env.NEXT_PUBLIC_BASE_URL || `https://${verticalConfig.domain}`;
 
-  const [listingCount, activeStates] = await Promise.all([
+  const [listingCount, activeStates, activeProvincesCA] = await Promise.all([
     getListingsCount(),
     getActiveLicenseStates(),
+    getActiveProvincesCA(),
   ]);
 
-  // chunk 0 carries the static + region (one per active license_state) headers.
-  const headers = STATIC_PATH_COUNT + activeStates.length;
+  // Region-page headers — MUST match app/sitemap/[id]/route.ts exactly. US
+  // regions resolve via license_state→REGIONS; CA regions via province→REGIONS.
+  const usRegions = REGIONS.filter((r) => activeStates.includes(r.province));
+  const caRegions = REGIONS.filter((r) => activeProvincesCA.includes(r.province));
+
+  // chunk 0 carries the static + region headers (one per active US state and CA
+  // province). City pages are emitted in chunk 0 but, as before, are not
+  // subtracted from listing capacity (chunk 0 stays within the 50K sitemap cap).
+  const headers = STATIC_PATH_COUNT + usRegions.length + caRegions.length;
   const firstChunkListingCapacity = Math.max(0, CHUNK_SIZE - headers);
   const remainingListings = Math.max(0, listingCount - firstChunkListingCapacity);
   const remainingChunks = Math.ceil(remainingListings / CHUNK_SIZE);

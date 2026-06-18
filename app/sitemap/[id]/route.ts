@@ -1,12 +1,18 @@
 // TDL #457: sitemap chunk children. Served as /sitemap/{id}.xml; the index is
-// app/sitemap.xml/route.ts. chunk 0 carries static + state-page headers; every
+// app/sitemap.xml/route.ts. chunk 0 carries static + region-page headers; every
 // chunk carries a CHUNK_SIZE-bounded slice of listing URLs via the minimal-
 // projection getListingsRange (no select("*") → no route timeout).
+//
+// us+ca consolidation 2026-06-17: chunk 0 emits US region pages (license_state→
+// REGIONS) AND CA region pages (province→REGIONS); city pages and listing URLs
+// span both countries (getCityPageSlugs / getListingsRange are us+ca). The
+// header count here MUST match app/sitemap.xml/route.ts exactly.
 import verticalConfig from "@/lib/vertical.config";
 import { REGIONS } from "@/lib/constants";
 import {
   getListingsRange,
   getActiveLicenseStates,
+  getActiveProvincesCA,
   getCityPageSlugs,
 } from "@/lib/supabase";
 
@@ -53,9 +59,17 @@ export async function GET(
   const baseUrl =
     process.env.NEXT_PUBLIC_BASE_URL || `https://${verticalConfig.domain}`;
 
-  // State pages only for states with bar attorneys (TDL #458 + criterion #3).
-  const activeStates = await getActiveLicenseStates();
-  const activeRegions = REGIONS.filter((r) => activeStates.includes(r.province));
+  // Region pages only for regions with rows (criterion #3: no 404s in sitemap).
+  // US via license_state (TDL #458); CA via province_state. Both filtered through
+  // REGIONS so the slugs are the canonical routable ones. Header count below MUST
+  // match app/sitemap.xml/route.ts.
+  const [activeStates, activeProvincesCA] = await Promise.all([
+    getActiveLicenseStates(),
+    getActiveProvincesCA(),
+  ]);
+  const usRegions = REGIONS.filter((r) => activeStates.includes(r.province));
+  const caRegions = REGIONS.filter((r) => activeProvincesCA.includes(r.province));
+  const activeRegions = [...usRegions, ...caRegions];
 
   const headers = STATIC_ENTRIES.length + activeRegions.length;
   const firstChunkListingCapacity = Math.max(0, CHUNK_SIZE - headers);
@@ -76,12 +90,11 @@ export async function GET(
     for (const region of activeRegions) {
       parts.push(urlEntry(`${baseUrl}/${region.slug}`, now, "daily", "0.8"));
     }
-    // City pages (/{state}/{city}) — every US row that carries both
-    // province_state + region_slug (EOIR location set + the bar city backfill,
-    // TDL #464). Via getCityPageSlugs (paginated, NOT a capped .limit() select)
-    // so the long-tail of rare cities isn't truncated at the PostgREST cap.
-    // State lowercased to match the lowercase state-page URLs (/ca) and the
-    // city route's canonical form.
+    // City pages (/{province}/{city}) — every us+ca row that carries both
+    // province_state + region_slug. Via getCityPageSlugs (paginated, NOT a capped
+    // .limit() select) so the long-tail of rare cities isn't truncated at the
+    // PostgREST cap. Province lowercased to match the lowercase region-page URLs
+    // (/on, /ca) and the city route's canonical form.
     const cityPages = await getCityPageSlugs();
     for (const { province_state, region_slug } of cityPages) {
       parts.push(
