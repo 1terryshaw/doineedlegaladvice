@@ -39,6 +39,15 @@ const verticalConfig = {
   listingNoun: "lawyer",
   listingNounPlural: "lawyers",
 
+  // === /costs Cost Estimator (V14-FOLD) ===
+  // No nounOverride: listingNoun "lawyer" reads correctly ("a lawyer cost?").
+  // disclaimerExtension scopes the flat-fee estimator — contingency matters are
+  // billed as a % of settlement, not flat fee, so frame that explicitly.
+  costEstimator: {
+    disclaimerExtension:
+      "Contingency cases (personal injury, class action, medical malpractice) are billed as a percentage of settlement, not flat fee.",
+  },
+
   // Category/type of business
   businessType: "LegalService",
 
