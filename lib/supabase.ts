@@ -99,7 +99,7 @@ export async function getListings(regionSlug?: string): Promise<Listing[]> {
       .select("*")
       .neq("is_published", false)
       .order("tier_priority", { ascending: false, nullsFirst: false })
-      .order("featured", { ascending: false })
+      .order("featured", { ascending: false, nullsFirst: false })
       .order("google_rating", { ascending: false, nullsFirst: false })
       .order("name_sortkey", { ascending: true }).limit(200);
 
@@ -137,7 +137,7 @@ export async function getFilteredListings(filters: ListingFilters): Promise<List
       .select("*")
       .neq("is_published", false)
       .order("tier_priority", { ascending: false, nullsFirst: false })
-      .order("featured", { ascending: false })
+      .order("featured", { ascending: false, nullsFirst: false })
       .order("google_rating", { ascending: false, nullsFirst: false })
       .order("name_sortkey", { ascending: true }).limit(200);
 
@@ -181,7 +181,7 @@ export async function getListingsByCity(provinceCode: string, citySlug: string):
       .eq("province_state", provinceCode.toUpperCase())
       .eq("region_slug", citySlug)
       .order("tier_priority", { ascending: false, nullsFirst: false })
-      .order("featured", { ascending: false })
+      .order("featured", { ascending: false, nullsFirst: false })
       .order("google_rating", { ascending: false, nullsFirst: false })
       .order("name_sortkey", { ascending: true }).limit(200);
     return query as unknown as PromiseLike<{ data: Listing[] | null; error: unknown }>;

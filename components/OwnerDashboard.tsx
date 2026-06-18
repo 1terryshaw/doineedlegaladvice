@@ -36,7 +36,7 @@ function tierPillStyle(tier: string): TierPillColors {
 }
 
 function formatPrice(tier: TierSlug | null): string {
-  const t = tier === "reviews_plus" || tier === "website" || tier === "growth"
+  const t = tier === "reviews_plus" || tier === "website"
     ? TIERS[tier]
     : null;
   return t ? `$${t.priceMonthlyUSD} USD/mo` : "";
@@ -187,25 +187,6 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot }: { li
             style={{ backgroundColor: CTA_COLOR }}
           >
             Upgrade to Website →
-          </Link>
-        </div>
-      )}
-
-      {/* Website tier — Upgrade to Growth teaser */}
-      {tier === "website" && (
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-lg p-5 mt-4">
-          <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Upgrade</p>
-          <h2 className="text-xl font-bold mt-1">Unlock Growth tier — ${TIERS.growth.priceMonthlyUSD} USD/mo</h2>
-          <ul className="mt-3 space-y-1 text-sm text-gray-700">
-            {TIERS.growth.visibleFeatures.map((f, i) => (
-              <li key={i}>✓ {f}</li>
-            ))}
-          </ul>
-          <Link
-            href={`/directory/${listing.slug}?upgrade=true`}
-            className="mt-4 inline-block bg-amber-600 hover:bg-amber-700 text-white font-semibold px-5 py-2.5 rounded-lg text-sm transition-colors"
-          >
-            Upgrade to Growth →
           </Link>
         </div>
       )}

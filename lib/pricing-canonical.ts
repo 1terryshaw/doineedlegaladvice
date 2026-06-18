@@ -1,9 +1,9 @@
-// pricing-version: 2026-05-17-reviews-plus-canonical
+// pricing-version: 2026-06-18-596-ladder
 // CANONICAL PRICING — single source of truth
 // All directory pricing pages, UpgradeModal, and Stripe checkout flows import from here.
 // DO NOT hardcode prices, tier names, or feature lists elsewhere.
 
-export type TierId = 'verified' | 'reviews_plus' | 'website' | 'growth';
+export type TierId = 'verified' | 'reviews_plus' | 'website';
 
 export interface CTA {
   label: string;
@@ -61,7 +61,7 @@ export const TIERS: Record<TierId, Tier> = {
   reviews_plus: {
     id: 'reviews_plus',
     name: 'Reviews Plus',
-    subtitle: 'Most pros start here',
+    subtitle: 'Most pros start here.',
     priceMonthlyUSD: 9,
     priceAnnualUSD: 90,
     stripeProductId: 'prod_UVCwwsGLZrCrFh',
@@ -76,10 +76,9 @@ export const TIERS: Record<TierId, Tier> = {
     ],
     expandedFeatures: [
       'All Verified features',
-      'SMS + email lead alerts',
-      'Owner dashboard with Recent Leads',
+      'Recent Leads dashboard (existing inquiries to you, through the directory)',
+      'Email lead alerts',
       'Weekly digest of activity',
-      'Branded inquiry emails to prospects',
     ],
     cta: { label: 'Start 30-Day Free Trial', mode: 'trial' },
     secondaryCta: { label: 'Skip trial, pay now — $9/mo', mode: 'direct' },
@@ -89,51 +88,27 @@ export const TIERS: Record<TierId, Tier> = {
     id: 'website',
     name: 'Website',
     subtitle: '',
-    priceMonthlyUSD: 29,
-    priceAnnualUSD: 290,
+    priceMonthlyUSD: 49,
+    priceAnnualUSD: 490,
     stripeProductId: 'prod_UVCwbO2cUAURCF',
-    stripePriceMonthlyId: 'price_1TWCWiB4nhVx1nmUlQWuYxkF',
-    stripePriceAnnualId: 'price_1TWCWiB4nhVx1nmUtHQuD2co',
+    stripePriceMonthlyId: 'price_1TjfMNB4nhVx1nmUtSlsXNFW',
+    stripePriceAnnualId: 'price_1TjfMNB4nhVx1nmUQlFCiwyl',
     visibleFeatures: [
       'Everything in Reviews Plus, plus:',
-      'SiteForge-built website at your domain',
+      'SiteForge-built website at your domain (concierge delivered)',
+      'SMS + email lead alerts',
+      'Weekly digest of activity',
+      'Branded inquiry emails to prospects',
+    ],
+    expandedFeatures: [
       'Mobile-optimized, fast-loading',
       'Click-to-call header',
       'Service pricing sections',
-    ],
-    expandedFeatures: [
-      '7-day deploy from your existing content',
-      'Schema.org markup for Google',
-      'Monthly site updates',
-      'SEO-optimized for your city + service',
+      'Built for Google search (Schema.org, city/service pages)',
+      'Custom domain wiring (when delivered)',
     ],
     cta: { label: 'Start 30-Day Free Trial', mode: 'trial' },
-    secondaryCta: { label: 'Skip trial, pay now — $29/mo', mode: 'direct' },
-    anchored: false,
-  },
-  growth: {
-    id: 'growth',
-    name: 'Growth',
-    subtitle: '',
-    priceMonthlyUSD: 97,
-    priceAnnualUSD: 970,
-    stripeProductId: 'prod_UVCwO2AN4M6aKT',
-    stripePriceMonthlyId: 'price_1TWCWiB4nhVx1nmUcfLKGTtR',
-    stripePriceAnnualId: 'price_1TWCWjB4nhVx1nmUyZB92HW8',
-    visibleFeatures: [
-      'Everything in Website, plus:',
-      'Inbound lead CRM (track status, never lose a lead)',
-      'Appointment booking on your listing',
-      'Automated review request workflow',
-      'Monthly performance report',
-      'Priority support — direct line to Terry',
-    ],
-    expandedFeatures: [
-      'Monthly blog post published for you',
-      'Quarterly listing optimization review',
-      'Competitor tracking',
-    ],
-    cta: { label: 'Get Growth', mode: 'direct' },
+    secondaryCta: { label: 'Skip trial, pay now — $49/mo', mode: 'direct' },
     anchored: false,
   },
 };
@@ -146,10 +121,22 @@ export const TRIAL = {
 } as const;
 
 /** Ordered tier list for rendering the card grid (left → right). */
-export const TIER_ORDER: TierId[] = ['verified', 'reviews_plus', 'website', 'growth'];
+export const TIER_ORDER: TierId[] = ['verified', 'reviews_plus', 'website'];
+
+/**
+ * Legacy Growth price IDs — the Growth tier was removed per #596 (2026-06-18).
+ * Resolve them explicitly to undefined so any stale handoff token degrades
+ * gracefully. empire-billing's reverse map is the primary handler; this is a
+ * layered defense.
+ */
+const LEGACY_GROWTH_PRICE_IDS: ReadonlySet<string> = new Set([
+  'price_1TWCWiB4nhVx1nmUcfLKGTtR',
+  'price_1TWCWjB4nhVx1nmUyZB92HW8',
+]);
 
 /** Look up a tier by a Stripe price ID (monthly or annual). */
 export function getTierByPriceId(priceId: string): Tier | undefined {
+  if (LEGACY_GROWTH_PRICE_IDS.has(priceId)) return undefined;
   return Object.values(TIERS).find(
     (t) => t.stripePriceMonthlyId === priceId || t.stripePriceAnnualId === priceId,
   );

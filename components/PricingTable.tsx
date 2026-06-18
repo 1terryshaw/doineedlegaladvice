@@ -42,7 +42,7 @@ export default function PricingTable() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 max-w-6xl mx-auto items-start">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto items-start">
         {TIER_ORDER.map((id) => {
           const tier = TIERS[id];
           const anchored = tier.anchored;
