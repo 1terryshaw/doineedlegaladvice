@@ -1,34 +1,45 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import verticalConfig from "@/lib/vertical.config";
-import { getFilteredListings , getFilteredListingsCount, getDirectoryRegions, type DirectoryRegion } from "@/lib/supabase";
-import { getUkCounties, getUkAllTownHubs } from "@/lib/uk-solicitors";
-import { LISTING_TYPES, REGIONS, formatCount } from "@/lib/constants";
+import { getDirectoryRegions, type DirectoryRegion } from "@/lib/supabase";
+import {
+  getFilteredListingsPaged,
+  getRegionCounts,
+  getDirectoryTotal,
+  REGION_PAGE_SIZE,
+} from "@/lib/directory-hub";
+import {
+  LISTING_TYPES,
+  getRegionBySlug,
+  getRegionByProvinceCode,
+  countryOfProvinceCode,
+} from "@/lib/constants";
 import ListingCard from "@/components/ListingCard";
 import SearchBar from "@/components/SearchBar";
-import LegalDisclaimer from "@/components/LegalDisclaimer";
+import Pagination from "@/components/Pagination";
+import RegionHub, { type HubSection, type HubRegion } from "@/components/RegionHub";
 import ShareButtons from "@/components/pizzazz/ShareButtons";
 
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 export const metadata: Metadata = {
-  title: `Browse Directory`,
-  description: `Browse all ${verticalConfig.listingNounPlural} in the ${verticalConfig.name} directory.`,
+  title: "Find a Lawyer",
+  description: `Browse lawyers near you in the ${verticalConfig.name} directory.`,
   alternates: { canonical: "/directory" },
 };
 
 export default async function DirectoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; search?: string; city?: string; s?: string; listing_type?: string; region?: string }>;
+  searchParams: Promise<{ q?: string; search?: string; city?: string; s?: string; listing_type?: string; region?: string; page?: string }>;
 }) {
   const params = await searchParams;
   const region = params.region || "";
-  // FIX-EMPIRE-F7-SWEEP — when `region` is present, `city` is the
-  // cascading-dropdown filter (slug). When no region, legacy `?city=`
-  // stays a free-text name search alias.
   const cityFilter = region ? params.city || "" : "";
   const q = params.q || params.search || params.s || (region ? "" : params.city || "");
-  const listing_type = params.listing_type || "";
-
+  const listingType = params.listing_type || "";
+  const hasFilters = !!(q || listingType || region || cityFilter);
 
   let runtimeRegions: DirectoryRegion[] = [];
   try {
@@ -37,98 +48,150 @@ export default async function DirectoryPage({
     console.error("getDirectoryRegions failed; falling back:", err);
   }
 
-  // UK cascade options — same is_published-gated views the /uk/ pages use, so every
-  // option resolves to a live page. Fail-open: on error the UK optgroup just won't show.
-  let ukCounties: { slug: string; name: string; count: number }[] = [];
-  let ukTowns: { countySlug: string; slug: string; name: string }[] = [];
-  try {
-    const [counties, townHubs] = await Promise.all([getUkCounties(), getUkAllTownHubs()]);
-    ukCounties = counties.map((c) => ({
-      slug: c.county_slug,
-      name: c.county,
-      count: Number(c.firm_count),
-    }));
-    ukTowns = townHubs.map((t) => ({
-      countySlug: t.county_slug,
-      slug: t.town_slug,
-      name: t.town,
-    }));
-  } catch (err) {
-    console.error("UK cascade geo fetch failed (UK optgroup hidden):", err);
+  // ── Default view (no filters): browse-by-region hub. ──────────────────────
+  if (!hasFilters) {
+    const [counts, total] = await Promise.all([getRegionCounts(), getDirectoryTotal()]);
+    const ca: HubRegion[] = [];
+    const us: HubRegion[] = [];
+    for (const c of counts) {
+      const r = getRegionByProvinceCode(c.province_state);
+      if (!r) continue;
+      const entry: HubRegion = { slug: r.slug, name: r.name ?? r.province, count: c.n };
+      (countryOfProvinceCode(c.province_state) === "CA" ? ca : us).push(entry);
+    }
+    const byName = (a: HubRegion, b: HubRegion) => a.name.localeCompare(b.name);
+    ca.sort(byName);
+    us.sort(byName);
+    const sections: HubSection[] = [];
+    if (us.length) sections.push({ country: "US", label: "🇺🇸 United States", regions: us });
+    if (ca.length) sections.push({ country: "CA", label: "🇨🇦 Canada", regions: ca });
+
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-12">
+        <h1 className="text-3xl font-bold mb-2" style={{ color: verticalConfig.primaryColor }}>
+          Find a Lawyer
+        </h1>
+        <div className="mb-4">
+          <ShareButtons variant="compact" title={`Browse ${verticalConfig.name} Directory`} />
+        </div>
+        <div className="mb-6">
+          <SearchBar variant="directory" regions={runtimeRegions.length > 0 ? runtimeRegions : undefined} />
+        </div>
+        <p className="text-gray-600 mb-8">
+          {total.toLocaleString("en-US")} lawyers in our directory. Choose a state or province to browse.
+        </p>
+        {sections.length === 0 ? (
+          <p className="text-gray-500 text-center py-12">No regions available yet. Check back soon!</p>
+        ) : (
+          <RegionHub sections={sections} />
+        )}
+      </div>
+    );
   }
 
-  // Cards capped at 200; totalCount is the real DB count for honest display (#3).
-  const [listings, totalCount] = await Promise.all([
-    getFilteredListings({ q, listing_type, region, city: cityFilter }),
-    getFilteredListingsCount({ q, listing_type, region, city: cityFilter }),
-  ]);
-  const hasFilters = !!(q || listing_type || region);
+  // ── Filtered view: paginated results. ─────────────────────────────────────
+  const page = Math.max(1, parseInt(params.page || "1", 10) || 1);
+  const fetched = await getFilteredListingsPaged({
+    q,
+    listing_type: listingType,
+    region,
+    city: cityFilter,
+    page,
+    perPage: REGION_PAGE_SIZE,
+  });
+  const hasNext = fetched.length > REGION_PAGE_SIZE;
+  const listings = hasNext ? fetched.slice(0, REGION_PAGE_SIZE) : fetched;
 
-  const typeName = listing_type ? LISTING_TYPES.find((t) => t.slug === listing_type)?.name : null;
-  const regionName = region ? REGIONS.find((r) => r.slug === region)?.name : null;
+  const typeName = listingType ? LISTING_TYPES.find((t) => t.slug === listingType)?.name : null;
+  // HARDENED (Batch 4): use getRegionBySlug (constants.REGIONS) — shape-agnostic
+  // across config-map AND explicit-array repos, and works when vertical.config
+  // has no `regions` field. REGIONS.name is pre-normalized (name||label).
+  const regionMatch = getRegionBySlug(region) as
+    | { name?: string; label?: string }
+    | null;
+  const regionName = region
+    ? regionMatch?.name || regionMatch?.label || getRegionByProvinceCode(region)?.name
+    : null;
+
+  const pageParams: Record<string, string> = {};
+  if (q) pageParams.q = q;
+  if (listingType) pageParams.listing_type = listingType;
+  if (region) pageParams.region = region;
+  if (cityFilter) pageParams.city = cityFilter;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
-      <div className="mb-6">
-        <LegalDisclaimer />
-      </div>
-      <h1 className="text-3xl font-bold mb-2">All {verticalConfig.listingNounPlural}</h1>
+      <h1 className="text-3xl font-bold mb-2" style={{ color: verticalConfig.primaryColor }}>
+        Find a Lawyer
+      </h1>
       <div className="mb-4">
         <ShareButtons variant="compact" title={`Browse ${verticalConfig.name} Directory`} />
       </div>
 
       <div className="mb-6">
-        <SearchBar variant="directory" defaultQ={q} defaultType={listing_type} defaultRegion={region} defaultCity={cityFilter} regions={runtimeRegions.length > 0 ? runtimeRegions : undefined} ukCounties={ukCounties.length > 0 ? ukCounties : undefined} ukTowns={ukTowns.length > 0 ? ukTowns : undefined} />
+        <SearchBar
+          variant="directory"
+          defaultQ={q}
+          defaultType={listingType}
+          defaultRegion={region}
+          defaultCity={cityFilter}
+          regions={runtimeRegions.length > 0 ? runtimeRegions : undefined}
+        />
       </div>
 
       <p className="text-gray-600 mb-4">
-        {formatCount(totalCount)} {totalCount === 1 ? verticalConfig.listingNoun : verticalConfig.listingNounPlural}
-        {hasFilters ? " matching your filters" : " in our directory"}.
+        {listings.length === 0
+          ? "No lawyers"
+          : `Page ${page} — ${listings.length} ${listings.length !== 1 ? "lawyers" : "lawyer"}`}
+        {" matching your filters"}.
       </p>
 
-      {hasFilters && (
-        <div className="flex flex-wrap gap-2 mb-6">
-          {q && (
-            <Link
-              href={`/directory?${new URLSearchParams({ ...(listing_type ? { listing_type } : {}), ...(region ? { region } : {}) }).toString()}`}
-              className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm hover:bg-blue-200"
-            >
-              Search: {q} <span aria-label="clear">&times;</span>
-            </Link>
-          )}
-          {typeName && (
-            <Link
-              href={`/directory?${new URLSearchParams({ ...(q ? { q } : {}), ...(region ? { region } : {}) }).toString()}`}
-              className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm hover:bg-blue-200"
-            >
-              Type: {typeName} <span aria-label="clear">&times;</span>
-            </Link>
-          )}
-          {regionName && (
-            <Link
-              href={`/directory?${new URLSearchParams({ ...(q ? { q } : {}), ...(listing_type ? { listing_type } : {}) }).toString()}`}
-              className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm hover:bg-blue-200"
-            >
-              Region: {regionName} <span aria-label="clear">&times;</span>
-            </Link>
-          )}
+      <div className="flex flex-wrap gap-2 mb-6">
+        {q && (
           <Link
-            href="/directory"
-            className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm hover:bg-gray-200"
+            href={`/directory?${new URLSearchParams({ ...(listingType ? { listing_type: listingType } : {}), ...(region ? { region } : {}) }).toString()}`}
+            className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm hover:bg-green-200"
           >
-            Clear all
+            Search: {q} <span aria-label="clear">&times;</span>
           </Link>
-        </div>
-      )}
+        )}
+        {typeName && (
+          <Link
+            href={`/directory?${new URLSearchParams({ ...(q ? { q } : {}), ...(region ? { region } : {}) }).toString()}`}
+            className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm hover:bg-green-200"
+          >
+            Specialty: {typeName} <span aria-label="clear">&times;</span>
+          </Link>
+        )}
+        {regionName && (
+          <Link
+            href={`/directory?${new URLSearchParams({ ...(q ? { q } : {}), ...(listingType ? { listing_type: listingType } : {}) }).toString()}`}
+            className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm hover:bg-green-200"
+          >
+            Region: {regionName} <span aria-label="clear">&times;</span>
+          </Link>
+        )}
+        <Link
+          href="/directory"
+          className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm hover:bg-gray-200"
+        >
+          Clear all
+        </Link>
+      </div>
 
       {listings.length === 0 ? (
-        <p className="text-gray-500 text-center py-12">No {verticalConfig.listingNounPlural} found. Try adjusting your filters.</p>
+        <p className="text-gray-500 text-center py-12">
+          No lawyers found matching your criteria. Try broadening your search.
+        </p>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {listings.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {listings.map((listing) => (
+              <ListingCard key={listing.id} listing={listing} />
+            ))}
+          </div>
+          <Pagination currentPage={page} basePath="/directory" hasNext={hasNext} params={pageParams} />
+        </>
       )}
     </div>
   );
