@@ -1,0 +1,2 @@
+-- TDL #661 legal hub. CUSTOM: disjoint region (US=license_state per TDL #458, CA=province_state).
+-- mv_legal_listings_regions (effective region) + idx_legal_listings_us_license_sort + idx_legal_listings_ca_prov_sort. Built centrally.

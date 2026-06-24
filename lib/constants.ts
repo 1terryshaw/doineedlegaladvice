@@ -4,6 +4,7 @@ import {
   getCityBySlug as _getCityBySlug,
 } from "./shared/cities";
 import verticalConfig from "./vertical.config";
+import { CANADIAN_PROVINCES, US_STATES } from "./provinces";
 
 // US states (50 + DC). slug = lowercase 2-letter code, used at /[region].
 // CITIES merges the CA canonical catalog with US_CITIES (TDL #464, Option B:
@@ -1223,6 +1224,27 @@ export const BRAND = {
 
 export function getRegionBySlug(slug: string) {
   return REGIONS.find((r) => r.slug === slug.toLowerCase()) || null;
+}
+
+// TDL #661 — region hub resolves provinces/states from canonical lib/provinces.ts.
+const PROVINCE_NAME_BY_CODE = new Map<string, string>(
+  [...CANADIAN_PROVINCES, ...US_STATES].map((p) => [p.code, p.name])
+);
+
+export function getProvinceNameByCode(code: string): string | null {
+  return PROVINCE_NAME_BY_CODE.get(code.toUpperCase()) ?? null;
+}
+
+export function getRegionByProvinceCode(code: string) {
+  const c = code.toUpperCase();
+  const name = PROVINCE_NAME_BY_CODE.get(c);
+  if (!name) return null;
+  return { name, slug: c.toLowerCase(), province: c };
+}
+
+const CA_PROVINCE_CODES = new Set(CANADIAN_PROVINCES.map((p) => p.code));
+export function countryOfProvinceCode(code: string): "CA" | "US" {
+  return CA_PROVINCE_CODES.has(code.toUpperCase()) ? "CA" : "US";
 }
 
 export function getListingTypeBySlug(slug: string) {
