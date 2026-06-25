@@ -406,6 +406,16 @@ const CANONICAL_PROVINCE_CODES = [
   "VA","WA","WV","WI","WY","DC",
 ];
 
+// TDL #685: defensive guard against street-address / ZIP values polluting the
+// `city` column. Conservative — only patterns that can NEVER be a real city:
+//   • starts with a digit  • unit/suite/floor/box token  • "#<n>"
+function looksLikeAddress(city: string): boolean {
+  if (/^\s*\d/.test(city)) return true;
+  if (/\b(unit|suite|ste|apt|floor|fl\.|building|bldg|rr#|p\.?o\.? box)\b/i.test(city)) return true;
+  if (/#\s*\d/.test(city)) return true;
+  return false;
+}
+
 function slugifyCityName(s: string): string {
   return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
@@ -427,7 +437,6 @@ export async function getDirectoryRegions(): Promise<DirectoryRegion[]> {
       .from(`mv_${LISTINGS_TABLE}_cities`)
       .select("province_state, city")
       .in("country", ["CA", "US"])
-      .neq("is_published", false)
       .in("province_state", CANONICAL_PROVINCE_CODES)
       .not("city", "is", null)
       .neq("city", "") as unknown as PromiseLike<{
@@ -441,6 +450,7 @@ export async function getDirectoryRegions(): Promise<DirectoryRegion[]> {
     if (!r.city || !r.province_state) continue;
     const cleaned = r.city.trim();
     if (!cleaned) continue;
+    if (looksLikeAddress(cleaned)) continue; // TDL #685 — drop address/ZIP pollution
     const baseSlug = slugifyCityName(cleaned);
     if (!baseSlug) continue;
     const key = `${r.province_state}::${baseSlug}`;
