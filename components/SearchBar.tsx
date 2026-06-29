@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { REGIONS, LISTING_TYPES } from "@/lib/constants";
+import { REGIONS } from "@/lib/constants";
 import verticalConfig from "@/lib/vertical.config";
 import { CANADIAN_PROVINCES, US_STATES } from "@/lib/provinces";
 
@@ -43,7 +43,6 @@ function stripCollisionSuffix(slug: string, province: string): string {
 export default function SearchBar({
   variant,
   defaultQ = "",
-  defaultType = "",
   defaultRegion = "",
   defaultCity = "",
   regions,
@@ -52,7 +51,6 @@ export default function SearchBar({
 }: SearchBarProps) {
   const router = useRouter();
   const [q, setQ] = useState(defaultQ);
-  const [type, setType] = useState(defaultType);
   const [province, setProvince] = useState(defaultRegion.toUpperCase());
   const [city, setCity] = useState(defaultCity);
 
@@ -123,7 +121,6 @@ export default function SearchBar({
     }
     const params = new URLSearchParams();
     if (q) params.set("q", q);
-    if (type) params.set("listing_type", type);
     if (province) params.set("region", province);
     if (province && city) params.set("city", city);
     const qs = params.toString();
@@ -150,18 +147,6 @@ export default function SearchBar({
           onChange={(e) => setQ(e.target.value)}
           className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-          className="px-4 py-2 rounded-lg border border-gray-200 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">All Specialties</option>
-          {LISTING_TYPES.map((t) => (
-            <option key={t.slug} value={t.slug}>
-              {t.name}
-            </option>
-          ))}
-        </select>
         <select
           value={province}
           onChange={onProvinceChange}

@@ -1,14 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import verticalConfig from "@/lib/vertical.config";
-import { getRegionByProvinceCode, countryOfProvinceCode, formatCount } from "@/lib/constants";
-import { getRegionCounts } from "@/lib/directory-hub";
 import TriageChat from "@/components/TriageChat";
 import SearchBar from "@/components/SearchBar";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
 import FadeIn from "@/components/pizzazz/FadeIn";
 import ShareButtons from "@/components/pizzazz/ShareButtons";
-import { BrowseByArea } from "@/components/browse-by-area";
 import { websiteSearchSchema } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
@@ -17,29 +13,10 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-// TDL #788 \u2014 practice-area tiles were decorative (no practice-area data exists
-// in legal_listings: listing_type \u2208 {attorney, lawyer, immigration, ''}). Replaced
-// with Browse-by-State, sourced live from the region-count MV.
-const COUNTRY_FLAG: Record<string, string> = { US: "\uD83C\uDDFA\uD83C\uDDF8", CA: "\uD83C\uDDE8\uD83C\uDDE6" };
-
+// TDL #800 \u2014 homepage collapsed to a single search surface: the practice-area
+// dropdown (no practice-area data) and the redundant Browse-by-State / Browse-by-Area
+// sections were removed, leaving hero \u2192 triage \u2192 Search the Directory \u2192 FAQ.
 export default async function HomePage() {
-  // Top states/provinces by live row count for the Browse-by-State section.
-  let topRegions: { slug: string; name: string; country: string; count: number }[] = [];
-  try {
-    const counts = await getRegionCounts();
-    topRegions = counts
-      .map((c) => {
-        const r = getRegionByProvinceCode(c.province_state);
-        if (!r) return null;
-        return { slug: r.slug, name: r.name, country: countryOfProvinceCode(c.province_state), count: c.n };
-      })
-      .filter((r): r is NonNullable<typeof r> => r !== null)
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 7);
-  } catch (err) {
-    console.error("HomePage getRegionCounts failed:", err);
-  }
-
   return (
     <>
       <script
@@ -103,46 +80,7 @@ export default async function HomePage() {
             </span>
           </div>
       </section>
-      {/* SECTION 2: Browse Directory */}
-
-      {/* Browse by State / Province (live counts \u2014 TDL #788) */}
-      {topRegions.length > 0 && (
-        <section className="py-16 px-4">
-          <div className="max-w-7xl mx-auto">
-            <h2 className="text-2xl font-bold mb-8 text-center">Browse by State &amp; Province</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {topRegions.map((r) => (
-                <Link
-                  key={r.slug}
-                  href={`/${r.slug}`}
-                  className="flex flex-col items-center p-5 bg-white border rounded-lg card-lift text-center"
-                >
-                  <span className="text-3xl mb-2">{COUNTRY_FLAG[r.country] || "\uD83D\uDCCD"}</span>
-                  <span className="font-semibold text-gray-900 text-sm">{r.name}</span>
-                  <span className="text-xs text-gray-500 mt-1">{formatCount(r.count)} lawyers</span>
-                </Link>
-              ))}
-            </div>
-            <div className="text-center mt-6">
-              <Link
-                href="/directory"
-                className="text-sm font-semibold"
-                style={{ color: verticalConfig.primaryColor }}
-              >
-                Browse all states &amp; provinces &rarr;
-              </Link>
-            </div>
-          </div>
-        </section>
-      )}
-      {/* Browse by Area (replaces LocationPicker — TDL #138) */}
-      <FadeIn as="div" delay={100}>
-        <BrowseByArea
-          vertical="legal"
-          accentTextClass="text-[#3B82F6] hover:text-[#306bca]"
-        />
-      </FadeIn>
-
+      {/* SECTION 2: Search the Directory — single geographic entry point (TDL #800) */}
 
       {/* Search */}
       <section className="py-16 px-4">
