@@ -71,10 +71,10 @@ export default async function ListingPage({ params }: Props) {
   const placeId =
     (listing as typeof listing & { google_place_id?: string }).google_place_id ?? null;
 
-  // TDL #791 — registry-harvested emails (e.g. fl_bar_registry) are BACKEND-ONLY:
-  // never surfaced on the public page or in JSON-LD, pending separate ToS review.
-  // Owner-provided / non-registry emails render as before.
-  const REGISTRY_EMAIL_SOURCES = new Set(["fl_bar_registry"]);
+  // TDL #791/#803 — registry-harvested emails (e.g. fl_bar_registry, il_ardc_registry)
+  // are BACKEND-ONLY: never surfaced on the public page or in JSON-LD, pending separate
+  // per-source ToS review. Owner-provided / non-registry emails render as before.
+  const REGISTRY_EMAIL_SOURCES = new Set(["fl_bar_registry", "il_ardc_registry"]);
   const emailSource = (listing as { email_source?: string | null }).email_source ?? null;
   const publicEmail =
     listing.email && !(emailSource && REGISTRY_EMAIL_SOURCES.has(emailSource))
