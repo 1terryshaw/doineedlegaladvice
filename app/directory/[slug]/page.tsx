@@ -71,13 +71,23 @@ export default async function ListingPage({ params }: Props) {
   const placeId =
     (listing as typeof listing & { google_place_id?: string }).google_place_id ?? null;
 
+  // TDL #791 — registry-harvested emails (e.g. fl_bar_registry) are BACKEND-ONLY:
+  // never surfaced on the public page or in JSON-LD, pending separate ToS review.
+  // Owner-provided / non-registry emails render as before.
+  const REGISTRY_EMAIL_SOURCES = new Set(["fl_bar_registry"]);
+  const emailSource = (listing as { email_source?: string | null }).email_source ?? null;
+  const publicEmail =
+    listing.email && !(emailSource && REGISTRY_EMAIL_SOURCES.has(emailSource))
+      ? listing.email
+      : null;
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     name: listing.name,
     description: listing.short_description || listing.description,
     telephone: listing.phone,
-    email: listing.email,
+    email: publicEmail,
     url: listing.website,
     address: {
       "@type": "PostalAddress",
@@ -251,7 +261,7 @@ export default async function ListingPage({ params }: Props) {
             <div className="mt-8 border-t pt-6 space-y-2">
               <h3 className="font-semibold mb-3">Contact Information</h3>
               {listing.phone && <p className="text-sm"><span className="text-gray-500">Phone:</span> {listing.phone}</p>}
-              {listing.email && <p className="text-sm"><span className="text-gray-500">Email:</span> {listing.email}</p>}
+              {publicEmail && <p className="text-sm"><span className="text-gray-500">Email:</span> {publicEmail}</p>}
               {listing.website && (
                 <p className="text-sm">
                   <span className="text-gray-500">Website:</span>{" "}
