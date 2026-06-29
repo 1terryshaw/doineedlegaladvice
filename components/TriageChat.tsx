@@ -79,7 +79,7 @@ export default function TriageChat() {
 
       <div
         ref={scrollRef}
-        className="h-80 overflow-y-auto px-5 py-4 space-y-3 bg-white"
+        className="min-h-[8rem] max-h-80 overflow-y-auto px-5 py-4 space-y-3 bg-white"
         aria-live="polite"
       >
         {messages.length === 0 && (

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import verticalConfig from "@/lib/vertical.config";
-import { REGIONS, LISTING_TYPES } from "@/lib/constants";
+import { getRegionByProvinceCode, countryOfProvinceCode, formatCount } from "@/lib/constants";
+import { getRegionCounts } from "@/lib/directory-hub";
 import TriageChat from "@/components/TriageChat";
 import SearchBar from "@/components/SearchBar";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
@@ -16,20 +17,29 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-const PRACTICE_AREA_ICONS: Record<string, string> = {
-  "family-lawyer": "\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67",
-  "real-estate-lawyer": "\uD83C\uDFE0",
-  "immigration-lawyer": "\uD83C\uDF0D",
-  "criminal-lawyer": "\u2696\uFE0F",
-  "personal-injury-lawyer": "\uD83C\uDFE5",
-  "business-lawyer": "\uD83D\uDCBC",
-  "employment-lawyer": "\uD83D\uDC54",
-  "estate-lawyer": "\uD83D\uDCDC",
-  "tax-lawyer": "\uD83E\uDDFE",
-  "intellectual-property-lawyer": "\uD83D\uDCA1",
-};
+// TDL #788 \u2014 practice-area tiles were decorative (no practice-area data exists
+// in legal_listings: listing_type \u2208 {attorney, lawyer, immigration, ''}). Replaced
+// with Browse-by-State, sourced live from the region-count MV.
+const COUNTRY_FLAG: Record<string, string> = { US: "\uD83C\uDDFA\uD83C\uDDF8", CA: "\uD83C\uDDE8\uD83C\uDDE6" };
 
 export default async function HomePage() {
+  // Top states/provinces by live row count for the Browse-by-State section.
+  let topRegions: { slug: string; name: string; country: string; count: number }[] = [];
+  try {
+    const counts = await getRegionCounts();
+    topRegions = counts
+      .map((c) => {
+        const r = getRegionByProvinceCode(c.province_state);
+        if (!r) return null;
+        return { slug: r.slug, name: r.name, country: countryOfProvinceCode(c.province_state), count: c.n };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 7);
+  } catch (err) {
+    console.error("HomePage getRegionCounts failed:", err);
+  }
+
   return (
     <>
       <script
@@ -95,25 +105,36 @@ export default async function HomePage() {
       </section>
       {/* SECTION 2: Browse Directory */}
 
-      {/* Browse by Practice Area */}
-      <section className="py-16 px-4">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-2xl font-bold mb-8 text-center">Browse by Practice Area</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-            {LISTING_TYPES.map((type) => (
+      {/* Browse by State / Province (live counts \u2014 TDL #788) */}
+      {topRegions.length > 0 && (
+        <section className="py-16 px-4">
+          <div className="max-w-7xl mx-auto">
+            <h2 className="text-2xl font-bold mb-8 text-center">Browse by State &amp; Province</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {topRegions.map((r) => (
+                <Link
+                  key={r.slug}
+                  href={`/${r.slug}`}
+                  className="flex flex-col items-center p-5 bg-white border rounded-lg card-lift text-center"
+                >
+                  <span className="text-3xl mb-2">{COUNTRY_FLAG[r.country] || "\uD83D\uDCCD"}</span>
+                  <span className="font-semibold text-gray-900 text-sm">{r.name}</span>
+                  <span className="text-xs text-gray-500 mt-1">{formatCount(r.count)} lawyers</span>
+                </Link>
+              ))}
+            </div>
+            <div className="text-center mt-6">
               <Link
-                key={type.slug}
                 href="/directory"
-                className="flex flex-col items-center p-5 bg-white border rounded-lg card-lift text-center"
+                className="text-sm font-semibold"
+                style={{ color: verticalConfig.primaryColor }}
               >
-                <span className="text-3xl mb-2">{PRACTICE_AREA_ICONS[type.slug] || "\u2696\uFE0F"}</span>
-                <span className="font-semibold text-gray-900 text-sm">{type.name}</span>
-                <span className="text-xs text-gray-500 mt-1">{type.description}</span>
+                Browse all states &amp; provinces &rarr;
               </Link>
-            ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
       {/* Browse by Area (replaces LocationPicker — TDL #138) */}
       <FadeIn as="div" delay={100}>
         <BrowseByArea
