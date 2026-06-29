@@ -126,9 +126,9 @@ BAD turn 1 examples (avoid):
         "No. DoINeedLegalAdvice.com provides general legal information only. This is not legal advice and does not create an attorney-client relationship. Always consult with a qualified attorney for advice specific to your situation.",
     },
     {
-      question: "What types of lawyers can I find here?",
+      question: "What lawyers can I find here?",
       answer:
-        "We cover family lawyers, real estate lawyers, immigration lawyers, criminal defense lawyers, personal injury lawyers, business lawyers, employment lawyers, estate lawyers, tax lawyers, and intellectual property lawyers across the United States.",
+        "Our directory lists hundreds of thousands of verified attorneys drawn from official state bar and Canadian law-society records across the United States and Canada. Browse by state or province, search by name or city, or describe your situation to our AI triage helper — it will suggest the type of lawyer to look for, such as family, criminal, immigration, real estate, or business law.",
     },
     {
       question: "How does the AI triage work?",
