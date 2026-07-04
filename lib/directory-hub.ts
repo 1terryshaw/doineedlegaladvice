@@ -1,7 +1,7 @@
 // TDL #661 — region-hub + pagination query helpers.
 // Lives in its own module because lib/supabase.ts is on this repo's DO-NOT-TOUCH
 // list (per CLAUDE.md). Reuses supabaseAdmin + LISTINGS_TABLE from supabase.ts.
-import { supabaseAdmin, LISTINGS_TABLE, type Listing } from "@/lib/supabase";
+import { sanitizeOrTerm, supabaseAdmin, LISTINGS_TABLE, type Listing } from "@/lib/supabase";
 
 export const REGION_PAGE_SIZE = 48;
 
@@ -66,8 +66,8 @@ export async function getFilteredListingsPaged(filters: ListingFiltersPaged): Pr
   }
   if (filters.listing_type) query = query.eq("listing_type", filters.listing_type);
   if (filters.q) {
-    const term = filters.q.replace(/'/g, "''");
-    query = query.or(`name.ilike.%${term}%,city.ilike.%${term}%`);
+    const term = sanitizeOrTerm(filters.q);
+    query = query.or(`name.ilike.${term},city.ilike.${term}`);
   }
 
   const { data, error } = await query.range(from, to);
