@@ -2,6 +2,8 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getListing } from "@/lib/supabase";
+import { getEnrichment } from "@/lib/knowledge";
+import EnrichmentBlock from "@/components/EnrichmentBlock";
 import verticalConfig from "@/lib/vertical.config";
 import InquiryForm from "@/components/InquiryForm";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
@@ -40,6 +42,8 @@ export default async function ListingPage({ params }: Props) {
   const { slug } = await params;
   const listing = await getListing(slug);
   if (!listing) notFound();
+  // Supplementary AI enrichment (fail-open: null on any error => page renders normally).
+  const enrichment = await getEnrichment("lawyer", listing.slug);
   const { photos, logo } = await listPhotosForListing(listing.id);
   const lst = listing as typeof listing & {
     hours_json?: HoursJson | null;
@@ -81,7 +85,7 @@ export default async function ListingPage({ params }: Props) {
       ? listing.email
       : null;
 
-  const jsonLd = {
+  const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     name: listing.name,
@@ -121,6 +125,25 @@ export default async function ListingPage({ params }: Props) {
     ...(lst.year_established && { foundingDate: String(lst.year_established) }),
     ...(sameAsLinks.length > 0 && { sameAs: sameAsLinks }),
 };
+
+  // Safe JSON-LD upgrades from AI enrichment. Additive expertise signals (knowsAbout,
+  // availableLanguage) plus GAP-FILL only for areaServed/description/foundingDate — authoritative
+  // listing data is never overridden (claimed > original > enrichment).
+  if (enrichment) {
+    const k = enrichment.knowledge;
+    const knowsAbout = Array.from(new Set([...k.services, ...k.specialties, ...k.certifications]))
+      .filter((s) => s && s.trim())
+      .slice(0, 30);
+    if (knowsAbout.length > 0 && !jsonLd.knowsAbout) jsonLd.knowsAbout = knowsAbout;
+    if (k.languages.length > 0 && !jsonLd.availableLanguage) jsonLd.availableLanguage = k.languages;
+    if (!jsonLd.areaServed && k.service_areas.length > 0) {
+      jsonLd.areaServed = k.service_areas.map((c) => ({ "@type": "City", name: c }));
+    }
+    if (!jsonLd.description && k.description) jsonLd.description = k.description;
+    if (!jsonLd.foundingDate && k.year_established && /^\d{4}$/.test(k.year_established)) {
+      jsonLd.foundingDate = k.year_established;
+    }
+  }
 
   return (
     <>
@@ -246,6 +269,16 @@ export default async function ListingPage({ params }: Props) {
                   ))}
                 </dl>
               </div>
+            )}
+
+            {/* Additional Information — supplementary AI enrichment (distinct, attributed block) */}
+            {enrichment && (
+              <EnrichmentBlock
+                enrichment={enrichment}
+                listingHasDescription={Boolean(listing.short_description || listing.description)}
+                listingHasServices={services.length > 0}
+                listingHasServiceArea={serviceArea.length > 0}
+              />
             )}
 
             {/* Photo gallery */}
