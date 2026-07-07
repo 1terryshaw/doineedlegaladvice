@@ -110,7 +110,7 @@ export async function getListings(regionSlug?: string): Promise<Listing[]> {
       .order("tier_priority", { ascending: false, nullsFirst: false })
       .order("featured", { ascending: false, nullsFirst: false })
       .order("google_rating", { ascending: false, nullsFirst: false })
-      .order("name_sortkey", { ascending: true }).limit(200);
+      .order("name_sortkey", { ascending: true }).order("id", { ascending: true }).limit(200);
 
     // US+CA (us+ca consolidation): derive country + region column from the
     // disjoint region code. US -> license_state (bar-of-record, TDL #458);
@@ -148,7 +148,7 @@ export async function getFilteredListings(filters: ListingFilters): Promise<List
       .order("tier_priority", { ascending: false, nullsFirst: false })
       .order("featured", { ascending: false, nullsFirst: false })
       .order("google_rating", { ascending: false, nullsFirst: false })
-      .order("name_sortkey", { ascending: true }).limit(200);
+      .order("name_sortkey", { ascending: true }).order("id", { ascending: true }).limit(200);
 
     // US+CA: country + region column derived from the disjoint region code
     // (US -> license_state, CA -> province_state). No region -> both countries.
@@ -192,7 +192,7 @@ export async function getListingsByCity(provinceCode: string, citySlug: string):
       .order("tier_priority", { ascending: false, nullsFirst: false })
       .order("featured", { ascending: false, nullsFirst: false })
       .order("google_rating", { ascending: false, nullsFirst: false })
-      .order("name_sortkey", { ascending: true }).limit(200);
+      .order("name_sortkey", { ascending: true }).order("id", { ascending: true }).limit(200);
     return query as unknown as PromiseLike<{ data: Listing[] | null; error: unknown }>;
   }, { maxRows: USER_PAGE_MAX_ROWS });
 }
