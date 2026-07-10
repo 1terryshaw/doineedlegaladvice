@@ -111,8 +111,8 @@ export default async function UkFirmPage({ params }: Props) {
             <div className="flex items-start justify-between mb-4 flex-wrap gap-2">
               <h1 className="text-3xl font-bold text-gray-900">{firm.business_name}</h1>
               {firm.is_claimed && (
-                <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 border border-green-200 text-xs font-medium px-2.5 py-1 rounded-full">
-                  &#10003; Verified
+                <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 border border-gray-200 text-xs font-medium px-2.5 py-1 rounded-full" title="Claimed: the business owner confirmed this listing by email.">
+                  Claimed
                 </span>
               )}
             </div>
@@ -152,9 +152,9 @@ export default async function UkFirmPage({ params }: Props) {
               <div className="mt-2 bg-green-50 border border-green-200 rounded-lg p-6 flex items-center gap-3">
                 <span className="text-green-600 text-xl">&#10003;</span>
                 <div>
-                  <p className="font-semibold text-green-800">Verified Business</p>
+                  <p className="font-semibold text-green-800">Claimed by Owner</p>
                   <p className="text-sm text-green-700">
-                    This listing has been claimed and verified by the business owner.
+                    This listing has been claimed by the business owner.
                   </p>
                 </div>
               </div>
@@ -165,7 +165,7 @@ export default async function UkFirmPage({ params }: Props) {
               >
                 <p className="font-semibold">Is this your firm?</p>
                 <p className="text-sm text-gray-600 mt-1">
-                  Claim this listing to get a free Verified badge and manage your details.
+                  Claim this listing to confirm your ownership and manage your details.
                 </p>
                 <Link
                   href={`/uk/claim/${slug}`}
