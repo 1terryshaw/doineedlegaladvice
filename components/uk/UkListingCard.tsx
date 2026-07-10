@@ -43,8 +43,8 @@ export default function UkListingCard({ firm }: { firm: UkFirm }) {
           </div>
         </div>
         {firm.is_claimed && (
-          <span className="flex-shrink-0 inline-flex items-center gap-1 bg-green-50 text-green-700 border border-green-200 text-xs font-medium px-2 py-0.5 rounded-full">
-            &#10003; Verified
+          <span className="flex-shrink-0 inline-flex items-center gap-1 bg-gray-100 text-gray-700 border border-gray-200 text-xs font-medium px-2 py-0.5 rounded-full" title="Claimed: the business owner confirmed this listing by email.">
+            Claimed
           </span>
         )}
       </div>
