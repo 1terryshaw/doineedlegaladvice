@@ -6,6 +6,8 @@ import ListingCard from "@/components/ListingCard";
 import verticalConfig from "@/lib/vertical.config";
 import ShareButtons from "@/components/pizzazz/ShareButtons";
 import { cityBreadcrumbSchema } from "@/lib/seo";
+import CityFacetSummary from "@/components/CityFacetSummary";
+import { getCityFacets } from "@/lib/facets";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +41,8 @@ export default async function CityPage({ params }: Props) {
 
   const provinceName = PROVINCES[cityData.province] ?? cityData.province;
   const listings = await getListingsByCity(region, city);
+  // Data-derived facet summary over our own enriched listings (renders nothing below floor).
+  const facets = await getCityFacets(listings, "lawyer");
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
@@ -59,6 +63,8 @@ export default async function CityPage({ params }: Props) {
       <p className="text-gray-600 mb-8">
         Browse {listings.length} {listings.length === 1 ? "professional" : "professionals"} in {cityData.name}, {provinceName}.
       </p>
+
+      <CityFacetSummary facets={facets} cityName={cityData.name} noun="lawyers" />
 
       {listings.length === 0 ? (
         <p className="text-gray-500 text-center py-12">
