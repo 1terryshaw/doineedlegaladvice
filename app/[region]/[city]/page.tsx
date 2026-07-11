@@ -41,8 +41,9 @@ export default async function CityPage({ params }: Props) {
 
   const provinceName = PROVINCES[cityData.province] ?? cityData.province;
   const listings = await getListingsByCity(region, city);
-  // Data-derived facet summary over our own enriched listings (renders nothing below floor).
-  const facets = await getCityFacets(listings, "lawyer");
+  // Data-derived facet summary over our own enriched listings (renders nothing below
+  // floor or when FACET_HELD in the experiment holdout).
+  const facets = await getCityFacets(listings, "lawyer", region, city);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">

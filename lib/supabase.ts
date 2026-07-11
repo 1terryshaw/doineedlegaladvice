@@ -333,33 +333,46 @@ export async function getActiveProvincesCA(): Promise<string[]> {
 // the long-tail of rare cities from the sitemap. Self-maintaining as rows fill.
 // (TDL #464 Phase 4.)
 export async function getCityPageSlugs(): Promise<
-  { province_state: string; region_slug: string }[]
+  { province_state: string; region_slug: string; lastmod: string }[]
 > {
+  // Carries a per-city lastmod = MAX(updated_at) over the city's listings, so a
+  // facet/enrichment change (which bumps updated_at, backfilled to the true
+  // enrichment timestamp) moves the city URL's sitemap lastmod. The old code
+  // emitted now() for every city — an always-fresh signal Google learns to ignore.
   const rows = await paginateAll<{
     province_state: string | null;
     region_slug: string | null;
+    updated_at: string | null;
+    created_at: string | null;
   }>(() => {
     return supabaseAdmin
       .from(LISTINGS_TABLE)
-      .select("province_state, region_slug")
+      .select("province_state, region_slug, updated_at, created_at")
       .in("country", DIRECTORY_COUNTRIES)
       .neq("is_published", false)
       .not("province_state", "is", null)
       .not("region_slug", "is", null) as unknown as PromiseLike<{
-        data: { province_state: string | null; region_slug: string | null }[] | null;
+        data: {
+          province_state: string | null; region_slug: string | null;
+          updated_at: string | null; created_at: string | null;
+        }[] | null;
         error: unknown;
       }>;
   });
-  const seen = new Set<string>();
-  const out: { province_state: string; region_slug: string }[] = [];
+  const maxTs = new Map<string, number>();
+  const order: { province_state: string; region_slug: string }[] = [];
   for (const r of rows) {
     if (!r.province_state || !r.region_slug) continue;
     const key = `${r.province_state}/${r.region_slug}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push({ province_state: r.province_state, region_slug: r.region_slug });
+    const raw = r.updated_at || r.created_at;
+    const ts = raw ? new Date(raw).getTime() : 0;
+    if (!maxTs.has(key)) { maxTs.set(key, ts); order.push({ province_state: r.province_state, region_slug: r.region_slug }); }
+    else if (ts > (maxTs.get(key) as number)) maxTs.set(key, ts);
   }
-  return out;
+  return order.map((o) => {
+    const t = maxTs.get(`${o.province_state}/${o.region_slug}`) || 0;
+    return { ...o, lastmod: (t ? new Date(t) : new Date()).toISOString() };
+  });
 }
 
 // Real total for a filtered view (decision #3): the directory/region pages cap

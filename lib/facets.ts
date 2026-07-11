@@ -36,13 +36,30 @@ function canon(vertical: string, raw: string): string | null {
 
 interface FacetListing { id: string | number; google_rating?: number | null }
 
+// Experiment holdout: FACET_HELD cities render nothing (control arm). A city not in
+// facet_assignment defaults to ON — the M>=8/N>=5 floor still gates it.
+async function facetHeld(vertical: string, provinceState: string, regionSlug: string): Promise<boolean> {
+  const { data, error } = await supabaseAdmin
+    .from("facet_assignment")
+    .select("facet_on")
+    .eq("vertical", vertical)
+    .eq("province_state", provinceState.toUpperCase())
+    .eq("region_slug", regionSlug)
+    .maybeSingle();
+  if (error || !data) return false; // not assigned => not held
+  return data.facet_on === false;
+}
+
 export async function getCityFacets(
   listings: FacetListing[],
-  vertical: string
+  vertical: string,
+  provinceState: string,
+  regionSlug: string
 ): Promise<CityFacets | null> {
   const totalCount = listings.length;
   const ids = listings.map((l) => String(l.id));
   if (ids.length < M_MIN) return null; // can't clear floor; skip the query entirely
+  if (await facetHeld(vertical, provinceState, regionSlug)) return null; // FACET_HELD control
 
   // ONE batch query for the whole city — never 200 per-slug round-trips.
   const { data, error } = await supabaseAdmin

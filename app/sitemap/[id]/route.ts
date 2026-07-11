@@ -96,11 +96,11 @@ export async function GET(
     // PostgREST cap. Province lowercased to match the lowercase region-page URLs
     // (/on, /ca) and the city route's canonical form.
     const cityPages = await getCityPageSlugs();
-    for (const { province_state, region_slug } of cityPages) {
+    for (const { province_state, region_slug, lastmod } of cityPages) {
       parts.push(
         urlEntry(
           `${baseUrl}/${province_state.toLowerCase()}/${region_slug}`,
-          now,
+          lastmod,
           "weekly",
           "0.7"
         )
