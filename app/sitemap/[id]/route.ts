@@ -46,7 +46,7 @@ function urlEntry(loc: string, lastmod: string, changefreq: string, priority: st
   return `  <url><loc>${escapeXml(loc)}</loc><lastmod>${lastmod}</lastmod><changefreq>${changefreq}</changefreq><priority>${priority}</priority></url>`;
 }
 
-export async function GET(
+async function renderSitemap(
   _req: Request,
   { params }: { params: { id: string } }
 ) {
@@ -125,4 +125,31 @@ ${parts.join("\n")}
       "Cache-Control": "public, max-age=0, must-revalidate",
     },
   });
+}
+
+// FAIL-CLOSED SITEMAP (P1 2026-07-13) ------------------------------------------------
+// A sitemap must NEVER serve a partial or empty result at HTTP 200. A well-formed
+// but EMPTY <urlset> at 200 tells Google "this chunk has no URLs" and de-indexes it;
+// a 5xx tells Google "temporary" so it retries and KEEPS the previous sitemap.
+// Every data helper below throws on error (see lib/supabase.ts); this boundary turns
+// any such throw into a real 503 instead of a silently-degraded 200.
+export async function GET(
+  ...args: Parameters<typeof renderSitemap>
+): Promise<Response> {
+  try {
+    return await renderSitemap(...args);
+  } catch (err) {
+    console.error("[sitemap] FAIL-CLOSED 503 — refusing to serve a partial/empty sitemap:", err);
+    return new Response(
+      `<?xml version="1.0" encoding="UTF-8"?>\n<!-- sitemap temporarily unavailable; retry -->`,
+      {
+        status: 503,
+        headers: {
+          "Content-Type": "application/xml",
+          "Cache-Control": "no-store",
+          "Retry-After": "600",
+        },
+      }
+    );
+  }
 }

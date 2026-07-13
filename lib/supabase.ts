@@ -30,7 +30,7 @@ const HARD_CAP = 500_000;
 
 async function paginateAll<T>(
   queryFactory: () => PromiseLike<{ data: T[] | null; error: unknown }>,
-  options: { maxRows?: number } = {}
+  options: { maxRows?: number; failClosed?: boolean } = {}
 ): Promise<T[]> {
   const upper = options.maxRows ?? HARD_CAP;
   const all: T[] = [];
@@ -43,6 +43,15 @@ async function paginateAll<T>(
     const { data, error } = await builder.range(from, to);
     if (error) {
       console.error("paginateAll error:", error);
+      // FAIL-CLOSED (P1 2026-07-13): sitemap-feeding callers pass failClosed and MUST throw.
+      // Returning `all` here yields a PARTIAL/EMPTY result that the caller renders as a
+      // well-formed <urlset> at HTTP 200 — which instructs Google to de-index the chunk.
+      // A throw becomes a 5xx: Google retries and keeps the last good sitemap.
+      if (options.failClosed) {
+        throw new Error(
+          `paginateAll failed after ${all.length} rows: ${(error as { message?: string })?.message ?? "unknown"}`
+        );
+      }
       return all;
     }
     const page = data || [];
@@ -229,7 +238,7 @@ export async function getAllListingsForSitemap(regionSlug?: string): Promise<Lis
       query = query.eq("region_slug", regionSlug);
     }
     return query as unknown as PromiseLike<{ data: Listing[] | null; error: unknown }>;
-  });
+  }, { failClosed: true });
 }
 
 // === TDL #457: chunked sitemap support ===
@@ -270,13 +279,29 @@ export async function getListingsRange(
       .range(from, to);
     if (error) {
       console.error("getListingsRange error:", error);
-      return all;
+      // FAIL-CLOSED (P1 2026-07-13): never return a partial page — see paginateAll.
+      throw new Error(
+        `getListingsRange failed after ${all.length} rows: ${(error as { message?: string })?.message ?? "unknown"}`
+      );
     }
     const page = (data || []) as Pick<Listing, "slug" | "updated_at" | "created_at">[];
     all.push(...page);
     const requested = to - from + 1;
     if (page.length < requested) break;
     from = to + 1;
+  }
+  // FAIL-CLOSED (P1 2026-07-13): 0 rows is only legitimate PAST THE END of the corpus.
+  // The sitemap index is SIZED from getListingsCount(), so a chunk whose offset falls
+  // inside that count MUST yield rows. Serving it as an empty <urlset> at HTTP 200 is
+  // what tells Google the chunk has no URLs. A genuinely out-of-range chunk (offset >=
+  // total) is still allowed to render empty — that is a real, legitimately-empty tail.
+  if (all.length === 0) {
+    const total = await getListingsCount();
+    if (offset < total) {
+      throw new Error(
+        `getListingsRange(${offset}, ${limit}) returned 0 rows but the corpus holds ${total} — refusing to serve an empty sitemap chunk`
+      );
+    }
   }
   return all;
 }
