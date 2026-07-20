@@ -1,4 +1,13 @@
 /**
+ * CANONICAL SOURCE. Per-vertical copies of this file must md5-match this canonical.
+ * Divergences are drift and get flagged by scripts/check-canonical-drift.mjs.
+ * Per-vertical identity is env-var driven (BILLING_HMAC_SECRET, BILLING_VERTICAL_SLUG) — do NOT hard-code slug/secrets here.
+ * To modify: change this file, then run the drift-check to see per-vertical impact, then stamp each vertical intentionally.
+ *
+ * Origin: copied verbatim from idealskitrip 2026-07-20 (empire-monetization-consolidation-audit §2 baseline).
+ * Loop: empire-canonical-monetization-scaffold-v1. This scaffold REWIRES NOBODY — verticals keep their forked copies.
+ */
+/**
  * Tier capability map + helpers.
  * Single source of truth for what each tier actually unlocks in the app.
  * Marketing copy lives in lib/pricing.ts; enforcement logic lives here.
@@ -99,6 +108,18 @@ export function can(
   const caps = TIER_CAPABILITIES[resolved as TierSlug];
   if (!caps) return false;
   return caps[capability] === true;
+}
+
+/**
+ * The tier that actually governs entitlements: the paid `subscription_tier` when present,
+ * else the operational `tier` column. (Mirrors getapro / the #472 guard.)
+ */
+export function getEffectiveTier(
+  listing: { tier?: string | null; subscription_tier?: string | null }
+): string {
+  const sub = listing.subscription_tier;
+  if (sub && sub !== "free") return sub;
+  return listing.tier || "free";
 }
 
 /**
