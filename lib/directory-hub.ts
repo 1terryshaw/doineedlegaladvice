@@ -36,8 +36,10 @@ export async function getFilteredListingsPaged(filters: ListingFiltersPaged): Pr
     .neq("is_published", false)
     .order("tier_priority", { ascending: false, nullsFirst: false })
     .order("featured", { ascending: false, nullsFirst: false })
+    .order("claimed", { ascending: false, nullsFirst: false })
     .order("google_rating", { ascending: false, nullsFirst: false })
-    .order("name_sortkey", { ascending: true });
+    .order("name_sortkey", { ascending: true })
+    .order("id", { ascending: true });
 
   if (filters.region) {
     const r = filters.region.trim();
@@ -147,8 +149,10 @@ export async function getListingsByProvincePaged(
     .eq(regionColumn(provinceCode), provinceCode.toUpperCase())
     .order("tier_priority", { ascending: false, nullsFirst: false })
     .order("featured", { ascending: false })
+    .order("claimed", { ascending: false, nullsFirst: false })
     .order("google_rating", { ascending: false, nullsFirst: false })
     .order("name", { ascending: true })
+    .order("id", { ascending: true })
     .range(from, to);
   if (error) {
     console.error(`getListingsByProvincePaged(${provinceCode}) error:`, error);

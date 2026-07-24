@@ -118,6 +118,7 @@ export async function getListings(regionSlug?: string): Promise<Listing[]> {
       .neq("is_published", false)
       .order("tier_priority", { ascending: false, nullsFirst: false })
       .order("featured", { ascending: false, nullsFirst: false })
+      .order("claimed", { ascending: false, nullsFirst: false })
       .order("google_rating", { ascending: false, nullsFirst: false })
       .order("name_sortkey", { ascending: true }).order("id", { ascending: true }).limit(200);
 
@@ -156,6 +157,7 @@ export async function getFilteredListings(filters: ListingFilters): Promise<List
       .neq("is_published", false)
       .order("tier_priority", { ascending: false, nullsFirst: false })
       .order("featured", { ascending: false, nullsFirst: false })
+      .order("claimed", { ascending: false, nullsFirst: false })
       .order("google_rating", { ascending: false, nullsFirst: false })
       .order("name_sortkey", { ascending: true }).order("id", { ascending: true }).limit(200);
 
@@ -200,6 +202,7 @@ export async function getListingsByCity(provinceCode: string, citySlug: string):
       .eq("region_slug", citySlug)
       .order("tier_priority", { ascending: false, nullsFirst: false })
       .order("featured", { ascending: false, nullsFirst: false })
+      .order("claimed", { ascending: false, nullsFirst: false })
       .order("google_rating", { ascending: false, nullsFirst: false })
       .order("name_sortkey", { ascending: true }).order("id", { ascending: true }).limit(200);
     return query as unknown as PromiseLike<{ data: Listing[] | null; error: unknown }>;
@@ -233,7 +236,8 @@ export async function getAllListingsForSitemap(regionSlug?: string): Promise<Lis
     let query = supabaseAdmin
       .from(LISTINGS_TABLE)
       .select("*")
-      .in("country", DIRECTORY_COUNTRIES).neq("is_published", false);
+      .in("country", DIRECTORY_COUNTRIES).neq("is_published", false)
+      .order("id", { ascending: true });
     if (regionSlug) {
       query = query.eq("region_slug", regionSlug);
     }
@@ -276,6 +280,7 @@ export async function getListingsRange(
       .in("country", DIRECTORY_COUNTRIES)
       .neq("is_published", false)
       .order("slug", { ascending: true })
+      .order("id", { ascending: true })
       .range(from, to);
     if (error) {
       console.error("getListingsRange error:", error);
