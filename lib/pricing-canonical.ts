@@ -68,6 +68,7 @@ export const TIERS: Record<TierId, Tier> = {
     stripePriceMonthlyId: 'price_1TWCWhB4nhVx1nmU7e5wn3EI',
     stripePriceAnnualId: 'price_1TWCWhB4nhVx1nmU9rAwLlH0',
     visibleFeatures: [
+      'Top reviews from Google displayed on your listing',
       '"Featured" badge (vs Verified)',
       'Up to 10 photos + hero cover image',
       'Top-of-browse placement in directory search',
