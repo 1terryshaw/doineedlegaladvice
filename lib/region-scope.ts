@@ -37,9 +37,10 @@ export function resolveRegionScope(code: string): RegionScope | null {
   return null;
 }
 
-// Countries the directory serves by default (D1: us+ca default browse). Mutable
-// string[] (not `as const`) so it drops straight into PostgREST `.in("country", …)`.
-export const DIRECTORY_COUNTRIES: string[] = ["US", "CA"];
+// Countries the directory serves. US-only (country split 2026-07-26): FLA keeps
+// CA-only, DINLA is US-only, disjoint slices. Mutable string[] (not `as const`) so it
+// drops straight into PostgREST `.in("country", …)`.
+export const DIRECTORY_COUNTRIES: string[] = ["US"];
 
 // CA province display names (for breadcrumb / country crumb derivation).
 export const CANADA_LABEL = "Canada";

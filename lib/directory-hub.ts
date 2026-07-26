@@ -32,7 +32,7 @@ export async function getFilteredListingsPaged(filters: ListingFiltersPaged): Pr
   let query = supabaseAdmin
     .from(LISTINGS_TABLE)
     .select("*")
-    .in("country", ["CA", "US"])
+    .eq("country", "US")
     .neq("is_published", false)
     .order("tier_priority", { ascending: false, nullsFirst: false })
     .order("featured", { ascending: false, nullsFirst: false })
@@ -96,7 +96,11 @@ export async function getRegionCounts(): Promise<RegionCount[]> {
   }
   const { data, error } = await supabaseAdmin
     .from(`mv_${LISTINGS_TABLE}_regions`)
-    .select("country, province_state, n");
+    // US-only (country split 2026-07-26): the region hub must not surface CA
+    // provinces. (mv_regions is currently CA-only, so the US hub stays empty
+    // until US region counts are populated — tracked as a follow-up.)
+    .select("country, province_state, n")
+    .eq("country", "US");
   if (error) {
     console.error("getRegionCounts error:", error);
     return _regionCountsCache?.data ?? [];
@@ -122,7 +126,7 @@ export async function getDirectoryTotal(): Promise<number> {
   const { count, error } = await supabaseAdmin
     .from(LISTINGS_TABLE)
     .select("*", { count: "exact", head: true })
-    .in("country", ["CA", "US"])
+    .eq("country", "US")
     .neq("is_published", false);
   if (error) {
     console.error("getDirectoryTotal error:", error);
@@ -144,7 +148,7 @@ export async function getListingsByProvincePaged(
   const { data, error } = await supabaseAdmin
     .from(LISTINGS_TABLE)
     .select("*")
-    .in("country", ["CA", "US"])
+    .eq("country", "US")
     .neq("is_published", false)
     .eq(regionColumn(provinceCode), provinceCode.toUpperCase())
     .order("tier_priority", { ascending: false, nullsFirst: false })

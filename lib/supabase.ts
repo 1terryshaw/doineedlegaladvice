@@ -194,9 +194,9 @@ export async function getListingsByCity(provinceCode: string, citySlug: string):
     const query = supabaseAdmin
       .from(LISTINGS_TABLE)
       .select("*")
-      // US+CA: city pages key on province_state for both countries; country is
-      // derived from the province code (CA province -> CA, US state -> US).
-      .eq("country", resolveRegionScope(provinceCode)?.country ?? "US")
+      // US-only (country split 2026-07-26): city pages serve US rows only; a CA
+      // province code therefore returns nothing here (CA rows live on FLA).
+      .eq("country", "US")
       .neq("is_published", false)
       .eq("province_state", provinceCode.toUpperCase())
       .eq("region_slug", citySlug)
@@ -213,8 +213,9 @@ export async function getListing(slug: string): Promise<Listing | null> {
   const { data, error } = await supabaseAdmin
     .from(LISTINGS_TABLE)
     .select("*")
-    // US+CA: slug is globally unique, so match by slug across both countries —
-    // this is what lets CA listing detail pages (the CTA card target) resolve.
+    // US-only (country split 2026-07-26): the detail page must not resolve a CA
+    // row even by direct URL — CA listings render on FLA, not here.
+    .eq("country", "US")
     .neq("is_published", false)
     .eq("slug", slug)
     .single();
@@ -488,7 +489,7 @@ export async function getDirectoryRegions(): Promise<DirectoryRegion[]> {
     return supabaseAdmin
       .from(`mv_${LISTINGS_TABLE}_cities`)
       .select("province_state, city")
-      .in("country", ["CA", "US"])
+      .eq("country", "US")
       .in("province_state", CANONICAL_PROVINCE_CODES)
       .not("city", "is", null)
       .neq("city", "") as unknown as PromiseLike<{
