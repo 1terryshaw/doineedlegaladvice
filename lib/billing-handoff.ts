@@ -30,3 +30,20 @@ export async function signBillingHandoff(payload: HandoffPayload): Promise<strin
     .setExpirationTime(`${TOKEN_TTL_SECONDS}s`)
     .sign(secretKey());
 }
+
+/**
+ * Signs the short-lived JWT for the two-tier-display place-id resolve endpoint
+ * (empire-billing /api/place-id/resolve). Same per-vertical HS256 secret + issuer as the
+ * billing handoff; distinct audience. Fire-and-forget from claim/verify — never blocks a claim.
+ */
+export async function signPlaceResolve(listing_id: string, slug: string): Promise<string> {
+  const vertical = process.env.BILLING_VERTICAL_SLUG;
+  if (!vertical) throw new Error('BILLING_VERTICAL_SLUG not set');
+  return await new SignJWT({ vertical, listing_id, slug })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setIssuer(vertical)
+    .setAudience('empire-place-resolve')
+    .setExpirationTime('120s')
+    .sign(secretKey());
+}
