@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
   // failure must NEVER cost a claim: the claim write above is already committed and this
   // block cannot alter the response below. Endpoint does the Places call + email async.
   try {
-    const base = "https://10.255.255.1"; // GATE-D BLACK-HOLE (temporary, reverted next commit)
+    const base = process.env.BILLING_SERVICE_URL;
     const vslug = process.env.BILLING_VERTICAL_SLUG;
     if (base && vslug) {
       const jwt = await signPlaceResolve(String(listing.id), slug);
