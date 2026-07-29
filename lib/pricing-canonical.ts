@@ -97,7 +97,6 @@ export const TIERS: Record<TierId, Tier> = {
     visibleFeatures: [
       'Everything in Reviews Plus, plus:',
       'SiteForge-built website at your domain (concierge delivered)',
-      'SMS + email lead alerts',
       'Weekly digest of activity',
       'Branded inquiry emails to prospects',
     ],
