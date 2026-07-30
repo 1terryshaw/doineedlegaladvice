@@ -468,7 +468,7 @@ function RecentLeads() {
     <div className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-6">
       <h3 className="font-semibold text-lg mb-1">Recent Leads</h3>
       <p className="text-xs text-gray-500 mb-4">
-        Leads from your contact form, forwarded to you via email + SMS.
+        Leads from your contact form, forwarded to you via email.
       </p>
 
       {loading && (
