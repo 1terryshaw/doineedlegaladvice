@@ -5,7 +5,7 @@ import SearchBar from "@/components/SearchBar";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
 import FadeIn from "@/components/pizzazz/FadeIn";
 import ShareButtons from "@/components/pizzazz/ShareButtons";
-import { websiteSearchSchema } from "@/lib/seo";
+import { websiteSearchSchema, faqPageSchema } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -93,8 +93,15 @@ export default async function HomePage() {
       {/* FAQs */}
       {verticalConfig.faqs && verticalConfig.faqs.length > 0 && (
         <FadeIn as="section" delay={200} className="py-16 px-4 bg-gray-50">
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPageSchema([...verticalConfig.faqs])) }}
+          />
           <div className="max-w-3xl mx-auto">
             <h2 className="text-2xl font-bold mb-8 text-center">Frequently Asked Questions</h2>
+            <p className="mb-6 text-sm text-gray-600 italic text-center border-l-4 border-gray-300 bg-white/60 px-4 py-3 rounded">
+              The information here is for informational purposes only and is not legal advice. Consult a licensed attorney in your jurisdiction about your specific situation.
+            </p>
             <div className="space-y-4">
               {verticalConfig.faqs.map((faq, i) => (
                 <details key={i} className="bg-white border rounded-lg p-5 group">

@@ -4,7 +4,11 @@ import verticalConfig from "@/lib/vertical.config";
 import { getListings } from "@/lib/supabase";
 import { getProvinceNameByCode, getRegionBySlug } from "@/lib/constants";
 import { getListingsByProvincePaged, getRegionTotal, REGION_PAGE_SIZE } from "@/lib/directory-hub";
-import { regionBreadcrumbSchema, regionCollectionPageSchema } from "@/lib/seo";
+import { regionBreadcrumbSchema, regionCollectionPageSchema, localizeFaqs } from "@/lib/seo";
+import FaqSection from "@/components/FaqSection";
+
+const LEGAL_DISCLAIMER =
+  "The information here is for informational purposes only and is not legal advice. Consult a licensed attorney in your jurisdiction about your specific situation.";
 import ListingCard from "@/components/ListingCard";
 import Pagination from "@/components/Pagination";
 import ShareButtons from "@/components/pizzazz/ShareButtons";
@@ -93,6 +97,7 @@ export default async function RegionPage({ params, searchParams }: Props) {
             <Pagination currentPage={page} basePath={`/${region}`} totalPages={totalPages} />
           </>
         )}
+        <FaqSection faqs={localizeFaqs(verticalConfig.faqs, provName)} disclaimer={LEGAL_DISCLAIMER} />
       </div>
     );
   }
@@ -128,6 +133,7 @@ export default async function RegionPage({ params, searchParams }: Props) {
           ))}
         </div>
       )}
+      <FaqSection faqs={localizeFaqs(verticalConfig.faqs, label)} disclaimer={LEGAL_DISCLAIMER} />
     </div>
   );
 }

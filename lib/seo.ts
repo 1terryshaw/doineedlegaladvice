@@ -132,3 +132,76 @@ export function regionCollectionPageSchema(
     description: `Browse ${listingCount} ${noun} in ${regionName}.`,
   };
 }
+
+
+// Static branded social card (public/og-default.png, 1200x630). Emitted
+// UNCONDITIONALLY on detail pages — deliberately NOT gated on a hero image, so
+// coverage is 100% rather than "whichever rows happen to have photos". Relative
+// path; metadataBase (app/layout.tsx) resolves it to an absolute URL.
+export const OG_DEFAULT_IMAGE = "/og-default.png";
+
+export interface FaqItem {
+  question: string;
+  answer: string;
+}
+
+/**
+ * FAQPage JSON-LD from a {question, answer}[] — the SAME shape app/costs emits.
+ * Content is passed in verbatim (from verticalConfig.faqs, optionally with a
+ * localized QUESTION via localizeFaqs); this helper never edits text, so the
+ * schema is a 1:1 mirror of whatever the visible accordion renders.
+ */
+export function faqPageSchema(faqs: FaqItem[]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((f) => ({
+      "@type": "Question",
+      name: f.question,
+      acceptedAnswer: { "@type": "Answer", text: f.answer },
+    })),
+  };
+}
+
+/**
+ * Interpolate a page's location into the QUESTION only, and only where it reads
+ * naturally — pricing ("...cost?"), licensing requirement ("Do I need..."), and
+ * DIY-legality ("Can I do my own...") questions. Definitional / safety questions
+ * stay generic. ANSWERS are returned byte-for-byte unchanged: a place is NEVER
+ * injected into a price, code, or licensing claim (no fabricated local figures).
+ * Returns the same array (same order) so the caller renders the visible accordion
+ * and the FAQPage schema from ONE localized array — keeping them 1:1.
+ */
+export function localizeFaqs(faqs: FaqItem[], location?: string | null): FaqItem[] {
+  const loc = (location || "").trim();
+  if (!loc) return faqs;
+  return faqs.map((f) => {
+    const q = f.question.toLowerCase();
+    const placeScoped =
+      q.includes("cost") || q.includes("do i need") || q.includes("can i do my own");
+    if (!placeScoped) return f;
+    // Answer untouched; only the question gains " in {loc}" before its trailing "?".
+    return { question: f.question.replace(/\?\s*$/, ` in ${loc}?`), answer: f.answer };
+  });
+}
+
+/**
+ * BreadcrumbList for detail pages. Accepts an ordered trail of {name, path}
+ * (Home → region hub → city hub → business); the CALLER drops any level whose hub
+ * does not 200 — notably the CA province level (`/on` 404s, no region hub) — so the
+ * emitted trail never carries a broken URL. Paths are canonical lowercase and the
+ * last item is the listing's own canonical URL. Mirrors regionBreadcrumbSchema's
+ * shape + SITE_URL derivation (Home item = bare SITE_URL, as there).
+ */
+export function detailBreadcrumbSchema(trail: Array<{ name: string; path: string }>) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: trail.map((t, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: t.name,
+      item: t.path === "/" ? SITE_URL : canonicalUrl(t.path),
+    })),
+  };
+}

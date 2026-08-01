@@ -22,6 +22,12 @@ import { canonical } from "@/lib/vertical-canonical";
 import ListingGallery from "@/components/ListingGallery";
 import TierBadge from "@/components/TierBadge";
 import ReviewShowcase from "@/components/ReviewShowcase";
+import FaqSection from "@/components/FaqSection";
+import { detailBreadcrumbSchema, localizeFaqs, OG_DEFAULT_IMAGE } from "@/lib/seo";
+import { getRegionBySlug } from "@/lib/constants";
+
+const LEGAL_DISCLAIMER =
+  "The information here is for informational purposes only and is not legal advice. Consult a licensed attorney in your jurisdiction about your specific situation.";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -35,6 +41,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: listing.name,
     description: listing.short_description || listing.description,
     alternates: { canonical: `/directory/${slug}` },
+    openGraph: { images: [OG_DEFAULT_IMAGE] },
   };
 }
 
@@ -87,7 +94,7 @@ export default async function ListingPage({ params }: Props) {
 
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
-    "@type": "LocalBusiness",
+    "@type": "LegalService",
     name: listing.name,
     description: listing.short_description || listing.description,
     telephone: listing.phone,
@@ -145,11 +152,34 @@ export default async function ListingPage({ params }: Props) {
     }
   }
 
+  // BreadcrumbList JSON-LD (SEPARATE block — the LegalService object above is
+  // untouched). Static-config US-state: trail is Home → /{stateSlug} hub → business,
+  // where the state crumb is included only when province_state resolves to a
+  // configured region hub (getRegionBySlug) so the emitted URL always 200s.
+  const bcStateSlug = (listing.province_state || "").trim().toLowerCase();
+  const bcRegion = bcStateSlug ? getRegionBySlug(bcStateSlug) : null;
+  const breadcrumbTrail: Array<{ name: string; path: string }> = [
+    { name: "Home", path: "/" },
+  ];
+  if (bcRegion) {
+    const bcName =
+      (bcRegion as { name?: string; label?: string }).name ||
+      (bcRegion as { label?: string }).label ||
+      bcStateSlug.toUpperCase();
+    breadcrumbTrail.push({ name: bcName, path: `/${bcStateSlug}` });
+  }
+  breadcrumbTrail.push({ name: listing.name, path: `/directory/${listing.slug}` });
+  const breadcrumbLd = detailBreadcrumbSchema(breadcrumbTrail);
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
       />
       <div className="max-w-4xl mx-auto px-4 py-12">
         <div className="mb-6">
@@ -368,6 +398,12 @@ export default async function ListingPage({ params }: Props) {
           </div>
         </div>
       </div>
+      {/* FAQ — visible accordion + FAQPage ld+json (sibling block; LegalService +
+          BreadcrumbList above untouched). Legal disclaimer above accordion. */}
+      <FaqSection
+        faqs={localizeFaqs(verticalConfig.faqs, listing.city)}
+        disclaimer={LEGAL_DISCLAIMER}
+      />
       <UpgradeModal
         listingSlug={listing.slug}
         priceIds={{

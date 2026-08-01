@@ -5,6 +5,11 @@ import { getCityBySlug, CITIES, PROVINCES } from "@/lib/constants";
 import ListingCard from "@/components/ListingCard";
 import verticalConfig from "@/lib/vertical.config";
 import ShareButtons from "@/components/pizzazz/ShareButtons";
+import FaqSection from "@/components/FaqSection";
+import { localizeFaqs } from "@/lib/seo";
+
+const LEGAL_DISCLAIMER =
+  "The information here is for informational purposes only and is not legal advice. Consult a licensed attorney in your jurisdiction about your specific situation.";
 import { cityBreadcrumbSchema } from "@/lib/seo";
 import CityFacetSummary from "@/components/CityFacetSummary";
 import { getCityFacets } from "@/lib/facets";
@@ -98,6 +103,7 @@ export default async function CityPage({ params }: Props) {
           ))}
         </div>
       )}
+      <FaqSection faqs={localizeFaqs(verticalConfig.faqs, cityName)} disclaimer={LEGAL_DISCLAIMER} />
     </div>
   );
 }
