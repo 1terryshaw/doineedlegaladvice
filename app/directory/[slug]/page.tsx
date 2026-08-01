@@ -85,6 +85,16 @@ export default async function ListingPage({ params }: Props) {
       ? listing.email
       : null;
 
+  // TDL #849 geo block — emit a geo point ONLY at street precision (geo_precision_m <= 50);
+  // finite numeric coords, never 0,0; failing rows emit the JSON-LD unchanged. @type preserved, no map.
+  const geoLat = Number((listing as { latitude?: number | string | null }).latitude);
+  const geoLng = Number((listing as { longitude?: number | string | null }).longitude);
+  const geoPrec = (listing as { geo_precision_m?: number | null }).geo_precision_m;
+  const emitGeo =
+    geoPrec != null && geoPrec <= 50 &&
+    Number.isFinite(geoLat) && Number.isFinite(geoLng) &&
+    !(geoLat === 0 && geoLng === 0);
+
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
@@ -99,6 +109,13 @@ export default async function ListingPage({ params }: Props) {
       addressRegion: listing.province_state,
       addressCountry: listing.country || verticalConfig.defaultCountry,
     },
+    ...(emitGeo && {
+      geo: {
+        "@type": "GeoCoordinates",
+        latitude: geoLat,
+        longitude: geoLng,
+      },
+    }),
     ...(listing.google_rating && {
       aggregateRating: {
         "@type": "AggregateRating",
