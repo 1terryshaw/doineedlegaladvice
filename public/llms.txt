@@ -1,0 +1,14 @@
+# DoINeedLegalAdvice.com
+
+> A public lawyer directory organized by location.
+
+- Canonical site: https://doineedlegaladvice.com
+- Geographic coverage: the United States; availability varies by listed location.
+- Directory: /directory
+- Location browse pages: /[region]
+- Listing pages: /directory/[listing-slug]
+- Owner or claim access: /owner/[listing-slug]
+
+## Reader guidance
+
+Use the directory and location pages to discover lawyer listings. Verify current listing details directly with the listed business. This file is a concise orientation aid for crawlers and AI readers; it does not replace the public pages.
