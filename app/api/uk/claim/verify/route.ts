@@ -4,9 +4,9 @@ import { UK_TABLE } from "@/lib/uk-solicitors";
 
 export const dynamic = "force-dynamic";
 
-// Verifies the magic-link token and flips the UK listing to Verified. No payment, no
+// Verifies the magic-link token and flips the UK listing to Claimed (is_claimed=true). No payment, no
 // owner cookie/dashboard this session (TODO(UK-PRICING) + owner dashboard are the
-// deferred follow-up). On success -> firm page showing the Verified badge.
+// deferred follow-up). On success -> firm page showing the Claimed badge.
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const token = searchParams.get("token");

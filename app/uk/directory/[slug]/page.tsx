@@ -145,7 +145,7 @@ export default async function UkFirmPage({ params }: Props) {
               </p>
             </div>
 
-            {/* Claim CTA — free Verified only this session. TODO(UK-PRICING): once the GBP
+            {/* Claim CTA — free "Claimed" badge only this session. TODO(UK-PRICING): once the GBP
                 ladder locks, the claimed state gains the upgrade entry point (Reviews Plus /
                 Website tiers in £). Paid flow is intentionally absent now (no broken UI). */}
             {firm.is_claimed ? (

@@ -29,7 +29,7 @@ export async function sendUkClaimEmail(
       html: `
       <h2>Claim ${firmName} on ${verticalConfig.name}</h2>
       <p>Click the link below to verify you control this business and add a free
-         <strong>Verified</strong> badge to your listing:</p>
+         <strong>Claimed</strong> badge to your listing:</p>
       <p><a href="${verifyLink}" style="display:inline-block;padding:12px 24px;background:${verticalConfig.primaryColor};color:white;text-decoration:none;border-radius:6px;">Verify Claim</a></p>
       <p>Or copy this link: ${verifyLink}</p>
       <p style="color:#666;font-size:12px;">If you didn't request this, you can safely ignore this email.</p>

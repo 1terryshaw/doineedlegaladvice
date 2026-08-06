@@ -45,7 +45,7 @@ export default function UkClaimForm({ slug, firmName }: Props) {
         <h2 className="text-xl font-bold text-green-800 mt-3">Check your email</h2>
         <p className="text-sm text-green-700 mt-2">
           We&apos;ve sent a verification link to <strong>{email}</strong>. Click it to
-          confirm control of <strong>{firmName}</strong> and mark your listing as Verified
+          confirm control of <strong>{firmName}</strong> and mark your listing as Claimed
           — it&apos;s free.
         </p>
         <p className="text-xs text-gray-500 mt-3">
@@ -60,7 +60,7 @@ export default function UkClaimForm({ slug, firmName }: Props) {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Claim {firmName}</h1>
         <p className="text-sm text-gray-600 mt-2">
-          Confirm you control this business to get a free <strong>Verified</strong> badge
+          Confirm you control this business to get a free <strong>Claimed</strong> badge
           on your listing. We&apos;ll email you a one-click verification link — no payment.
         </p>
       </div>

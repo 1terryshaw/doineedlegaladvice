@@ -6,7 +6,7 @@ import { sendUkClaimEmail } from "@/lib/uk-claim-email";
 
 export const dynamic = "force-dynamic";
 
-// PARALLEL UK claim flow — operates ONLY on uk_accountants. Free "Verified" via
+// PARALLEL UK claim flow — operates ONLY on uk_accountants. Free "Claimed" badge via
 // magic-link control verification; no payment (TODO(UK-PRICING) for the GBP tiers).
 export async function POST(request: NextRequest) {
   try {
