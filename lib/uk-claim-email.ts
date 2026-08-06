@@ -5,7 +5,7 @@
 import { Resend } from "resend";
 import verticalConfig from "@/lib/vertical.config";
 
-const AUTH_FROM = "Smart Website Management <auth@smartwebsitemanagement.ca>";
+const AUTH_FROM = "Smart Website Management <verify@auth.smartwebsitemanagement.ca>";
 
 export type UkAuthSendResult = { ok: true; id: string } | { ok: false; error: string };
 
