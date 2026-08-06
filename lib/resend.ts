@@ -8,7 +8,7 @@ const FROM_ADDRESS = "notifications@smartwebsitemanagement.ca";
 
 // Transactional auth sender (owner login + claim verification). Distinct from the
 // notifications@ lead/inquiry sender. Migrated off Gmail SMTP — see lib/email.ts.
-const AUTH_FROM = "Smart Website Management <auth@smartwebsitemanagement.ca>";
+const AUTH_FROM = "Smart Website Management <verify@auth.smartwebsitemanagement.ca>";
 
 export type AuthSendResult = { ok: true; id: string } | { ok: false; error: string };
 
