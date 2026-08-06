@@ -25,6 +25,11 @@ import ReviewShowcase from "@/components/ReviewShowcase";
 import FaqSection from "@/components/FaqSection";
 import { detailBreadcrumbSchema, localizeFaqs, OG_DEFAULT_IMAGE } from "@/lib/seo";
 import { getRegionBySlug } from "@/lib/constants";
+import ListingClaimCTA from "@/components/ListingClaimCTA";
+import ClaimUnlockPreview from "@/components/ClaimUnlockPreview";
+import PublicGbpClaimSidecar from "@/components/PublicGbpClaimSidecar";
+import { normalizeTierForPricing } from "@/lib/pricing-canonical";
+import { HAS_LIST_YOUR_BUSINESS } from "@/lib/add-business";
 
 const LEGAL_DISCLAIMER =
   "The information here is for informational purposes only and is not legal advice. Consult a licensed attorney in your jurisdiction about your specific situation.";
@@ -221,13 +226,15 @@ export default async function ListingPage({ params }: Props) {
               <TierBadge
                 tier={listing.tier}
                 subscription_tier={listing.subscription_tier}
-                featured={listing.featured}
-                is_claimed={listing.claimed} gbp_url={(listing as { gbp_url?: string | null }).gbp_url}
+                is_claimed={listing.claimed} google_rating={listing.google_rating}
               />
               {listing.now_hiring && (
                 <span className="bg-green-600 text-white text-xs font-medium px-2 py-0.5 rounded-full ml-2">Now Hiring</span>
               )}
             </div>
+            <p className="text-xs text-gray-400 mb-4">
+              We don&apos;t vet or endorse listed businesses.
+            </p>
 
             {listing.now_hiring && (
               <p className="text-sm text-green-700 mb-3">This business is currently hiring. Contact them directly to inquire about opportunities.</p>
@@ -374,24 +381,31 @@ export default async function ListingPage({ params }: Props) {
               <ShareButtons title={listing.name} variant="full" />
             </div>
 
-            {/* Claim CTA */}
-            {!listing.claimed && (
-              <div className="mt-8 bg-gray-50 border rounded-lg p-6">
-                <p className="font-semibold">Is this your business?</p>
-                <p className="text-sm text-gray-600 mt-1">Claim this listing to manage it and connect with clients.</p>
-                <Link
-                  href={`/claim/${listing.slug}`}
-                  className="inline-block mt-3 px-4 py-2 rounded-lg text-white text-sm font-medium"
-                  style={{ backgroundColor: verticalConfig.primaryColor }}
-                >
-                  Claim Listing
-                </Link>
-              </div>
+            {/* Claim CTA — UNCLAIMED: server-rendered unlock-preview (visible JS-off,
+                no client auth hook). CLAIMED: keep ListingClaimCTA for the owner's
+                "Edit My Listing" affordance (anon sees nothing on claimed pages). */}
+            <>{listing.claimed ? (
+              <ListingClaimCTA
+                listingSlug={listing.slug}
+                listingClaimed={listing.claimed}
+              />
+            ) : (
+              <ClaimUnlockPreview
+                listingSlug={listing.slug}
+                hasReviews={Number(listing.google_review_count) > 0}
+              />
             )}
+            {HAS_LIST_YOUR_BUSINESS && <p className="mt-4 text-sm text-gray-500">Run a different lawyer{listing.city ? ` in ${listing.city}` : ""}? <Link href="/list-your-business" className="underline" style={{ color: verticalConfig.primaryColor }}>Add your business &rarr;</Link></p>}</>
+            <PublicGbpClaimSidecar
+              listingSlug={listing.slug}
+              listingName={listing.name}
+              address={[(lst as { address?: string | null }).address, listing.city, listing.province_state, (lst as { postal_code?: string | null }).postal_code, listing.country].filter(Boolean).join(", ")}
+              listingClaimed={listing.claimed}
+            />
           </div>
 
           {/* Sidebar */}
-          <div className="md:col-span-1">
+          <div className="md:col-span-1 space-y-6">
             <div className="border rounded-lg p-6 sticky top-4">
               <InquiryForm listingSlug={listing.slug} />
             </div>
@@ -414,11 +428,7 @@ export default async function ListingPage({ params }: Props) {
           growth_monthly: process.env.STRIPE_PRICE_GROWTH_MONTHLY || "",
           growth_annual: process.env.STRIPE_PRICE_GROWTH_ANNUAL || "",
         }}
-        currentTier={
-          listing.tier === 'reviews_plus' || listing.tier === 'website' || listing.tier === 'growth'
-            ? listing.tier
-            : null
-        }
+        currentTier={normalizeTierForPricing(listing.tier as string | null, listing.claimed)}
         currentCycle={null}
       />
     </>

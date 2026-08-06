@@ -11,6 +11,8 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Owner Dashboard",
 };

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getAuthFromCookies } from "@/lib/auth";
-import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
+import { getAuthFromCookies, getAuthorizedOwnerListing, getControlledOwnerListings } from "@/lib/auth";
+import type { OwnerDisplayState } from "@/lib/header-navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -17,22 +17,29 @@ export async function GET() {
     return NextResponse.json({ authenticated: false }, { headers: NO_CACHE_HEADERS });
   }
 
-  // Verify the token is still valid
-  const { data: listing, error } = await supabaseAdmin
-    .from(LISTINGS_TABLE)
-    .select("slug, owner_email, tier, subscription_tier")
-    .eq("slug", auth.slug)
-    .eq("owner_auth_token", auth.token)
-    .single();
-
-  if (error || !listing) {
+  const listing = await getAuthorizedOwnerListing<{ slug: string }>(auth, "slug, owner_auth_token, owner_auth_token_expires_at, claimed");
+  if (!listing) {
     return NextResponse.json({ authenticated: false }, { headers: NO_CACHE_HEADERS });
   }
 
-  return NextResponse.json({
-    authenticated: true,
-    slug: listing.slug,
-    ownerEmail: listing.owner_email,
-    tier: listing.tier || listing.subscription_tier || null,
-  }, { headers: NO_CACHE_HEADERS });
+  const controlledListings = await getControlledOwnerListings(auth.token);
+  // A partial/failed display query is authentication uncertainty, not a reason
+  // to retain stale owner navigation on a public page.
+  if (!controlledListings) {
+    return NextResponse.json({ authenticated: false }, { headers: NO_CACHE_HEADERS });
+  }
+
+  const listingCount = controlledListings.length;
+  const displayState: OwnerDisplayState = listingCount === 1
+    ? {
+        authenticated: true,
+        listingCount,
+        primaryListingSlug: controlledListings[0].slug,
+      }
+    : {
+        authenticated: true,
+        listingCount,
+      };
+
+  return NextResponse.json(displayState, { headers: NO_CACHE_HEADERS });
 }

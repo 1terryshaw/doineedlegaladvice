@@ -65,8 +65,7 @@ export default function ListingCard({ listing }: { listing: Listing }) {
           <TierBadge
             tier={listing.tier}
             subscription_tier={listing.subscription_tier}
-            featured={listing.featured}
-            is_claimed={listing.claimed} gbp_url={(listing as { gbp_url?: string | null }).gbp_url}
+            is_claimed={listing.claimed} google_rating={listing.google_rating}
           />
           {listing.now_hiring && (
             <span className="bg-green-600 text-white text-xs font-medium px-2 py-0.5 rounded-full ml-2">Now Hiring</span>

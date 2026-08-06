@@ -39,7 +39,7 @@ export interface Tier {
 export const TIERS: Record<TierId, Tier> = {
   verified: {
     id: 'verified',
-    name: 'Verified',
+    name: 'Free',
     subtitle: 'Free forever — no credit card',
     priceMonthlyUSD: 0,
     priceAnnualUSD: 0,
@@ -47,7 +47,7 @@ export const TIERS: Record<TierId, Tier> = {
     stripePriceMonthlyId: null,
     stripePriceAnnualId: null,
     visibleFeatures: [
-      '"Verified" badge on your listing',
+      '"Claimed" badge — becomes "Reviews verified" once your Google rating loads',
       'Contact info, hours, services displayed',
       'Up to 3 photos',
       'Star rating + Google review count',
@@ -69,14 +69,14 @@ export const TIERS: Record<TierId, Tier> = {
     stripePriceAnnualId: 'price_1TWCWhB4nhVx1nmU9rAwLlH0',
     visibleFeatures: [
       'Top reviews from Google displayed on your listing',
-      '"Featured" badge (vs Verified)',
+      '"Featured" badge (vs Claimed)',
       'Up to 10 photos + hero cover image',
       'Top-of-browse placement in directory search',
       'Listing health score in your dashboard',
       '"Welcome to Reviews Plus" PDF playbook',
     ],
     expandedFeatures: [
-      'All Verified features',
+      'All Free features',
       'Recent Leads dashboard (existing inquiries to you, through the directory)',
       'Email lead alerts',
       'Weekly digest of activity',
@@ -122,6 +122,15 @@ export const TRIAL = {
 
 /** Ordered tier list for rendering the card grid (left → right). */
 export const TIER_ORDER: TierId[] = ['verified', 'reviews_plus', 'website'];
+
+/** Single source of truth: map a raw owner tier → the pricing-canonical tier id used by
+ * current-plan comparison (currentTier === tier.id; the free tier id is "verified").
+ * A claimed owner with no paid tier is on the free "Verified" plan; unclaimed/no-owner → null.
+ * Normalizes the VALUE only — never touches owner-session detection or auth. */
+export function normalizeTierForPricing(rawTier: string | null | undefined, claimed: boolean): string | null {
+  if (rawTier === "reviews_plus" || rawTier === "website" || rawTier === "growth") return rawTier;
+  return claimed ? "verified" : null;
+}
 
 /**
  * Legacy Growth price IDs — the Growth tier was removed per #596 (2026-06-18).

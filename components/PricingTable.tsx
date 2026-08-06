@@ -10,7 +10,7 @@ import { useOwnerAuth } from "@/lib/useOwnerAuth";
 export default function PricingTable() {
   const [annual, setAnnual] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const { authenticated, slug, tier: currentTier } = useOwnerAuth();
+  const { authenticated, slug, tier: currentTier } = useOwnerAuth({ context: true });
 
   const primary = verticalConfig.primaryColor || "#374151";
 

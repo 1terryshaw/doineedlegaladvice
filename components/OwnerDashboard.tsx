@@ -3,6 +3,7 @@
 
 import { useState, useEffect, type ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import verticalConfig from "@/lib/vertical.config";
 import { Listing } from "@/lib/supabase";
 import { can, getTierDisplayName, getNextTier, TierSlug } from "@/lib/tier-capabilities";
@@ -56,6 +57,13 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot }: { li
   const [saveMessage, setSaveMessage] = useState<string>("");
   const [refreshing, setRefreshing] = useState(false);
   const [refreshResult, setRefreshResult] = useState<string>("");
+  const [gbpUrl, setGbpUrl] = useState("");
+  const [connectingGbp, setConnectingGbp] = useState(false);
+  const [gbpResult, setGbpResult] = useState("");
+  const [connectedPlaceId, setConnectedPlaceId] = useState<string | null>((listing as { google_place_id?: string | null }).google_place_id || null);
+  const [connectedGbpUrl, setConnectedGbpUrl] = useState<string>((listing as { gbp_url?: string | null }).gbp_url || "");
+  const [editingGbp, setEditingGbp] = useState(false);
+  const router = useRouter();
 
   async function handleLogout() {
     await fetch("/api/owner/logout", { method: "POST" });
@@ -105,6 +113,31 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot }: { li
     } finally {
       setRefreshing(false);
       setTimeout(() => setRefreshResult(""), 6000);
+    }
+  }
+
+  async function handleConnectGbp(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setConnectingGbp(true);
+    setGbpResult("");
+    try {
+      const response = await fetch("/api/owner/gbp-connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug: listing.slug, gbpUrl }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "We could not connect Google.");
+      setConnectedPlaceId(data.placeId);
+      setConnectedGbpUrl(data.gbpUrl || gbpUrl);
+      setEditingGbp(false);
+      setGbpUrl("");
+      setGbpResult("Google Business Profile connected. You can refresh reviews when you are ready.");
+      router.refresh();
+    } catch (error) {
+      setGbpResult(error instanceof Error ? error.message : "We could not connect Google.");
+    } finally {
+      setConnectingGbp(false);
     }
   }
 
@@ -294,8 +327,39 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot }: { li
         </div>
       )}
 
-      {/* Reviews refresh — reviews + above */}
-      {can(tier, "reviews_display") && (
+      {/* GBP connect box — one coherent block, state-aware on google_place_id. */}
+      <section className="border rounded-lg p-6" aria-labelledby="google-gbp-heading">
+        {!connectedPlaceId ? (
+          <>
+            <h3 id="google-gbp-heading" className="font-semibold mb-2">Connect your Google Business Profile</h3>
+            <p className="text-sm text-gray-600 mb-4">Paste the HTTPS Google Maps or Business Profile share link for this listing. We only save a valid Google Place ID; reviews will not refresh automatically.</p>
+            <form onSubmit={handleConnectGbp} className="space-y-3">
+              <label htmlFor="gbp-url" className="block text-sm font-medium text-gray-700">Google Business Profile link</label>
+              <div className="flex flex-col gap-2 sm:flex-row"><input id="gbp-url" type="url" required value={gbpUrl} onChange={(event) => setGbpUrl(event.target.value)} placeholder="https://maps.app.goo.gl/..." className="min-w-0 flex-1 rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" /><button type="submit" disabled={connectingGbp} className="rounded px-4 py-2 text-sm font-medium text-white disabled:opacity-50" style={{ backgroundColor: verticalConfig.primaryColor }}>{connectingGbp ? "Connecting…" : "Connect Google"}</button></div>
+            </form>
+          </>
+        ) : (
+          <>
+            <h3 id="google-gbp-heading" className="font-semibold mb-2 text-green-700">✓ Google connected</h3>
+            {connectedGbpUrl && (
+              <p className="text-sm text-gray-600 mb-2 break-all">Linked profile:{" "}<a href={connectedGbpUrl} target="_blank" rel="noopener noreferrer" className="underline">{connectedGbpUrl}</a></p>
+            )}
+            <p className="text-sm text-gray-600 mb-4">Once your Google rating is available it shows on your public listing, which earns the &ldquo;Reviews verified&rdquo; badge.</p>
+            {editingGbp ? (
+              <form onSubmit={handleConnectGbp} className="space-y-3">
+                <label htmlFor="gbp-url" className="block text-sm font-medium text-gray-700">Replace Google Business Profile link</label>
+                <div className="flex flex-col gap-2 sm:flex-row"><input id="gbp-url" type="url" required value={gbpUrl} onChange={(event) => setGbpUrl(event.target.value)} placeholder="https://maps.app.goo.gl/..." className="min-w-0 flex-1 rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" /><button type="submit" disabled={connectingGbp} className="rounded px-4 py-2 text-sm font-medium text-white disabled:opacity-50" style={{ backgroundColor: verticalConfig.primaryColor }}>{connectingGbp ? "Saving…" : "Replace"}</button><button type="button" onClick={() => { setEditingGbp(false); setGbpUrl(""); }} className="rounded px-4 py-2 text-sm font-medium text-gray-600 underline">Cancel</button></div>
+              </form>
+            ) : (
+              <button type="button" onClick={() => { setEditingGbp(true); setGbpUrl(connectedGbpUrl); }} className="text-sm font-medium underline" style={{ color: verticalConfig.primaryColor }}>Edit / Replace link</button>
+            )}
+          </>
+        )}
+        {gbpResult && <p role="status" className="mt-3 text-sm text-gray-700">{gbpResult}</p>}
+      </section>
+
+      {/* Reviews remain a distinct, paid, owner-triggered action. */}
+      {connectedPlaceId && can(tier, "reviews_display") && (
         <div className="border rounded-lg p-6">
           <h3 className="font-semibold mb-2">Google reviews</h3>
           <p className="text-xs text-gray-600 mb-3">

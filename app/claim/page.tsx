@@ -1,46 +1,24 @@
 import { Metadata } from "next";
-import Link from "next/link";
 import verticalConfig from "@/lib/vertical.config";
+import ClaimOrAddHub from "@/components/ClaimOrAddHub";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: `Claim Your Listing — ${verticalConfig.name}`,
-  description: `Are you a lawyer listed on ${verticalConfig.name}? Claim your listing to manage your profile, respond to inquiries, and connect with potential clients.`,
+  title: "Claim or Add Your Business",
 };
 
 export default function ClaimLandingPage() {
   return (
-    <div className="max-w-2xl mx-auto px-4 py-16">
-      <h1 className="text-3xl font-bold mb-4">Claim Your Listing</h1>
-      <p className="text-gray-600 mb-6">
-        Are you a {verticalConfig.listingNoun} listed on {verticalConfig.name}?
-        Claiming your listing lets you manage your profile, respond to client
-        inquiries, and upgrade your plan for greater visibility.
-      </p>
-
-      <div className="bg-gray-50 border rounded-lg p-6 mb-8">
-        <h2 className="font-semibold text-lg mb-3">How to Claim Your Listing</h2>
-        <ol className="list-decimal list-inside space-y-2 text-gray-700">
-          <li>
-            <Link href="/directory" className="underline" style={{ color: verticalConfig.primaryColor }}>
-              Browse the directory
-            </Link>{" "}
-            and find your listing.
-          </li>
-          <li>
-            Click the <strong>&ldquo;Claim Listing&rdquo;</strong> button on your listing page.
-          </li>
-          <li>Verify your identity via email.</li>
-          <li>Once verified, you can manage your profile and respond to inquiries.</li>
-        </ol>
+    <div className="bg-gradient-to-b from-slate-50 to-white">
+      <div className="mx-auto max-w-6xl px-4 py-12 sm:py-16">
+        <header className="mx-auto mb-10 max-w-3xl text-center">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">For business owners</p>
+          <h1 className="mt-3 text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">Claim or Add Your Business</h1>
+          <p className="mt-5 text-lg leading-8 text-slate-600">Find your business in our directory to claim it, or add it if it is not listed yet. Your Google Business Profile can help you identify the right business and provide its Google Maps link.</p>
+        </header>
+        <ClaimOrAddHub />
       </div>
-
-      <Link
-        href="/directory"
-        className="inline-block px-6 py-3 rounded-lg text-white font-medium"
-        style={{ backgroundColor: verticalConfig.primaryColor }}
-      >
-        Browse the Directory
-      </Link>
     </div>
   );
 }
