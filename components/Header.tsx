@@ -66,6 +66,7 @@ export default function Header() {
     <Link
       key={item.href}
       href={item.href}
+      {...(/^https?:\/\//.test(item.href) ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       className={item.primary
         ? `${HEADER_FOCUS_RING} ${HEADER_ACTIVE_LINK} ${mobile ? "block text-center" : ""} px-4 py-2 rounded-lg text-white font-semibold text-sm hover:opacity-90 transition-opacity ${item.active ? "ring-2 ring-gray-900 ring-offset-2" : ""}`
         : `${HEADER_FOCUS_RING} ${mobile ? "block" : ""} text-gray-600 hover:text-gray-900 ${item.active ? HEADER_ACTIVE_LINK : ""}`}

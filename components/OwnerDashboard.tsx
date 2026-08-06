@@ -336,6 +336,9 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot }: { li
             <form onSubmit={handleConnectGbp} className="space-y-3">
               <label htmlFor="gbp-url" className="block text-sm font-medium text-gray-700">Google Business Profile link</label>
               <div className="flex flex-col gap-2 sm:flex-row"><input id="gbp-url" type="url" required value={gbpUrl} onChange={(event) => setGbpUrl(event.target.value)} placeholder="https://maps.app.goo.gl/..." className="min-w-0 flex-1 rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" /><button type="submit" disabled={connectingGbp} className="rounded px-4 py-2 text-sm font-medium text-white disabled:opacity-50" style={{ backgroundColor: verticalConfig.primaryColor }}>{connectingGbp ? "Connecting…" : "Connect Google"}</button></div>
+              {connectedGbpUrl && (
+                <p className="text-sm text-blue-700">A Google Business Profile link is on file — click Connect to verify it</p>
+              )}
             </form>
           </>
         ) : (

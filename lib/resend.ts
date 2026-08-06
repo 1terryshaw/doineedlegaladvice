@@ -208,11 +208,11 @@ export async function sendClaimEmail(
       from: AUTH_FROM,
       to: email,
       subject: `Verify your claim on ${verticalConfig.name}`,
+      text: `Claim your listing on ${verticalConfig.name}\n\nVerify your ownership claim by opening this link:\n${verifyLink}\n\nIf you didn't request this, you can safely ignore this email.`,
       html: `
       <h2>Claim Your Listing on ${verticalConfig.name}</h2>
-      <p>Click the link below to verify your ownership claim:</p>
+      <p>Click the button below to verify your ownership claim:</p>
       <p><a href="${verifyLink}" style="display:inline-block;padding:12px 24px;background:${verticalConfig.primaryColor};color:white;text-decoration:none;border-radius:6px;">Verify Claim</a></p>
-      <p>Or copy this link: ${verifyLink}</p>
       <p style="color:#666;font-size:12px;">If you didn't request this, you can safely ignore this email.</p>
     `,
     });
