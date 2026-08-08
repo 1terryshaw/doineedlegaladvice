@@ -206,10 +206,10 @@ export function sanitizeExtras(input: Record<string, unknown>): Record<string, u
           .slice(0, MAX_SERVICE_AREA)
       : null;
   }
-  if ("gbp_url" in input) {
-    const v = typeof input.gbp_url === "string" ? input.gbp_url.trim() : "";
-    out.gbp_url = v && isValidGbpUrl(v) ? v : (v ? null : "");
-  }
+  // gbp_url is intentionally NOT written here. GBP is owned solely by the
+  // resolver at /api/owner/gbp-connect, which writes google_place_id + gbp_url
+  // together. The edit-save path must never persist a raw, unresolved gbp_url
+  // (that created the two-doors half-state trap).
   if ("year_established" in input) {
     const n = typeof input.year_established === "number"
       ? input.year_established

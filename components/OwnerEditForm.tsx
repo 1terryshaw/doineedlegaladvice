@@ -10,7 +10,6 @@ import {
   ListingExtras,
   ListingPhoto,
 } from "@/lib/listing-extras";
-import HelpDropdown from "@/components/owner-edit/HelpDropdown";
 import TagListInput from "@/components/owner-edit/TagListInput";
 import UrlInput from "@/components/owner-edit/UrlInput";
 import HoursEditor from "@/components/owner-edit/HoursEditor";
@@ -40,7 +39,6 @@ interface FormState {
   hours_json: HoursJson | null;
   services: string[];
   service_area: string[];
-  gbp_url: string;
   year_established: string;
   social_instagram: string;
   social_facebook: string;
@@ -77,7 +75,6 @@ export default function OwnerEditForm({
     hours_json: (lst.hours_json as HoursJson | null) ?? null,
     services: lst.services ?? [],
     service_area: lst.service_area ?? [],
-    gbp_url: lst.gbp_url ?? "",
     year_established: lst.year_established ? String(lst.year_established) : "",
     social_instagram: lst.social_instagram ?? "",
     social_facebook: lst.social_facebook ?? "",
@@ -124,7 +121,6 @@ export default function OwnerEditForm({
       hours_json: form.hours_json,
       services: form.services,
       service_area: form.service_area,
-      gbp_url: form.gbp_url ? normalizeUrl(form.gbp_url) : "",
       year_established: form.year_established ? parseInt(form.year_established, 10) : null,
       social_instagram: form.social_instagram ? normalizeUrl(form.social_instagram) : "",
       social_facebook: form.social_facebook ? normalizeUrl(form.social_facebook) : "",
@@ -240,7 +236,9 @@ export default function OwnerEditForm({
         </div>
       </section>
 
-      {/* === High-leverage 4: photos, services, service area, GBP === */}
+      {/* === High-leverage: photos, services, service area ===
+          GBP is connected on the dashboard (Connect Google → /api/owner/gbp-connect),
+          which resolves the place_id. The edit form no longer touches the GBP link. */}
       <section className="space-y-6 border-t pt-6">
         <h2 className="text-lg font-semibold">Boost your listing</h2>
 
@@ -271,25 +269,6 @@ export default function OwnerEditForm({
           max={10}
           placeholder="Toronto, Mississauga, Vaughan, ..."
           hint="Cities or regions where you take work — comma-separated."
-        />
-
-        <UrlInput
-          label="Google Business Profile URL"
-          value={form.gbp_url}
-          onChange={(v) => update("gbp_url", v)}
-          kind="gbp"
-          helpSlot={
-            <HelpDropdown label="Google Business Profile URL">
-              <p><strong>What is this?</strong></p>
-              <p>Your Google Business Profile is the listing that shows up when someone Googles your business — with the map, hours, reviews, and photos. It&apos;s free.</p>
-              <p><strong>How to find yours</strong></p>
-              <p>Search Google for your business name. If a panel appears on the right with a map, that&apos;s your profile. Click &ldquo;Own this business?&rdquo; to start claiming. If nothing appears, go to <a href="https://www.google.com/business" target="_blank" rel="noopener" className="text-blue-700 underline">google.com/business</a> to create one.</p>
-              <p><strong>How to claim it</strong></p>
-              <p>Google will verify by postcard, phone, or video. Takes 5-14 days. Once claimed, copy your profile&apos;s share URL (looks like g.page/YourBusiness or a maps.google.com link) and paste it here.</p>
-              <p><strong>Why it matters</strong></p>
-              <p>Claimed GBPs rank higher, get more clicks, and let you respond to reviews. It&apos;s the single highest-leverage free thing a local {canonical.noun} can do.</p>
-            </HelpDropdown>
-          }
         />
       </section>
 

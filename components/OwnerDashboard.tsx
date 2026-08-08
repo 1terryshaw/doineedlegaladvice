@@ -57,7 +57,14 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot }: { li
   const [saveMessage, setSaveMessage] = useState<string>("");
   const [refreshing, setRefreshing] = useState(false);
   const [refreshResult, setRefreshResult] = useState<string>("");
-  const [gbpUrl, setGbpUrl] = useState("");
+  // Heal half-state rows: if a link is on file but no place_id was resolved
+  // (owner pasted via the old edit-form door), prefill the Connect input so it's
+  // one click to resolve. Connected rows don't render the form; fully-empty stay empty.
+  const [gbpUrl, setGbpUrl] = useState<string>(
+    (listing as { google_place_id?: string | null }).google_place_id
+      ? ""
+      : ((listing as { gbp_url?: string | null }).gbp_url || "")
+  );
   const [connectingGbp, setConnectingGbp] = useState(false);
   const [gbpResult, setGbpResult] = useState("");
   const [connectedPlaceId, setConnectedPlaceId] = useState<string | null>((listing as { google_place_id?: string | null }).google_place_id || null);
