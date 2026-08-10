@@ -200,7 +200,7 @@ function isConfidentMatch(
   if (!tokens.length) return { ok: false, reason: "no_distinctive_token" };
   if (!tokens.some((t) => candName.includes(t.norm))) return { ok: false, reason: "name_token_miss" };
   const city = (listing.city ?? "").toLowerCase().trim();
-  if (!(city && candAddr.includes(city))) return { ok: false, reason: "city_miss" };
+  if (!(city && candAddr.includes(city.replace(/-/g, " ")))) return { ok: false, reason: "city_miss" };
 
   // Arm 3 — stubby-name floor. Uses the strongest (longest) token for the signal-strength test.
   const queryHasNumeric = /\d/.test(rawName);
