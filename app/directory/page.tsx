@@ -18,9 +18,35 @@ import SearchBar from "@/components/SearchBar";
 import Pagination from "@/components/Pagination";
 import RegionHub, { type HubSection, type HubRegion } from "@/components/RegionHub";
 import ShareButtons from "@/components/pizzazz/ShareButtons";
+import { getUkAllTownHubs, getUkCounties } from "@/lib/uk-solicitors";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
+
+async function getUkSearchOptions() {
+  try {
+    const [counties, towns] = await Promise.all([
+      getUkCounties(),
+      getUkAllTownHubs(),
+    ]);
+
+    return {
+      ukCounties: counties.map((county) => ({
+        slug: county.county_slug,
+        name: county.county,
+        count: county.firm_count,
+      })),
+      ukTowns: towns.map((town) => ({
+        countySlug: town.county_slug,
+        slug: town.town_slug,
+        name: town.town,
+      })),
+    };
+  } catch (error) {
+    console.error("getUkSearchOptions failed; UK cascade omitted:", error);
+    return { ukCounties: [], ukTowns: [] };
+  }
+}
 
 export const metadata: Metadata = {
   title: "Find a Lawyer",
@@ -46,6 +72,7 @@ export default async function DirectoryPage({
   } catch (err) {
     console.error("getDirectoryRegions failed; falling back:", err);
   }
+  const ukOptions = await getUkSearchOptions();
 
   // ── Default view (no filters): browse-by-region hub. ──────────────────────
   if (!hasFilters) {
@@ -61,9 +88,24 @@ export default async function DirectoryPage({
     const byName = (a: HubRegion, b: HubRegion) => a.name.localeCompare(b.name);
     ca.sort(byName);
     us.sort(byName);
+    const uk: HubRegion[] = ukOptions.ukCounties
+      .map((county) => ({
+        slug: county.slug,
+        name: county.name,
+        count: county.count ?? 0,
+      }))
+      .sort(byName);
     const sections: HubSection[] = [];
     if (us.length) sections.push({ country: "US", label: "🇺🇸 United States", regions: us });
     if (ca.length) sections.push({ country: "CA", label: "🇨🇦 Canada", regions: ca });
+    if (uk.length) {
+      sections.push({
+        country: "UK",
+        label: "🇬🇧 United Kingdom",
+        regions: uk,
+        hrefPrefix: "/uk",
+      });
+    }
 
     return (
       <div className="max-w-7xl mx-auto px-4 py-12">
@@ -74,7 +116,12 @@ export default async function DirectoryPage({
           <ShareButtons variant="compact" title={`Browse ${verticalConfig.name} Directory`} />
         </div>
         <div className="mb-6">
-          <SearchBar variant="directory" regions={runtimeRegions.length > 0 ? runtimeRegions : undefined} />
+          <SearchBar
+            variant="directory"
+            regions={runtimeRegions.length > 0 ? runtimeRegions : undefined}
+            ukCounties={ukOptions.ukCounties}
+            ukTowns={ukOptions.ukTowns}
+          />
         </div>
         {sections.length === 0 ? (
           <p className="text-gray-500 text-center py-12">No regions available yet. Check back soon!</p>
@@ -132,6 +179,8 @@ export default async function DirectoryPage({
           defaultRegion={region}
           defaultCity={cityFilter}
           regions={runtimeRegions.length > 0 ? runtimeRegions : undefined}
+          ukCounties={ukOptions.ukCounties}
+          ukTowns={ukOptions.ukTowns}
         />
       </div>
 

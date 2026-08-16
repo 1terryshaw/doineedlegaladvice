@@ -100,7 +100,7 @@ export default function Header() {
     <header className="border-b bg-white relative z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <Link href="/" className={`${HEADER_FOCUS_RING} text-xl font-bold`} style={{ color: verticalConfig.primaryColor }}>
+          <Link href="/" className={`${HEADER_FOCUS_RING} text-sm sm:text-xl font-bold`} style={{ color: verticalConfig.primaryColor }}>
             {verticalConfig.name}
           </Link>
           <nav aria-label="Primary navigation" className="hidden md:flex items-center gap-6">

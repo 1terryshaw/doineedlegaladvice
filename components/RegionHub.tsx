@@ -12,6 +12,7 @@ export interface HubSection {
   country: string;
   label: string;
   regions: HubRegion[];
+  hrefPrefix?: string;
 }
 
 function fmt(n: number): string {
@@ -34,7 +35,7 @@ export default function RegionHub({ sections }: { sections: HubSection[] }) {
             {section.regions.map((r) => (
               <Link
                 key={`${section.country}-${r.slug}`}
-                href={`/${r.slug}`}
+                href={section.hrefPrefix ? `${section.hrefPrefix}/${r.slug}` : `/${r.slug}`}
                 className="flex items-center justify-between gap-3 px-4 py-3 rounded-lg border border-gray-200 bg-white hover:border-blue-400 hover:bg-blue-50 transition-colors"
               >
                 <span className="font-medium text-gray-900">{r.name}</span>
