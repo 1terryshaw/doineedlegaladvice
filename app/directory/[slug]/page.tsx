@@ -104,7 +104,11 @@ export default async function ListingPage({ params }: Props) {
     description: listing.short_description || listing.description,
     telephone: listing.phone,
     email: publicEmail,
-    url: listing.website,
+    // Conditional, NOT `url: listing.website`. JSON.stringify drops `undefined` but KEEPS `null`,
+    // so an unconditional key emits `"url":null` for any row whose website is null — invalid
+    // schema.org. The Arc-2 dead-website cleanup nulled 38,669 websites fleet-wide, so this is
+    // now common rather than theoretical. The outbound <a> below is already guarded.
+    ...(listing.website && { url: listing.website }),
     address: {
       "@type": "PostalAddress",
       addressLocality: listing.city,
