@@ -131,7 +131,11 @@ export default function SearchBar({
 
   const supportedCountries =
     (verticalConfig as { supportedCountries?: readonly string[] }).supportedCountries ?? ["CA"];
+  // Gate each country's options INDEPENDENTLY. The old shape asked only "does this
+  // vertical ALSO do US", so supportsUS=true always rendered the CA optgroup too —
+  // a US-only vertical could not drop it. (DINLA: read path is country='US'.)
   const supportsUS = supportedCountries.includes("US");
+  const supportsCA = supportedCountries.includes("CA");
 
   return (
     <form onSubmit={handleSubmit} className={isHero ? "w-full max-w-3xl mx-auto" : "w-full"}>
@@ -153,7 +157,7 @@ export default function SearchBar({
           className="px-4 py-2 rounded-lg border border-gray-200 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">All Regions</option>
-          {supportsUS ? (
+          {supportsCA && supportsUS ? (
             <>
               <optgroup label="🇨🇦 Canada">
                 {provinceList.ca.map((p) => (
@@ -170,6 +174,12 @@ export default function SearchBar({
                 ))}
               </optgroup>
             </>
+          ) : supportsUS ? (
+            provinceList.us.map((p) => (
+              <option key={p.code} value={p.code}>
+                {p.label}
+              </option>
+            ))
           ) : (
             provinceList.ca.map((p) => (
               <option key={p.code} value={p.code}>

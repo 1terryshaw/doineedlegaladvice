@@ -167,7 +167,9 @@ BAD turn 1 examples (avoid):
   },
 
   // FIX-EMPIRE-SEARCHBAR-SWEEP — adapter fields required by canonical SearchBar
-  supportedCountries: ["CA", "US"] as const,
+  // US-only: the directory read path is pinned to country='US' (lib/directory-hub.ts),
+  // so CA province options resolved to zero results. Ruled 2026-08-23.
+  supportedCountries: ["US"] as const,
   provinceLabels: {
     ON: "Ontario",
     BC: "British Columbia",
