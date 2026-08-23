@@ -6,7 +6,7 @@ import UkAttribution from "@/components/UkAttribution";
 // live US root stays fully indexable. Reversible: change the robots metadata below to
 // re-index /uk — do NOT delete this file, it also renders the MANDATORY OGL attribution.
 export const metadata: Metadata = {
-  robots: { index: false, follow: false },
+  robots: { index: true, follow: true },
 };
 
 export default function UkLayout({ children }: { children: React.ReactNode }) {
