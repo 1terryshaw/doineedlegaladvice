@@ -19,7 +19,7 @@ export const fetchCache = "force-cache";
 
 const TITLE = "Find a Solicitor in the UK | DoINeedLegalAdvice";
 const DESCRIPTION =
-  "Browse a directory of UK solicitors and law firms by county and town. Find contact details, registered addresses, regulator, and claim your firm's listing for free.";
+  "Browse a directory of UK solicitors and law firms by county and town. Find contact details, registered addresses, and claim your firm's listing for free.";
 
 export const metadata: Metadata = ukPageMetadata({
   title: TITLE,
@@ -60,9 +60,8 @@ export default async function UkIndexPage() {
       </div>
       <p className="text-gray-600 mb-8 max-w-3xl">
         Browse {totalFirms.toLocaleString("en-GB")} solicitor firms across{" "}
-        {counties.length} UK counties, regulated by the SRA (England &amp; Wales), the Law
-        Society of Scotland, or the Law Society of Northern Ireland. Choose a county to find
-        solicitors near you, see registered details, and connect directly.
+        {counties.length} UK counties. Choose a county to find solicitors near you, see
+        registered details, and connect directly.
       </p>
 
       {counties.length === 0 ? (

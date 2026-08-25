@@ -54,9 +54,7 @@ export default function UkPrivacyPage() {
           matched a firm to its own website, business contact details published on that website
           (such as a business email address, a business phone number, and the website URL). We hold
           this for <strong>solicitor firms — incorporated companies, LLPs and PLCs, plus listed
-          practices</strong> — i.e. organisations, not individuals. Each firm is regulated by the
-          relevant authority: the Solicitors Regulation Authority (England &amp; Wales), the Law
-          Society of Scotland, or the Law Society of Northern Ireland.
+          practices</strong> — i.e. organisations, not individuals.
         </p>
       </Section>
 

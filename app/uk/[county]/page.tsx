@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `Solicitors in ${countyData.county} | DoINeedLegalAdvice`,
     description: `Find solicitors and law firms in ${countyData.county}, UK. Browse ${Number(
       countyData.firm_count
-    ).toLocaleString("en-GB")} listings by town, with contact details, regulator, and registered addresses.`,
+    ).toLocaleString("en-GB")} listings by town, with contact details and registered addresses.`,
     path: `/uk/${county}`,
   });
 }

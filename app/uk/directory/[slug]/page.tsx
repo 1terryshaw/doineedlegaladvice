@@ -60,7 +60,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${firm.business_name} | Solicitors | DoINeedLegalAdvice`,
     description: `${firm.business_name} is a solicitor firm${
       where ? ` in ${where}` : ""
-    }, UK. View registered address, regulator, contact details, and claim this listing.`,
+    }, UK. View registered address, contact details, and claim this listing.`,
     path: `/uk/directory/${slug}`,
   });
 }
