@@ -5,8 +5,17 @@ import { getUkCounties } from "@/lib/uk-solicitors";
 import { ukBreadcrumbSchema, ukCollectionPageSchema, ukPageMetadata } from "@/lib/uk-seo";
 import ShareButtons from "@/components/pizzazz/ShareButtons";
 
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
+// ISR (2026-08-24, K32 /uk ISR pilot): these /uk pages are public Companies House
+// directory data with NO per-request dependency (no cookies/headers/searchParams).
+// force-dynamic made Googlebot re-render every page on every crawl, uncached, on
+// Vercel's meter. Dropping force-dynamic is NOT sufficient on its own: lib/supabase.ts
+// hardcodes `cache: "no-store"` in supabaseAdmin's global fetch override, and per the
+// Next docs an explicit no-store fetch forces the whole route to render dynamically.
+// Route-level fetchCache="force-cache" overrides that AT THE ROUTE BOUNDARY, so the
+// shared client is left untouched and /uk/claim keeps its own force-no-store (claims
+// still read fresh).
+export const revalidate = 86400; // 24h - directory rows change infrequently
+export const fetchCache = "force-cache";
 
 const TITLE = "Find a Solicitor in the UK | DoINeedLegalAdvice";
 const DESCRIPTION =

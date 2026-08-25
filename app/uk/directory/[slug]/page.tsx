@@ -12,8 +12,31 @@ import { ukBreadcrumbSchema, ukFirmSchema, ukPageMetadata } from "@/lib/uk-seo";
 import RegulatorBadge from "@/components/uk/RegulatorBadge";
 import ShareButtons from "@/components/pizzazz/ShareButtons";
 
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
+// ISR (2026-08-24, K32 /uk ISR pilot): these /uk pages are public Companies House
+// directory data with NO per-request dependency (no cookies/headers/searchParams).
+// force-dynamic made Googlebot re-render every page on every crawl, uncached, on
+// Vercel's meter. Dropping force-dynamic is NOT sufficient on its own: lib/supabase.ts
+// hardcodes `cache: "no-store"` in supabaseAdmin's global fetch override, and per the
+// Next docs an explicit no-store fetch forces the whole route to render dynamically.
+// Route-level fetchCache="force-cache" overrides that AT THE ROUTE BOUNDARY, so the
+// shared client is left untouched and /uk/claim keeps its own force-no-store (claims
+// still read fresh).
+// Deliberately NO generateStaticParams: pre-building the full leaf set is the
+// full-SSG-of-a-large-vertical anti-pattern. Leaves generate on first request and
+// then cache at the edge; dynamicParams stays on.
+export const revalidate = 86400; // 24h - directory rows change infrequently
+export const fetchCache = "force-cache";
+export const dynamicParams = true;
+
+// Returns EMPTY on purpose. A dynamic route with no generateStaticParams at all is
+// treated by Next as fully dynamic (verified: the leaf stayed `f (Dynamic)` in the build
+// table until this was added). An empty array prerenders ZERO leaves at build time -
+// avoiding the full-SSG-of-a-large-vertical anti-pattern on ~42k/17k rows - while marking
+// the route statically-generated, so with dynamicParams=true each leaf is generated on
+// its FIRST request and then served from the edge cache until `revalidate` expires.
+export async function generateStaticParams() {
+  return [];
+}
 
 interface Props {
   params: Promise<{ slug: string }>;

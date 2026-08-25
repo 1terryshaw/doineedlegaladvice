@@ -8,7 +8,28 @@
 // Geo hierarchy: county -> town -> firm. Firm slug = `id` (uuid), NOT company_number —
 // uk_solicitors has LSNI rows with company_number IS NULL, so the uuid PK is the only
 // universal stable key. Town hubs render only at >= N firms (thin-content guard).
-import { supabaseAdmin } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
+
+// ISR (2026-08-24, K32 /uk ISR pilot): the shared `supabaseAdmin` in lib/supabase.ts
+// hardcodes `cache: "no-store"` in a global fetch override. Per the Next docs an explicit
+// no-store fetch forces the WHOLE route to render dynamically, and route-level
+// fetchCache="force-cache" does NOT override it in practice - verified empirically with
+// `export const dynamic = "error"`, which named this exact fetch as the blocker:
+//   Route /uk ... couldn't be rendered statically because it used `no-store fetch
+//   https://<ref>.supabase.co/rest/v1/uk_..._county_stats`.
+// So the /uk data layer gets its OWN service-role client that sets NO cache option, and
+// each /uk route's own segment config decides:
+//   /uk, /uk/directory/[slug]  -> fetchCache="force-cache"    => ISR, cached at the edge
+//   /uk/claim/[slug]           -> fetchCache="force-no-store" => always fresh (claims)
+//   /uk/sitemap*, /directory   -> revalidate=0/force-no-store => always fresh
+// Same URL + service-role key as lib/supabase.ts; the ONLY difference is the absent
+// no-store override. lib/supabase.ts is deliberately left untouched so nothing outside
+// /uk changes behaviour.
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { persistSession: false } }
+);
 
 export const UK_TABLE = "uk_solicitors";
 export const COUNTY_STATS_VIEW = "uk_solicitors_county_stats";
