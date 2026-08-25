@@ -25,6 +25,28 @@
 // fan-out caches its hubs the purge set must already be correct. A no-op costs nothing; a
 // missing ancestor is a silently stale hub.
 //
+// 🔴 PURGE_ROOT_HUB IS OFF IN THIS REPO — MEASURED, NOT ASSUMED.
+// On this deployment (Next 14.2.35) `revalidatePath("/uk")` invalidates the ENTIRE /uk
+// subtree, not just the /uk page. Measured on prod by cache-age continuity: two control
+// leaves in unrelated counties (Greater London, Cumberland) both flipped HIT(age 33) ->
+// REVALIDATED and reset to age 0 on a purge of an unrelated Derbyshire row — and again when
+// purging a NONEXISTENT slug, whose only other path was "/uk". The identical test on
+// doineedacleaningservice (Next 16.2.2) shows both controls surviving with age climbing
+// straight through the purge (138->142->149), so the purge set is NOT the difference: the
+// two Next majors are served by different Vercel ISR tag protocols, and the older one
+// prefix-matches `_N_T_/uk`. (Both versions attach the SAME implicit tags to a page —
+// verified in patch-fetch.js/implicit-tags.js — so this is a platform behaviour, not ours.)
+//
+// Dropping the root hub is the right trade here: /uk is a COUNTY INDEX. It renders zero
+// firm names and zero /uk/directory/ links (verified on prod: 0 of each), so it is not a
+// name-bearing compliance surface — only its per-county firm COUNTS go stale, for at most
+// the 24h revalidate. Re-rendering ~17k leaves on every de-publish to keep a count exact is
+// precisely the cost win the ISR conversion bought.
+//
+// FOR THE FAN-OUT: do not copy this flag on faith, measure it. Warm two leaves in unrelated
+// counties, purge a third, and re-probe: if their `age` keeps climbing, the purge is
+// surgical and this may be true; if they reset to 0, it must be false.
+//
 // SYMMETRIC BY CONSTRUCTION. Purging a path clears whatever is cached at it — a stale 200
 // on unpublish, or a stale 404 on republish. There is no separate "publish" code path.
 
@@ -34,6 +56,11 @@ import { getUkFirmGeoAnyState, ukSlugify } from "./uk-solicitors";
 /** Per-request slug cap. Each slug fans out to up to 4 paths, so this is 4x heavier than a
  *  tag-based bust; callers with larger sets chunk. */
 export const UK_REVALIDATE_MAX_SLUGS = 500;
+
+/** Whether to include the "/uk" root hub in the purge set. FALSE here — on this repo's Next
+ *  major, purging "/uk" cascades to the whole subtree. See the 🔴 note in the header block;
+ *  it is a measured per-repo fact, not a preference. */
+export const PURGE_ROOT_HUB = false;
 
 /** Leaf slugs are the row UUID in this repo (cleaningservice uses company_number — the shape
  *  differs per vertical). Anything outside this shape is rejected rather than interpolated
@@ -53,7 +80,7 @@ export async function ukPathsForSlug(slug: string): Promise<string[]> {
   const townSlug = geo?.town ? ukSlugify(geo.town) : null;
   if (countySlug && townSlug) paths.push(`/uk/${countySlug}/${townSlug}`);
   if (countySlug) paths.push(`/uk/${countySlug}`);
-  paths.push("/uk");
+  if (PURGE_ROOT_HUB) paths.push("/uk");
   return paths;
 }
 
@@ -64,7 +91,7 @@ export interface UkRevalidateResult {
 
 /**
  * Purge the leaf + ancestor hubs for each slug. Paths are de-duplicated across the batch,
- * so a 500-slug purge still touches "/uk" exactly once.
+ * so a 500-slug purge still touches each shared hub exactly once.
  *
  * A geo lookup that fails must NOT swallow the purge — the leaf is the compliance-critical
  * path, so on error we still purge the leaf and /uk and record the error.
@@ -83,7 +110,7 @@ export async function revalidateUkSlugs(slugs: string[]): Promise<UkRevalidateRe
     } catch (e) {
       errors.push(`${slug}: geo lookup failed (${(e as Error)?.message || "unknown"})`);
       targets.add(`/uk/directory/${slug}`);
-      targets.add("/uk");
+      if (PURGE_ROOT_HUB) targets.add("/uk");
     }
   }
 
