@@ -1,4 +1,4 @@
-import verticalConfig from "@/lib/vertical.config";
+import { SITE_URL } from "@/lib/seo";
 import {
   getUkCounties,
   getUkAllTownHubs,
@@ -32,7 +32,10 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   }
   const id = Number(match[1]);
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `https://${verticalConfig.domain}`;
+  // Canonical host from SITE_URL (lib/seo.ts) — the SAME source the pages'
+  // <link rel="canonical"> uses. NOT NEXT_PUBLIC_BASE_URL: on prod that env var can hold
+  // the APEX form, which would make every sitemap URL a 308 redirect to the www canonical.
+  const baseUrl = SITE_URL;
   const now = new Date().toISOString();
   const parts: string[] = [];
 

@@ -1,4 +1,4 @@
-import verticalConfig from "@/lib/vertical.config";
+import { SITE_URL } from "@/lib/seo";
 import { getUkPublishedCount } from "@/lib/uk-solicitors";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,10 @@ const CHUNK_SIZE = 45_000;
 // firm URLs, CHUNK_SIZE each, so no child can exceed the 50k protocol limit. Mirrors the
 // CA /sitemap.xml chunking but scoped to the published /uk/ universe.
 export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `https://${verticalConfig.domain}`;
+  // Canonical host from SITE_URL (lib/seo.ts) — the SAME source the pages'
+  // <link rel="canonical"> uses. NOT NEXT_PUBLIC_BASE_URL: on prod that env var can hold
+  // the APEX form, which would make every sitemap URL a 308 redirect to the www canonical.
+  const baseUrl = SITE_URL;
 
   const firmCount = await getUkPublishedCount();
   const totalChunks = 1 + Math.ceil(firmCount / CHUNK_SIZE);
