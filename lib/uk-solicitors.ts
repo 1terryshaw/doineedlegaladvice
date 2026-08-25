@@ -361,3 +361,32 @@ export async function getUkFirmsRange(
   }
   return all;
 }
+
+/**
+ * Geo of a /uk row REGARDLESS of is_published — the ONE lookup here that deliberately
+ * does not apply the serve filter (K32 on-demand ISR purge, 2026-08-24).
+ *
+ * On de-publish we still need the row's county/town in order to purge its ANCESTOR hub
+ * pages, and by then getUkFirm() returns null for exactly the rows being purged — so the
+ * serve-gated reader cannot be reused for this. It selects two non-identifying geo columns
+ * and nothing else: it is a cache-key resolver, never a serve path, and its result is not
+ * rendered anywhere.
+ *
+ * Keyed on `id` (this repo's leaf slug is the row UUID, not company_number — the /uk leaf
+ * slug differs per vertical and that difference is load-bearing for the fan-out).
+ */
+export async function getUkFirmGeoAnyState(
+  id: string
+): Promise<{ county: string | null; town: string | null } | null> {
+  const { data, error } = await supabaseAdmin
+    .from(UK_TABLE)
+    .select("county, town")
+    .eq("id", id)
+    .limit(1);
+  if (error) {
+    console.error(`getUkFirmGeoAnyState("${id}") error:`, error.message);
+    return null;
+  }
+  const row = (data ?? [])[0] as { county: string | null; town: string | null } | undefined;
+  return row ?? null;
+}

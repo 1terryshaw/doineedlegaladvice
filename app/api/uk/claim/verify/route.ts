@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { UK_TABLE } from "@/lib/uk-solicitors";
+import { revalidateUkSlugs } from "@/lib/uk-revalidate";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,20 @@ export async function GET(request: NextRequest) {
     .from(UK_TABLE)
     .update({ is_claimed: true, claimed_at: now, updated_at: now })
     .eq("id", firm.id);
+
+  // ISR purge (K32 on-demand purge, 2026-08-24). This route mutates the row and then
+  // redirects the owner ONTO the cached leaf. Without the purge they land on a copy that
+  // can be up to 24h old and still says "Claim this listing" — the claim they just
+  // completed appears not to have worked. Best-effort ONLY: the claim write above has
+  // already committed, and a purge failure must never cost the claim.
+  try {
+    await revalidateUkSlugs([String(firm.id)]);
+  } catch (e) {
+    console.error(
+      `[uk/claim/verify] revalidate failed for ${firm.id}:`,
+      e instanceof Error ? e.message : e
+    );
+  }
 
   return NextResponse.redirect(`${siteUrl}/uk/directory/${firm.id}?claimed=1`);
 }
