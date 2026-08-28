@@ -9,7 +9,6 @@ import InquiryForm from "@/components/InquiryForm";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
 import UpgradeModal from "@/components/UpgradeModal";
 import { can } from "@/lib/tier-capabilities";
-import ShareButtons from "@/components/pizzazz/ShareButtons";
 import { listPhotosForListing } from "@/lib/listing-photos";
 import {
   DAY_KEYS,
@@ -378,12 +377,6 @@ export default async function ListingPage({ params }: Props) {
                 </div>
               )}
 </div>
-
-            {/* Share buttons */}
-            <div className="mt-6 pt-4 border-t">
-              <h3 className="font-semibold text-sm text-gray-500 mb-3">Share this listing</h3>
-              <ShareButtons title={listing.name} variant="full" />
-            </div>
 
             {/* Claim CTA — UNCLAIMED: server-rendered unlock-preview (visible JS-off,
                 no client auth hook). CLAIMED: keep ListingClaimCTA for the owner's

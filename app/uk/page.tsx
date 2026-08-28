@@ -3,7 +3,6 @@ import Link from "next/link";
 import verticalConfig from "@/lib/vertical.config";
 import { getUkCounties } from "@/lib/uk-solicitors";
 import { ukBreadcrumbSchema, ukCollectionPageSchema, ukPageMetadata } from "@/lib/uk-seo";
-import ShareButtons from "@/components/pizzazz/ShareButtons";
 
 // ISR (2026-08-24, K32 /uk ISR pilot): these /uk pages are public Companies House
 // directory data with NO per-request dependency (no cookies/headers/searchParams).
@@ -55,9 +54,6 @@ export default async function UkIndexPage() {
       <h1 className="text-3xl font-bold mb-2" style={{ color: verticalConfig.primaryColor }}>
         Find a Solicitor in the UK
       </h1>
-      <div className="mb-4">
-        <ShareButtons variant="compact" title="UK Solicitors — DoINeedLegalAdvice" />
-      </div>
       <p className="text-gray-600 mb-8 max-w-3xl">
         Browse {totalFirms.toLocaleString("en-GB")} solicitor firms across{" "}
         {counties.length} UK counties. Choose a county to find solicitors near you, see

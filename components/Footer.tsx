@@ -3,7 +3,6 @@ import verticalConfig from "@/lib/vertical.config";
 import { REGIONS } from "@/lib/constants";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
 import FooterTagline from "@/components/FooterTagline";
-import ShareButtons from "@/components/pizzazz/ShareButtons";
 
 export default function Footer() {
   return (
@@ -56,10 +55,6 @@ export default function Footer() {
         <div className="border-t border-gray-800 mt-8 pt-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-sm">&copy; {new Date().getFullYear()} {verticalConfig.name}. All rights reserved.</p>
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-gray-500">Enjoying the site? Share it.</span>
-              <ShareButtons variant="compact" title={verticalConfig.name} />
-            </div>
           </div>
         </div>
       </div>

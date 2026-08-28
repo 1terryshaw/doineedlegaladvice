@@ -17,7 +17,6 @@ import ListingCard from "@/components/ListingCard";
 import SearchBar from "@/components/SearchBar";
 import Pagination from "@/components/Pagination";
 import RegionHub, { type HubSection, type HubRegion } from "@/components/RegionHub";
-import ShareButtons from "@/components/pizzazz/ShareButtons";
 import { getUkAllTownHubs, getUkCounties } from "@/lib/uk-solicitors";
 
 export const dynamic = "force-dynamic";
@@ -112,9 +111,6 @@ export default async function DirectoryPage({
         <h1 className="text-3xl font-bold mb-2" style={{ color: verticalConfig.primaryColor }}>
           Find a Lawyer
         </h1>
-        <div className="mb-4">
-          <ShareButtons variant="compact" title={`Browse ${verticalConfig.name} Directory`} />
-        </div>
         <div className="mb-6">
           <SearchBar
             variant="directory"
@@ -167,9 +163,6 @@ export default async function DirectoryPage({
       <h1 className="text-3xl font-bold mb-2" style={{ color: verticalConfig.primaryColor }}>
         Find a Lawyer
       </h1>
-      <div className="mb-4">
-        <ShareButtons variant="compact" title={`Browse ${verticalConfig.name} Directory`} />
-      </div>
 
       <div className="mb-6">
         <SearchBar

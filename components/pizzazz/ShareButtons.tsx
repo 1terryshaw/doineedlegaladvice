@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
+import verticalConfig from '@/lib/vertical.config';
 import { Share2, Link2, Mail, Send, Globe, MessageCircle, ExternalLink, MessageSquare } from 'lucide-react';
 
 interface ShareButtonsProps {
@@ -12,7 +14,12 @@ interface ShareButtonsProps {
 
 export default function ShareButtons({ url, title, description, variant = 'full' }: ShareButtonsProps) {
   const [copied, setCopied] = useState(false);
-  const shareUrl = url || (typeof window !== 'undefined' ? window.location.href : '');
+  const pathname = usePathname() ?? '/';
+  // F4 — bind the share target to the page canonical URL. The old
+  // `window.location.href` fallback is '' during SSR, so every share link shipped
+  // an empty url=/u= on first paint.
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `https://${verticalConfig.domain}`;
+  const shareUrl = url || `${baseUrl}${pathname}`;
   const encodedUrl = encodeURIComponent(shareUrl);
   const encodedTitle = encodeURIComponent(title);
   const encodedDesc = encodeURIComponent(description || title);
@@ -61,7 +68,7 @@ export default function ShareButtons({ url, title, description, variant = 'full'
   // Mobile native share
   if (typeof navigator !== 'undefined' && 'share' in navigator) {
     return (
-      <div className="flex flex-wrap items-center gap-2">
+      <div className={`flex items-center gap-2 ${compact ? 'flex-nowrap shrink-0' : 'flex-wrap'}`}>
         <button
           onClick={handleNativeShare}
           className={btnBase}
@@ -83,7 +90,7 @@ export default function ShareButtons({ url, title, description, variant = 'full'
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className={`flex items-center gap-2 ${compact ? 'flex-nowrap shrink-0' : 'flex-wrap'}`}>
       {buttons.map((btn) => {
         if (btn.onClick) {
           return (

@@ -10,7 +10,6 @@ import {
 } from "@/lib/uk-solicitors";
 import { ukBreadcrumbSchema, ukFirmSchema, ukPageMetadata } from "@/lib/uk-seo";
 import RegulatorBadge from "@/components/uk/RegulatorBadge";
-import ShareButtons from "@/components/pizzazz/ShareButtons";
 
 // ISR (2026-08-24, K32 /uk ISR pilot): these /uk pages are public Companies House
 // directory data with NO per-request dependency (no cookies/headers/searchParams).
@@ -200,10 +199,6 @@ export default async function UkFirmPage({ params }: Props) {
               </div>
             )}
 
-            <div className="mt-8 pt-4 border-t">
-              <h2 className="font-semibold text-sm text-gray-500 mb-3">Share this listing</h2>
-              <ShareButtons title={firm.business_name} variant="full" />
-            </div>
           </div>
 
           {/* Sidebar: registered details */}

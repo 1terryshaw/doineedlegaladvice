@@ -11,7 +11,6 @@ const LEGAL_DISCLAIMER =
   "The information here is for informational purposes only and is not legal advice. Consult a licensed attorney in your jurisdiction about your specific situation.";
 import ListingCard from "@/components/ListingCard";
 import Pagination from "@/components/Pagination";
-import ShareButtons from "@/components/pizzazz/ShareButtons";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -76,9 +75,6 @@ export default async function RegionPage({ params, searchParams }: Props) {
         <h1 className="text-3xl font-bold mb-2" style={{ color: verticalConfig.primaryColor }}>
           Lawyers in {provName}
         </h1>
-        <div className="mb-4">
-          <ShareButtons variant="compact" title={`${verticalConfig.name} — Directory`} />
-        </div>
         <p className="text-gray-600 mb-8">
           Browse {total.toLocaleString("en-US")} {total !== 1 ? "lawyers" : "lawyer"} in {provName}
           {totalPages > 1 ? ` — page ${page} of ${totalPages.toLocaleString("en-US")}` : ""}.
@@ -115,9 +111,6 @@ export default async function RegionPage({ params, searchParams }: Props) {
       <h1 className="text-3xl font-bold mb-2" style={{ color: verticalConfig.primaryColor }}>
         Lawyers in {label}
       </h1>
-      <div className="mb-4">
-        <ShareButtons variant="compact" title={`${verticalConfig.name} — Directory`} />
-      </div>
       <p className="text-gray-600 mb-8">
         Browse {listings.length} {listings.length !== 1 ? "lawyers" : "lawyer"} in {label}.
       </p>

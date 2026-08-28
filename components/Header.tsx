@@ -68,8 +68,8 @@ export default function Header() {
       href={item.href}
       {...(/^https?:\/\//.test(item.href) ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       className={item.primary
-        ? `${HEADER_FOCUS_RING} ${HEADER_ACTIVE_LINK} ${mobile ? "block text-center" : ""} px-4 py-2 rounded-lg text-white font-semibold text-sm hover:opacity-90 transition-opacity ${item.active ? "ring-2 ring-gray-900 ring-offset-2" : ""}`
-        : `${HEADER_FOCUS_RING} ${mobile ? "block" : ""} text-gray-600 hover:text-gray-900 ${item.active ? HEADER_ACTIVE_LINK : ""}`}
+        ? `${HEADER_FOCUS_RING} no-underline whitespace-nowrap ${mobile ? "block text-center" : ""} px-4 py-2 rounded-lg text-white font-semibold text-sm hover:opacity-90 transition-opacity ${item.active ? "ring-2 ring-gray-900 ring-offset-2" : ""}`
+        : `${HEADER_FOCUS_RING} ${mobile ? "block" : "whitespace-nowrap"} text-gray-600 hover:text-gray-900 ${item.active ? HEADER_ACTIVE_LINK : ""}`}
       style={item.primary ? { backgroundColor: (verticalConfig as { accentColor?: string }).accentColor || verticalConfig.primaryColor } : undefined}
       aria-current={item.active ? "page" : undefined}
     >
@@ -81,7 +81,7 @@ export default function Header() {
     <button
       type="button"
       onClick={handleLogout}
-      className={`${HEADER_FOCUS_RING} ${mobile ? "block" : ""} text-gray-600 hover:text-gray-900`}
+      className={`${HEADER_FOCUS_RING} ${mobile ? "block" : "whitespace-nowrap"} text-gray-600 hover:text-gray-900`}
     >
       Log Out
     </button>
@@ -98,21 +98,21 @@ export default function Header() {
 
   return (
     <header className="border-b bg-white relative z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl min-[1264px]:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <Link href="/" className={`${HEADER_FOCUS_RING} text-sm sm:text-xl font-bold`} style={{ color: verticalConfig.primaryColor }}>
+          <Link href="/" className={`${HEADER_FOCUS_RING} text-sm sm:text-xl font-bold min-[1264px]:shrink-0 min-[1264px]:mr-4`} style={{ color: verticalConfig.primaryColor }}>
             {verticalConfig.name}
           </Link>
-          <nav aria-label="Primary navigation" className="hidden md:flex items-center gap-6">
+          <nav aria-label="Primary navigation" className="hidden min-[1264px]:flex items-center gap-6">
             {renderNavigation()}
-            <div className="border-l pl-4 ml-2"><ShareButtons variant="compact" title={verticalConfig.name} /></div>
+            <div className="border-l pl-4 ml-2 shrink-0"><ShareButtons variant="compact" title={verticalConfig.name} /></div>
           </nav>
-          <div className="md:hidden flex items-center gap-2">
+          <div className="min-[1264px]:hidden flex items-center gap-2">
             <div className="relative">
               <button type="button" className={`${HEADER_FOCUS_RING} p-2 text-gray-600 hover:text-gray-900`} onClick={handleMobileShare} aria-label="Share"><Share2 size={20} /></button>
               {showCopied && <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs bg-gray-800 text-white px-2 py-1 rounded">Link copied</span>}
             </div>
-            <details ref={mobileNavRef} className="relative md:hidden">
+            <details ref={mobileNavRef} className="relative min-[1264px]:hidden">
               <summary className={`${HEADER_FOCUS_RING} flex cursor-pointer list-none items-center gap-2 rounded p-2 text-gray-600 hover:text-gray-900`} aria-label="Open primary navigation">
                 <span className="text-sm font-medium">Menu</span>
                 <svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>

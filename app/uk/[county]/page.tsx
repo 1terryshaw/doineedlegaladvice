@@ -14,7 +14,6 @@ import {
 } from "@/lib/uk-seo";
 import UkListingCard from "@/components/uk/UkListingCard";
 import RegulatorBadge, { dominantJurisdiction } from "@/components/uk/RegulatorBadge";
-import ShareButtons from "@/components/pizzazz/ShareButtons";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -82,7 +81,6 @@ export default async function UkCountyPage({ params }: Props) {
         Solicitors in {countyData.county}
       </h1>
       <div className="mb-3 flex flex-wrap items-center gap-3">
-        <ShareButtons variant="compact" title={`Solicitors in ${countyData.county}`} />
         {dominantJurisdiction(firms) && (
           <RegulatorBadge jurisdiction={dominantJurisdiction(firms)} variant="full" />
         )}
