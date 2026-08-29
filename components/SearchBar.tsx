@@ -140,7 +140,7 @@ export default function SearchBar({
   return (
     <form onSubmit={handleSubmit} className={isHero ? "w-full max-w-3xl mx-auto" : "w-full"}>
       <div
-        className={`flex flex-col sm:flex-row gap-3 ${
+        className={`flex flex-col sm:flex-row sm:flex-wrap gap-3 ${
           isHero ? "bg-white/10 backdrop-blur-sm p-4 rounded-xl" : "bg-gray-50 p-4 rounded-lg"
         }`}
       >
@@ -149,7 +149,7 @@ export default function SearchBar({
           placeholder={`Search ${verticalConfig.listingNounPlural} by name...`}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 min-w-0 sm:min-w-[14rem] px-4 py-2 rounded-lg border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <select
           value={province}
