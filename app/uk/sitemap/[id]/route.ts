@@ -1,6 +1,7 @@
 import { SITE_URL } from "@/lib/seo";
 import {
   getUkCounties,
+  getUkAllRegionHubs,
   getUkAllTownHubs,
   getUkFirmsRange,
 } from "@/lib/uk-solicitors";
@@ -43,7 +44,17 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     // Static + county + town-hub URLs (no firms — those live in chunks 1..N).
     parts.push(urlEntry(`${baseUrl}/uk`, now, "daily", "0.9"));
     parts.push(urlEntry(`${baseUrl}/uk/privacy`, now, "monthly", "0.3"));
-    const [counties, townHubs] = await Promise.all([getUkCounties(), getUkAllTownHubs()]);
+    const [counties, regionHubs, townHubs] = await Promise.all([
+      getUkCounties(),
+      getUkAllRegionHubs(),
+      getUkAllTownHubs(),
+    ]);
+    // ITL1 region hubs (uk-region-tier-bba-day3). Priority 0.85 — above a county
+    // (0.8), below /uk itself (0.9). getUkAllRegionHubs applies the SAME allowlist +
+    // inventory gate the route does, so the sitemap can never advertise a URL that 404s.
+    for (const r of regionHubs) {
+      parts.push(urlEntry(`${baseUrl}/uk/region/${r.region_slug}`, now, "weekly", "0.85"));
+    }
     for (const c of counties) {
       parts.push(urlEntry(`${baseUrl}/uk/${c.county_slug}`, now, "weekly", "0.8"));
     }

@@ -390,3 +390,212 @@ export async function getUkFirmGeoAnyState(
   const row = (data ?? [])[0] as { county: string | null; town: string | null } | undefined;
   return row ?? null;
 }
+
+
+// --- ITL1 REGION TIER (uk-region-tier-bba-day3) --------------------------------------
+//
+// The UK peer of a CA province / US state is the ITL1 region (12 of them: London,
+// South East, …), NOT the ~190 ceremonial counties the /uk subtree routes at. This
+// block is the data layer for /uk/region/[region].
+//
+// 🔴 THE `region` COLUMN IS NOT A CONTROLLED VOCABULARY. It is source text and it
+// carries strays — uk_dentists holds one row whose region is "Nottinghamshire", which
+// is a COUNTY. So the canonical list below is an ALLOWLIST: a value not in it is
+// skipped, never linked, and not routable. That is the K119/K123 chips-resolve rule
+// applied at the source rather than at the chip. ITL1 is a fixed 12-member statistical
+// standard (ONS ITL1, formerly NUTS 1) — it is a vocabulary, not a growing set, which
+// is why an allowlist is the right model here.
+export const UK_ITL1_REGIONS: ReadonlyArray<{ name: string; slug: string }> = [
+  { name: "London", slug: "london" },
+  { name: "South East", slug: "south-east" },
+  { name: "South West", slug: "south-west" },
+  { name: "East of England", slug: "east-of-england" },
+  { name: "East Midlands", slug: "east-midlands" },
+  { name: "West Midlands", slug: "west-midlands" },
+  { name: "Yorkshire and The Humber", slug: "yorkshire-and-the-humber" },
+  { name: "North West", slug: "north-west" },
+  { name: "North East", slug: "north-east" },
+  { name: "Scotland", slug: "scotland" },
+  { name: "Wales", slug: "wales" },
+  { name: "Northern Ireland", slug: "northern-ireland" },
+];
+const ITL1_SLUGS = new Set(UK_ITL1_REGIONS.map((r) => r.slug));
+const ITL1_ORDER = new Map(UK_ITL1_REGIONS.map((r, i) => [r.slug, i] as const));
+
+// Both views slug with the SAME expression as ukSlugify() and the county views, and
+// carry the same `is_published = true` gate. Because of that, every county chip a
+// region hub emits has a matching row in COUNTY_STATS_VIEW by construction.
+export const REGION_STATS_VIEW = `${UK_TABLE}_region_stats`;
+export const REGION_COUNTY_STATS_VIEW = `${UK_TABLE}_region_county_stats`;
+
+export interface RegionStat {
+  region: string;
+  region_slug: string;
+  firm_count: number;
+}
+
+export interface RegionCountyStat {
+  region: string;
+  region_slug: string;
+  county: string;
+  county_slug: string;
+  firm_count: number;
+}
+// A region hub is a NAVIGATIONAL TIER: it exists to group SEVERAL counties. A region
+// whose whole published inventory sits in ONE county is not a tier, it is an ALIAS for
+// that county's hub — same rows, same top-200 cards, a "browse by county" row of exactly
+// one chip, and a title differing only in wording. In all three ITL1 verticals that is
+// exactly one region: London, whose firms all carry the county "Greater London".
+//
+// So no hub is built for it (the route 404s, and it is absent from generateStaticParams
+// AND from the sitemap), and its CHIP points at the county hub instead. The market keeps
+// its chip; no near-duplicate page ships.
+export const REGION_HUB_MIN_COUNTIES = 2;
+
+/** region_slug -> its county rows, summed per county_slug, biggest first. */
+async function regionCountyIndex(): Promise<Map<string, RegionCountyStat[]>> {
+  const { data, error } = await supabaseAdmin
+    .from(REGION_COUNTY_STATS_VIEW)
+    .select("region, region_slug, county, county_slug, firm_count")
+    .limit(20000);
+  if (error) {
+    console.error("regionCountyIndex error:", error.message);
+    return new Map();
+  }
+  const m = new Map<string, RegionCountyStat[]>();
+  for (const r of (data ?? []) as RegionCountyStat[]) {
+    const arr = m.get(r.region_slug) ?? [];
+    // Summed per county_slug: two source spellings that slugify alike are ONE county —
+    // they address one hub, so they must not look like two and halve the count.
+    const prev = arr.find((x) => x.county_slug === r.county_slug);
+    if (prev) prev.firm_count = Number(prev.firm_count) + Number(r.firm_count);
+    else arr.push({ ...r, firm_count: Number(r.firm_count) });
+    m.set(r.region_slug, arr);
+  }
+  // Array.from, not a bare Map iterator: this fleet's tsconfig targets below es2015 and
+  // iterating a MapIterator directly is a TS2802 build error.
+  for (const arr of Array.from(m.values())) arr.sort((a: RegionCountyStat, b: RegionCountyStat) => b.firm_count - a.firm_count);
+  return m;
+}
+
+/** ITL1 regions with published inventory, canonical order. Non-ITL1 values dropped. */
+async function ukItl1Regions(): Promise<RegionStat[]> {
+  const { data, error } = await supabaseAdmin
+    .from(REGION_STATS_VIEW)
+    .select("region, region_slug, firm_count")
+    .limit(5000);
+  if (error) {
+    console.error("ukItl1Regions error:", error.message);
+    return [];
+  }
+  return ((data ?? []) as RegionStat[])
+    .filter((r) => ITL1_SLUGS.has(r.region_slug) && Number(r.firm_count) > 0)
+    .sort((a, b) => (ITL1_ORDER.get(a.region_slug) ?? 99) - (ITL1_ORDER.get(b.region_slug) ?? 99));
+}
+
+/**
+ * The regions that GET A HUB — ITL1, with inventory, spanning >= 2 counties. This is
+ * BOTH the route's param set and the sitemap's URL set: one function, so the two
+ * expressions of the same gate cannot drift apart.
+ */
+export async function getUkRegions(): Promise<RegionStat[]> {
+  const [regions, idx] = await Promise.all([ukItl1Regions(), regionCountyIndex()]);
+  return regions.filter((r) => (idx.get(r.region_slug)?.length ?? 0) >= REGION_HUB_MIN_COUNTIES);
+}
+
+export interface RegionChip extends RegionStat {
+  /** Site-relative path this chip links to. Always resolves 200-with-cards. */
+  path: string;
+}
+
+/**
+ * Chips for the homepage Browse-by-Area and the /uk index: every ITL1 region with
+ * inventory, each pointing at whatever page actually serves it.
+ *
+ * A collapsed region's chip carries the COUNTY hub's OWN count, not the region's. They
+ * can differ — uk_dentists has region London = 4,544 but county Greater London = 4,547,
+ * three rows carrying the county with no region — and the number beside a link must be
+ * the number the link opens.
+ */
+export async function getUkRegionChips(): Promise<RegionChip[]> {
+  const [regions, idx] = await Promise.all([ukItl1Regions(), regionCountyIndex()]);
+  const out: RegionChip[] = [];
+  for (const r of regions) {
+    const counties = idx.get(r.region_slug) ?? [];
+    if (counties.length >= REGION_HUB_MIN_COUNTIES) {
+      out.push({ ...r, path: `/uk/region/${r.region_slug}` });
+      continue;
+    }
+    if (counties.length === 1) {
+      const county = await getUkCountyBySlug(counties[0].county_slug);
+      if (county) {
+        out.push({
+          region: r.region,
+          region_slug: r.region_slug,
+          firm_count: Number(county.firm_count),
+          path: `/uk/${county.county_slug}`,
+        });
+      }
+      continue;
+    }
+    // 0 counties: nothing that resolves to point at. Skipped, never linked (K119/K123).
+  }
+  return out;
+}
+
+/** One region hub. Null for a non-ITL1 slug, an empty region, or a single-county alias. */
+export async function getUkRegionBySlug(regionSlug: string): Promise<RegionStat | null> {
+  if (!ITL1_SLUGS.has(regionSlug)) return null;
+  const [res, idx] = await Promise.all([
+    supabaseAdmin
+      .from(REGION_STATS_VIEW)
+      .select("region, region_slug, firm_count")
+      .eq("region_slug", regionSlug)
+      .limit(1)
+      .maybeSingle(),
+    regionCountyIndex(),
+  ]);
+  if (res.error) {
+    console.error("getUkRegionBySlug error:", res.error.message);
+    return null;
+  }
+  const row = (res.data as RegionStat) ?? null;
+  if (!row || Number(row.firm_count) <= 0) return null;
+  if ((idx.get(regionSlug)?.length ?? 0) < REGION_HUB_MIN_COUNTIES) return null;
+  return row;
+}
+
+/** County hubs inside one ITL1 region — the "browse by county" chips on a region hub. */
+export async function getUkCountiesInRegion(regionSlug: string): Promise<RegionCountyStat[]> {
+  if (!ITL1_SLUGS.has(regionSlug)) return [];
+  const idx = await regionCountyIndex();
+  return idx.get(regionSlug) ?? [];
+}
+/** All region hubs (for the sitemap). Same allowlist + inventory gate as the route. */
+export async function getUkAllRegionHubs(): Promise<RegionStat[]> {
+  return getUkRegions();
+}
+
+
+/**
+ * Firms in one ITL1 region. DERIVED from this repo's own getUkFirmsByCounty (same
+ * columns, same row mapping, same ordering, same cap) with the filter column swapped.
+ */
+export async function getUkFirmsByRegion(
+  region: string,
+  limit = FIRM_LIST_CAP
+): Promise<UkFirm[]> {
+  const { data, error } = await supabaseAdmin
+    .from(UK_TABLE)
+    .select(RAW_FIRM_COLS)
+    .eq("is_published", true)
+    .eq("region", region)
+    .order("is_claimed", { ascending: false, nullsFirst: false })
+    .order("business_name", { ascending: true })
+    .limit(limit);
+  if (error) {
+    console.error("getUkFirmsByRegion error:", error.message);
+    return [];
+  }
+  return ((data ?? []) as RawFirmRow[]).map(mapFirm);
+}

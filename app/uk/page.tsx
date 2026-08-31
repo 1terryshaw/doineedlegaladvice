@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import verticalConfig from "@/lib/vertical.config";
-import { getUkCounties } from "@/lib/uk-solicitors";
+import { getUkCounties, getUkRegionChips } from "@/lib/uk-solicitors";
 import { ukBreadcrumbSchema, ukCollectionPageSchema, ukPageMetadata } from "@/lib/uk-seo";
 
 // ISR (2026-08-24, K32 /uk ISR pilot): these /uk pages are public Companies House
@@ -27,7 +27,7 @@ export const metadata: Metadata = ukPageMetadata({
 });
 
 export default async function UkIndexPage() {
-  const counties = await getUkCounties();
+  const [counties, regions] = await Promise.all([getUkCounties(), getUkRegionChips()]);
   const totalFirms = counties.reduce((sum, c) => sum + Number(c.firm_count), 0);
 
   return (
@@ -65,6 +65,27 @@ export default async function UkIndexPage() {
           UK listings are coming soon. Check back shortly.
         </p>
       ) : (
+        <>
+        {regions.length > 0 && (
+          <section className="mb-10">
+            <h2 className="text-xl font-semibold mb-3 text-gray-900">Browse by region</h2>
+            <div className="flex flex-wrap gap-2">
+              {regions.map((r) => (
+                <Link
+                  key={r.region_slug}
+                  href={r.path}
+                  className="inline-flex items-center gap-2 border rounded-full px-4 py-1.5 text-sm bg-white hover:shadow-md hover:border-gray-300 transition-all"
+                >
+                  <span className="text-gray-800">{r.region}</span>
+                  <span className="text-xs text-gray-400">
+                    {Number(r.firm_count).toLocaleString("en-GB")}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+        <h2 className="text-xl font-semibold mb-3 text-gray-900">Browse by county</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {counties.map((c) => (
             <Link
@@ -79,6 +100,7 @@ export default async function UkIndexPage() {
             </Link>
           ))}
         </div>
+        </>
       )}
     </div>
   );
