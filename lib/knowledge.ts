@@ -26,6 +26,13 @@ export interface KnowledgeData {
 
 const TIMEOUT_MS = 2500;
 
+// Cache the enrichment for 24h — the ISR-compatible pattern proven across the fleet since
+// 2026-07-17. `cache: "no-store"` here discarded the API's own `s-maxage=3600` on EVERY detail
+// render, producing one uncached knowledge-API call per page view. Only the TRANSPORT is cached;
+// the payload is byte-identical. The tag `enrichment:<vertical>:<slug>` allows a targeted
+// revalidateTag() purge on re-enrichment.
+const ENRICHMENT_REVALIDATE_SECONDS = 86400;
+
 export async function getEnrichment(vertical: string, slug: string | null | undefined): Promise<KnowledgeData | null> {
   const base = process.env.KNOWLEDGE_API_URL;
   const key = process.env.EMPIRE_KNOWLEDGE_API_KEY;
@@ -38,7 +45,7 @@ export async function getEnrichment(vertical: string, slug: string | null | unde
     const res = await fetch(url, {
       headers: { "x-empire-key": key },
       signal: ac.signal,
-      cache: "no-store",
+      next: { revalidate: ENRICHMENT_REVALIDATE_SECONDS, tags: [`enrichment:${vertical}:${slug}`] },
     });
     if (!res.ok) return null;
     const data = (await res.json()) as { found?: boolean; knowledge?: KnowledgeData["knowledge"]; meta?: KnowledgeData["meta"] };
