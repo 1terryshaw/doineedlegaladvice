@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
 import { generateToken } from "@/lib/auth";
+import { isOwnerTokenExpired } from "@/lib/owner-authorization";
 import { sendClaimEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,7 @@ export async function POST(request: NextRequest) {
 
     const { data: listing, error } = await supabaseAdmin
       .from(LISTINGS_TABLE)
-      .select("id, claimed, name")
+      .select("id, claimed, name, owner_email, owner_auth_token, owner_auth_token_expires_at")
       .eq("slug", slug)
       .single();
 
@@ -62,7 +63,21 @@ export async function POST(request: NextRequest) {
       console.error("[abuse] claim verdict failed (fail-open):", e instanceof Error ? e.message : e);
     }
 
-    const token = generateToken();
+    // A retry must not kill the link we already emailed. The claim capability lives in ONE
+    // column on the LISTING row (owner_auth_token) — there is no per-email token table — so
+    // an existing token can only be re-sent to the address that minted it. Same listing +
+    // same email + still-live token => re-send that exact link and write nothing, so every
+    // earlier email stays valid. Anything else (first claim, a different email, an expired
+    // token) mints fresh and necessarily supersedes the old link, which is correct: a
+    // capability must not survive being re-pointed at a different claimant.
+    const submittedEmail = String(email).trim().toLowerCase();
+    const rowEmail = String(listing.owner_email || "").trim().toLowerCase();
+    const reuseToken =
+      !!listing.owner_auth_token &&
+      rowEmail !== "" &&
+      rowEmail === submittedEmail &&
+      !isOwnerTokenExpired(listing.owner_auth_token_expires_at);
+    const token = reuseToken ? String(listing.owner_auth_token) : generateToken();
 
     // Send the verification email FIRST — if it fails we don't leave an
     // orphan owner_auth_token / owner_email on the row.
@@ -85,7 +100,7 @@ export async function POST(request: NextRequest) {
         return emailFailed;
       }
       console.log(
-        JSON.stringify({ event: "claim_send_ok", email_redacted: emailRedacted, slug, resend_id: result.id })
+        JSON.stringify({ event: "claim_send_ok", email_redacted: emailRedacted, slug, resend_id: result.id, token_reused: reuseToken })
       );
     } catch (emailErr) {
       console.error(
@@ -94,22 +109,25 @@ export async function POST(request: NextRequest) {
       return emailFailed;
     }
 
-    const { error: updateError } = await supabaseAdmin
-      .from(LISTINGS_TABLE)
-      .update({ owner_auth_token: token, owner_email: email })
-      .eq("id", listing.id);
+    // Only a freshly minted token needs writing; a re-send already matches the row.
+    if (!reuseToken) {
+      const { error: updateError } = await supabaseAdmin
+        .from(LISTINGS_TABLE)
+        .update({ owner_auth_token: token, owner_email: email })
+        .eq("id", listing.id);
 
-    if (updateError) {
-      console.error("[claim] db write failed after email sent:", updateError.message);
-      return NextResponse.json(
-        {
-          success: false,
-          error: "db_write_failed",
-          userMessage:
-            "We sent your verification email but hit a snag finishing the claim. Please try again — if it persists, contact support.",
-        },
-        { status: 500 }
-      );
+      if (updateError) {
+        console.error("[claim] db write failed after email sent:", updateError.message);
+        return NextResponse.json(
+          {
+            success: false,
+            error: "db_write_failed",
+            userMessage:
+              "We sent your verification email but hit a snag finishing the claim. Please try again — if it persists, contact support.",
+          },
+          { status: 500 }
+        );
+      }
     }
 
     return NextResponse.json({ success: true });
