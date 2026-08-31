@@ -335,9 +335,14 @@ export async function getActiveLicenseStates(): Promise<string[]> {
 }
 
 // CA region pages partition by province_state (CA rows have no license_state).
-// Distinct province_state present in the consumer-visible CA set — drives the
-// CA /{province} sitemap entries, only for provinces with rows (criterion #3:
-// no 404 URLs in the sitemap). Self-maintaining as CA rows load.
+// Distinct province_state present in the consumer-visible CA set.
+//
+// ⚠ DEPRECATED for sitemap use (TDL #322). This asks `country='CA'`, but the
+// serve path is scoped to DIRECTORY_COUNTRIES (US-only since the 2026-07-26
+// country split) — so it reported 11 'active' CA provinces whose hubs render
+// 200 with 'Browse 0 lawyers'. The sitemap emitters now use
+// getServedProvincesCA() in lib/directory-hub.ts, which counts rows under the
+// SERVE predicate. Do not re-wire the sitemap to this function.
 export async function getActiveProvincesCA(): Promise<string[]> {
   const rows = await paginateAll<{ province_state: string | null }>(() => {
     return supabaseAdmin

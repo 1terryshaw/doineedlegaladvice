@@ -11,8 +11,8 @@ import { REGIONS } from "@/lib/constants";
 import {
   getListingsCount,
   getActiveLicenseStates,
-  getActiveProvincesCA,
 } from "@/lib/supabase";
+import { getServedProvincesCA } from "@/lib/directory-hub";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -26,16 +26,17 @@ async function renderSitemap() {
   const baseUrl =
     process.env.NEXT_PUBLIC_BASE_URL || `https://${verticalConfig.domain}`;
 
-  const [listingCount, activeStates, activeProvincesCA] = await Promise.all([
+  const [listingCount, activeStates, servedProvincesCA] = await Promise.all([
     getListingsCount(),
     getActiveLicenseStates(),
-    getActiveProvincesCA(),
+    getServedProvincesCA(),
   ]);
 
   // Region-page headers — MUST match app/sitemap/[id]/route.ts exactly. US
-  // regions resolve via license_state→REGIONS; CA regions via province→REGIONS.
+  // regions resolve via license_state→REGIONS; CA regions via a served-row
+  // count under the serve predicate →REGIONS (TDL #322).
   const usRegions = REGIONS.filter((r) => activeStates.includes(r.province));
-  const caRegions = REGIONS.filter((r) => activeProvincesCA.includes(r.province));
+  const caRegions = REGIONS.filter((r) => servedProvincesCA.includes(r.province));
 
   // chunk 0 carries the static + region headers (one per active US state and CA
   // province). City pages are emitted in chunk 0 but, as before, are not

@@ -2,6 +2,7 @@
 // Lives in its own module because lib/supabase.ts is on this repo's DO-NOT-TOUCH
 // list (per CLAUDE.md). Reuses supabaseAdmin + LISTINGS_TABLE from supabase.ts.
 import { sanitizeOrTerm, supabaseAdmin, LISTINGS_TABLE, type Listing } from "@/lib/supabase";
+import { DIRECTORY_COUNTRIES } from "@/lib/region-scope";
 
 export const REGION_PAGE_SIZE = 48;
 
@@ -163,4 +164,46 @@ export async function getListingsByProvincePaged(
     return [];
   }
   return data || [];
+}
+
+// ── TDL #322 — the sitemap CA-province gate ──────────────────────────────────
+// A region hub may only be ADVERTISED in the sitemap if the SERVE path can fill
+// it. Those two predicates had drifted apart:
+//
+//   serve  (getListingsByProvincePaged / getRegionTotal / lib/supabase getListings)
+//          → country IN DIRECTORY_COUNTRIES  — US-only since the 2026-07-26 split
+//   gate   (lib/supabase getActiveProvincesCA)
+//          → country = 'CA'                  — asks a question the serve path
+//                                              never answers
+//
+// So the sitemap advertised 11 CA province hubs (/ab /bc /mb /nb /nl /ns /nt
+// /on /pe /qc /sk) that render 200 with "Browse 0 lawyers" — indexable,
+// sitemap-advertised soft-404s.
+//
+// This gate counts rows under the SERVE predicate itself, per province. There
+// is NO hardcoded exclusion list: a province re-advertises the moment the serve
+// path can return a row for it (e.g. when CA is added to DIRECTORY_COUNTRIES),
+// with no code change here.
+//
+// Fail-closed: a query error THROWS, so the sitemap routes' 503 boundary keeps
+// the previous sitemap rather than serving a silently-shrunken 200.
+export async function getServedProvincesCA(): Promise<string[]> {
+  const codes = Array.from(CA_CODES);
+  const served = await Promise.all(
+    codes.map(async (code) => {
+      const { count, error } = await supabaseAdmin
+        .from(LISTINGS_TABLE)
+        .select("id", { count: "exact", head: true })
+        .in("country", DIRECTORY_COUNTRIES)
+        .neq("is_published", false)
+        .eq(regionColumn(code), code);
+      if (error) {
+        throw new Error(
+          `getServedProvincesCA(${code}) failed: ${JSON.stringify(error)}`
+        );
+      }
+      return (count ?? 0) > 0 ? code : null;
+    })
+  );
+  return served.filter((c): c is string => c !== null).sort();
 }

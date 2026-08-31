@@ -12,9 +12,9 @@ import { REGIONS } from "@/lib/constants";
 import {
   getListingsRange,
   getActiveLicenseStates,
-  getActiveProvincesCA,
   getCityPageSlugs,
 } from "@/lib/supabase";
+import { getServedProvincesCA } from "@/lib/directory-hub";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -59,16 +59,19 @@ async function renderSitemap(
   const baseUrl =
     process.env.NEXT_PUBLIC_BASE_URL || `https://${verticalConfig.domain}`;
 
-  // Region pages only for regions with rows (criterion #3: no 404s in sitemap).
-  // US via license_state (TDL #458); CA via province_state. Both filtered through
-  // REGIONS so the slugs are the canonical routable ones. Header count below MUST
-  // match app/sitemap.xml/route.ts.
-  const [activeStates, activeProvincesCA] = await Promise.all([
+  // Region pages only for regions the SERVE path can fill (criterion #3: no
+  // soft-404s in the sitemap). US via license_state (TDL #458); CA via
+  // province_state, counted under the serve predicate (TDL #322 —
+  // getServedProvincesCA; the old getActiveProvincesCA asked country='CA', a
+  // question the US-only serve path never answers, and advertised 11 empty
+  // hubs). Both filtered through REGIONS so the slugs are the canonical
+  // routable ones. Header count below MUST match app/sitemap.xml/route.ts.
+  const [activeStates, servedProvincesCA] = await Promise.all([
     getActiveLicenseStates(),
-    getActiveProvincesCA(),
+    getServedProvincesCA(),
   ]);
   const usRegions = REGIONS.filter((r) => activeStates.includes(r.province));
-  const caRegions = REGIONS.filter((r) => activeProvincesCA.includes(r.province));
+  const caRegions = REGIONS.filter((r) => servedProvincesCA.includes(r.province));
   const activeRegions = [...usRegions, ...caRegions];
 
   const headers = STATIC_ENTRIES.length + activeRegions.length;
