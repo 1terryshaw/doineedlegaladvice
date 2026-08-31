@@ -13,8 +13,8 @@ export default function Footer() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div>
-            <h3 className="text-white font-bold text-lg mb-4">{verticalConfig.name}</h3>
+          <div className="min-w-0">
+            <h3 className="text-white font-bold text-lg mb-4 break-words">{verticalConfig.name}</h3>
             <p className="text-sm"><FooterTagline /></p>
           </div>
           <div>
