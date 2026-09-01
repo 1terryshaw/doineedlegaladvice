@@ -40,8 +40,13 @@ export default function Footer() {
             </ul>
           </div>
           <div>
-            <h4 className="text-white font-semibold mb-4">Our Network</h4>
+            <h4 className="text-white font-semibold mb-4">Related Directories</h4>
             <ul className="space-y-2 text-sm">
+              <li>
+                <a href="https://doineedapro.com/directories" target="_blank" rel="noopener noreferrer" className="font-medium hover:text-white">
+                  Browse all directories &rarr;
+                </a>
+              </li>
               {verticalConfig.crossReferrals.map((ref) => (
                 <li key={ref.url}>
                   <a href={ref.url} target="_blank" rel="noopener noreferrer" className="hover:text-white">
