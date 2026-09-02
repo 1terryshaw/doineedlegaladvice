@@ -1,5 +1,11 @@
 // COMPLIANCE / SEO — 410 Gone gate for DE-SERVED listing rows.
-// SHARED FILE: byte-identical across all 21 de-served verticals. Do not fork.
+// SHARED FILE: byte-identical across every de-served vertical. Do not fork.
+//
+// CANONICAL COPY: empire-policy/deserve_gate.ts (K101 — clone fixes return to the donor).
+// Each repo carries a byte-identical copy at lib/deserve-gate.ts. Sync + drift check:
+//   empire-policy/sync_deserve_gate.sh --write <repoDir>
+//   empire-policy/sync_deserve_gate.sh --verify
+// Edit the canonical FIRST; per-repo copies are re-synced from it, never hand-edited.
 //
 // WHY 410 AND NOT 404
 // ------------------
@@ -22,9 +28,23 @@
 // --------------------------
 // It never selects the row. It calls the SECURITY DEFINER RPC `is_deserved_listing`,
 // which returns a BARE BOOLEAN. By construction no field of a de-served row (name,
-// address, license, anything) can reach this process, let alone the response body —
-// the 410 is emitted with a null body. The RPC also allow-lists the 21 tables so the
-// anon key cannot probe arbitrary tables.
+// address, license, anything) can reach this process, let alone the response body.
+// The RPC is structurally gated to `*_listings` tables carrying the de-serve column
+// contract, so the anon key cannot probe arbitrary tables.
+//
+// WHY THE 410 NOW CARRIES A BODY (K148, ruling 2026-09-02)
+// --------------------------------------------------------
+// A de-serve removes the row; it does not remove the traffic. Google keeps serving its
+// last crawl of a withdrawn URL for weeks, and the people clicking are disproportionately
+// the SUBJECTS themselves (name lookups). notary: 98.9% of 2,271 detail clicks/28d landed
+// on this 410 — with a null body, a dead end for exactly the person K38 exists to let
+// claim. The body below is a CONSTANT string with ONLY the slug substituted into the href.
+// No name, no address, no phone, no field of the row — the slug is already in the
+// visitor's URL bar, so it discloses nothing new. K38 stays intact: no name, no data, no
+// index (`X-Robots-Tag: noindex`, `Cache-Control: no-store` unchanged; the sitemap is
+// untouched; no recrawl is triggered — the stale index IS the traffic). The link is
+// consent-seeking: /claim/<slug> lets the subject claim the record or ask for removal, and
+// `?src=gone_page` lands in claim_attribution so the effect is measurable.
 //
 // FAIL-OPEN, SAFELY
 // -----------------
@@ -44,11 +64,50 @@
 import { NextRequest, NextResponse } from "next/server";
 import verticalConfig from "@/lib/vertical.config";
 
+export const DESERVE_GATE_VERSION = "1.1.0";
+
 // Matches EXACTLY the listing-detail routes: /directory/<slug> and /uk/directory/<slug>.
 // Nothing else on the site is gated.
 const LISTING_PATH = /^\/(?:uk\/)?directory\/([^/]+)\/?$/;
 
 const LISTINGS_TABLE = `${verticalConfig.tablePrefix}listings`;
+
+// The site name is the only per-vertical value in the body, and it comes from config —
+// never from the row. Optional: a repo whose config lacks `name` renders the plain title.
+const SITE_NAME: string = (verticalConfig as { name?: unknown }).name
+  ? String((verticalConfig as { name?: unknown }).name)
+  : "";
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// The withdrawn-page body. Constant copy (ruling 2026-09-02 — tone is deliberate); the
+// ONLY substitution is the slug into the claim href. No nav chrome, no footer, no scripts,
+// no analytics — it is a 410. The claim link is root-relative so it works on every host
+// this file is shared into.
+export function goneBody(slug: string): string {
+  const href = `/claim/${encodeURIComponent(slug)}?src=gone_page`;
+  const title = SITE_NAME
+    ? `This page has been withdrawn | ${escapeHtml(SITE_NAME)}`
+    : "This page has been withdrawn";
+  return (
+    `<!doctype html><html lang="en"><head><meta charset="utf-8">` +
+    `<meta name="viewport" content="width=device-width, initial-scale=1">` +
+    `<title>${title}</title></head><body>` +
+    `<h1>This page has been withdrawn</h1>` +
+    `<p>The listing that was here is no longer published.</p>` +
+    `<p>If you are the professional it referred to, you can claim it or ask for it to be removed:</p>` +
+    `<p><a href="${escapeHtml(href)}">Claim this listing</a></p>` +
+    `<p><a href="/">Return to the directory</a></p>` +
+    `</body></html>`
+  );
+}
 
 export async function deserveGate(req: NextRequest): Promise<NextResponse | null> {
   const match = LISTING_PATH.exec(req.nextUrl.pathname);
@@ -86,10 +145,12 @@ export async function deserveGate(req: NextRequest): Promise<NextResponse | null
 
   if (!deserved) return null;
 
-  // TRUE 410 status line. Null body: the response carries no row data whatsoever.
-  return new NextResponse(null, {
+  // TRUE 410 status line. Nameless constant body carrying only the claim link (K148):
+  // the response carries no row data whatsoever.
+  return new NextResponse(goneBody(slug), {
     status: 410,
     headers: {
+      "Content-Type": "text/html; charset=utf-8",
       "X-Robots-Tag": "noindex",
       "Cache-Control": "no-store",
     },

@@ -227,6 +227,33 @@ export async function getListing(slug: string): Promise<Listing | null> {
   return data;
 }
 
+// CLAIM-CONTEXT read — the ONLY read that renders a HIDDEN (is_published=false) row.
+// Deliberately OMITS `.neq("is_published", false)` so a de-served / seeded row can reach
+// its own claim page (gone-page link → claim → republish-on-claim through the canonical
+// guard). It is this repo's own getListing() above MINUS the is_published filter —
+// notary 39c8789 pattern, ported by gone-page-claim-link-v1-B2 (2026-09-02, K148).
+//
+// 🔴 USE ONLY on the claim path (/claim/[slug] page). NEVER call this from a public/serve
+// read — directory listing, search, sitemap, category, region, or the cold-outreach queries.
+// Widening a public read to this would re-open the de-serve leak (#1010 / #1014). The public
+// getListing() above and every getListings* stay is_published-filtered and byte-unchanged.
+export async function getListingForClaim(slug: string): Promise<Listing | null> {
+  const { data, error } = await supabaseAdmin
+    .from(LISTINGS_TABLE)
+    .select("*")
+    // US-only (country split 2026-07-26): the detail page must not resolve a CA
+    // row even by direct URL — CA listings render on FLA, not here.
+    .eq("country", "US")
+    .eq("slug", slug)
+    .single();
+
+  if (error) {
+    console.error(`Error fetching claim listing "${slug}" from ${LISTINGS_TABLE}:`, error);
+    return null;
+  }
+  return data;
+}
+
 
 // Uncapped variant of getListings for sitemap generation. Calls paginateAll
 // without any maxRows option and with no per-page .limit() so the full result
