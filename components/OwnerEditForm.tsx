@@ -42,6 +42,10 @@ interface FormState {
   services: string[];
   service_area: string[];
   year_established: string;
+  /** STRUCTURED NAP FIELDS (Phase 1 fan) — kept as strings in form state like every
+      other controlled input here; coerced once, on submit. */
+  employee_count: string;
+  payment_methods: string;
   social_instagram: string;
   social_facebook: string;
   social_linkedin: string;
@@ -83,6 +87,8 @@ export default function OwnerEditForm({
     services: lst.services ?? [],
     service_area: lst.service_area ?? [],
     year_established: lst.year_established ? String(lst.year_established) : "",
+    employee_count: (listing as { employee_count?: number | null }).employee_count?.toString() ?? "",
+    payment_methods: (listing as { payment_methods?: string | null }).payment_methods ?? "",
     social_instagram: lst.social_instagram ?? "",
     social_facebook: lst.social_facebook ?? "",
     social_linkedin: lst.social_linkedin ?? "",
@@ -99,6 +105,8 @@ export default function OwnerEditForm({
   const hasMoreDetails =
     !!form.hours_json ||
     !!form.year_established ||
+    !!form.employee_count ||
+    !!form.payment_methods ||
     !!logo ||
     !!form.social_instagram ||
     !!form.social_facebook ||
@@ -130,6 +138,8 @@ export default function OwnerEditForm({
       services: form.services,
       service_area: form.service_area,
       year_established: form.year_established ? parseInt(form.year_established, 10) : null,
+      employee_count: form.employee_count ? parseInt(form.employee_count, 10) : null,
+      payment_methods: form.payment_methods,
       social_instagram: form.social_instagram ? normalizeUrl(form.social_instagram) : "",
       social_facebook: form.social_facebook ? normalizeUrl(form.social_facebook) : "",
       social_linkedin: form.social_linkedin ? normalizeUrl(form.social_linkedin) : "",
@@ -332,6 +342,43 @@ export default function OwnerEditForm({
                 placeholder="e.g. 1998"
                 className="w-full sm:w-48 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+
+            {/* STRUCTURED NAP FIELDS (Phase 1 fan, 2026-09-04). Public business facts on the
+                SAME owner-update contract as every other field here — /api/owner/update gains
+                no new logic. Non-sensitive by construction: an employee count and a list of
+                payment types say nothing about where a person lives, so unlike the address
+                there is no visibility toggle and no per-vertical default. */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Number of employees</label>
+              <input
+                type="number"
+                min={1}
+                max={1000000}
+                step={1}
+                value={form.employee_count}
+                onChange={(e) => update("employee_count", e.target.value)}
+                placeholder="e.g. 12"
+                className="w-full sm:w-48 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <small className="block text-xs text-gray-500 mt-1">
+                Shown on your listing and in the structured data search engines read. Leave blank to omit it.
+              </small>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Payment methods accepted</label>
+              <input
+                type="text"
+                maxLength={200}
+                value={form.payment_methods}
+                onChange={(e) => update("payment_methods", e.target.value)}
+                placeholder="Cash, Visa, Mastercard, e-transfer"
+                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <small className="block text-xs text-gray-500 mt-1">
+                A short comma-separated list. Leave blank to omit it.
+              </small>
             </div>
 
             <LogoUploader

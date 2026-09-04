@@ -105,6 +105,11 @@ export interface ListingPhoto {
 }
 
 export interface ListingExtras {
+  // STRUCTURED NAP FIELDS (Phase 1 fan, 2026-09-04). Non-sensitive public business
+  // attributes the owner types in on claim -> numberOfEmployees / paymentAccepted.
+  // NOT address-grade data: no grain split, no privacy gate, no backfill.
+  employee_count?: number | null;
+  payment_methods?: string | null;
   // ADDRESS SHOW/HIDE (Phase 2 fleet fan, 2026-09-04). Owner-controlled visibility of the
   // street address on the detail page's NAP block, its Maps link, the PostalAddress JSON-LD
   // and any street-precision geo node. NOT NULL in the DB, defaulted per vertical GRAIN
@@ -175,6 +180,8 @@ export function isValidSocial(
 
 // Used by /api/owner/update — list the new fields the form may send.
 export const EXTRA_UPDATE_FIELDS = [
+  "employee_count",
+  "payment_methods",
   "show_address",
   "hours_json",
   "services",
@@ -193,6 +200,22 @@ export type ExtraUpdateField = typeof EXTRA_UPDATE_FIELDS[number];
 // save, but a malformed URL that gets through is still cleaned up here.
 export function sanitizeExtras(input: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
+  if ("employee_count" in input) {
+    // Clamped, not coerced. An empty form field arrives as "" -> NaN -> null, and 0 is
+    // rejected outright (the DB CHECK agrees): "0 employees" is a blank input that became a
+    // number, not a fact about the business. The upper bound is a sanity rail, not a policy.
+    const n = typeof input.employee_count === "number"
+      ? input.employee_count
+      : parseInt(String(input.employee_count ?? ""), 10);
+    out.employee_count = Number.isFinite(n) && n >= 1 && n <= 1000000 ? Math.trunc(n) : null;
+  }
+  if ("payment_methods" in input) {
+    // Free text, deliberately. schema.org's `paymentAccepted` range IS Text ("Cash, Credit
+    // Card, ..."), so there is no vocabulary to validate against; we trim, cap the length,
+    // and collapse the newlines an owner might paste (this is a one-line list, not prose).
+    const v = typeof input.payment_methods === "string" ? input.payment_methods : "";
+    out.payment_methods = v.replace(/\s+/g, " ").trim().slice(0, 200);
+  }
   if ("show_address" in input) {
     // STRICT. The column is NOT NULL, and anything that is not literally `true` — a string
     // "false", a 0, an undefined from a stale client — means HIDE. Coercing loosely here is
