@@ -105,6 +105,11 @@ export interface ListingPhoto {
 }
 
 export interface ListingExtras {
+  // ADDRESS SHOW/HIDE (Phase 2 fleet fan, 2026-09-04). Owner-controlled visibility of the
+  // street address on the detail page's NAP block, its Maps link, the PostalAddress JSON-LD
+  // and any street-precision geo node. NOT NULL in the DB, defaulted per vertical GRAIN
+  // (business TRUE, person/uncertain FALSE). See lib/address-visibility.ts.
+  show_address?: boolean | null;
   hours_json?: HoursJson | null;
   services?: string[] | null;
   service_area?: string[] | null;
@@ -170,6 +175,7 @@ export function isValidSocial(
 
 // Used by /api/owner/update — list the new fields the form may send.
 export const EXTRA_UPDATE_FIELDS = [
+  "show_address",
   "hours_json",
   "services",
   "service_area",
@@ -187,6 +193,12 @@ export type ExtraUpdateField = typeof EXTRA_UPDATE_FIELDS[number];
 // save, but a malformed URL that gets through is still cleaned up here.
 export function sanitizeExtras(input: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
+  if ("show_address" in input) {
+    // STRICT. The column is NOT NULL, and anything that is not literally `true` — a string
+    // "false", a 0, an undefined from a stale client — means HIDE. Coercing loosely here is
+    // how a person-grain listing's home address would get published by accident.
+    out.show_address = input.show_address === true;
+  }
   if ("hours_json" in input) {
     out.hours_json = input.hours_json === null ? null : normalizeHours(input.hours_json);
   }

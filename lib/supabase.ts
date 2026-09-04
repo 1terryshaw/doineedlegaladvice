@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import verticalConfig from "@/lib/vertical.config";
 import { resolveRegionScope, DIRECTORY_COUNTRIES } from "@/lib/region-scope";
+import { applyAddressVisibility } from "@/lib/address-visibility";
 
 // BUG-S1 (audit 2026-07-02): PostgREST's .or() grammar treats , ( ) as structural,
 // so a raw search term containing them fails the whole filter with PGRST100 and the
@@ -71,6 +72,12 @@ export const LISTINGS_TABLE = `${verticalConfig.tablePrefix}listings`;
 export const INQUIRIES_TABLE = `${verticalConfig.tablePrefix}inquiries`;
 
 export interface Listing {
+  // ADDRESS SHOW/HIDE (Phase 2 fan, 2026-09-04). `show_address` is the owner-controlled
+  // gate on `address` + `postal_code`; the detail read nulls the street fields whenever
+  // it is not exactly `true`. See lib/address-visibility.ts.
+  address?: string | null;
+  postal_code?: string | null;
+  show_address?: boolean | null;
   id: string;
   slug: string;
   name: string;
@@ -224,7 +231,13 @@ export async function getListing(slug: string): Promise<Listing | null> {
     console.error(`Error fetching listing "${slug}" from ${LISTINGS_TABLE}:`, error);
     return null;
   }
-  return data;
+  // ADDRESS VISIBILITY CHOKE POINT (Phase 2 fleet fan, 2026-09-04). This read is
+  // `select("*")`, so the street arrives on EVERY row whether or not a consumer wants it.
+  // Nulling `address`/`postal_code` HERE — before the row reaches any renderer,
+  // client-component prop or JSON-LD builder — is what makes that safe: a call site that
+  // forgets the predicate still cannot emit a street. The per-consumer gates in the detail
+  // leaf are the readable statement of intent; THIS is the guarantee.
+  return applyAddressVisibility(data);
 }
 
 // CLAIM-CONTEXT read — the ONLY read that renders a HIDDEN (is_published=false) row.

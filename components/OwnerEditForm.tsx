@@ -28,6 +28,8 @@ interface Props {
 }
 
 interface FormState {
+  /** ADDRESS SHOW/HIDE (Phase 2 fan) — owner-controlled public visibility of the street. */
+  show_address: boolean;
   name: string;
   short_description: string;
   description: string;
@@ -64,6 +66,11 @@ export default function OwnerEditForm({
   const lst = listing as Listing & ListingExtras;
 
   const [form, setForm] = useState<FormState>({
+    // Seeded from the ROW'S OWN value, never a hardcoded per-repo constant. The migration set
+    // the grain default (business TRUE, person/uncertain FALSE), so the box arrives pre-ticked
+    // on a business vertical and unticked on a person vertical without this component knowing
+    // which one it is. `=== true` so a NULL/absent column reads unticked — the safe direction.
+    show_address: lst.show_address === true,
     name: initialName,
     short_description: listing.short_description || "",
     description: listing.description || "",
@@ -110,6 +117,7 @@ export default function OwnerEditForm({
     // The API route maps these to the actual DB columns via lib/owner-form-bucket.
     const payload = {
       slug: listing.slug,
+      show_address: form.show_address,
       name: form.name,
       short_description: form.short_description,
       description: form.description,
@@ -233,6 +241,29 @@ export default function OwnerEditForm({
               </optgroup>
             </select>
           </div>
+        </div>
+        {/* ADDRESS SHOW/HIDE (Phase 2 fan, 2026-09-04). The ONLY writer of `show_address`. */}
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <label htmlFor="show-address" className="flex items-start gap-3 cursor-pointer">
+            <input
+              id="show-address"
+              type="checkbox"
+              checked={form.show_address}
+              onChange={(e) => update("show_address", e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
+            />
+            <span>
+              <span className="block text-sm font-medium text-gray-700">
+                Show my business address publicly
+              </span>
+              <span className="mt-1 block text-sm text-gray-500">
+                When this is on, your full street address appears on your listing, in its
+                Google Maps link, and in the structured data search engines read. When it is
+                off, only your city and region are shown &mdash; useful if you work from home
+                or visit customers. Your city and region are always shown either way.
+              </span>
+            </span>
+          </label>
         </div>
       </section>
 
