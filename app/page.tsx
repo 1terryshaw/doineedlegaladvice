@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import verticalConfig from "@/lib/vertical.config";
 import TriageChat from "@/components/TriageChat";
 import SearchBar from "@/components/SearchBar";
-import LegalDisclaimer from "@/components/LegalDisclaimer";
 import FadeIn from "@/components/pizzazz/FadeIn";
 import ShareButtons from "@/components/pizzazz/ShareButtons";
 import { websiteSearchSchema, faqPageSchema } from "@/lib/seo";
@@ -53,16 +52,8 @@ export default async function HomePage() {
           </p>
         </div>
 
-        <div className="max-w-3xl mx-auto mb-6">
-          <LegalDisclaimer />
-        </div>
-
         <div className="max-w-3xl mx-auto">
           <TriageChat />
-        </div>
-
-        <div className="max-w-3xl mx-auto mt-6">
-          <LegalDisclaimer />
         </div>
           {/* Trust badges */}
           <div className="flex flex-wrap justify-center gap-6 mt-10 text-sm text-white/80">
