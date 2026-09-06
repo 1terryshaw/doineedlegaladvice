@@ -65,9 +65,9 @@ export default function AIChatAdvisor() {
         <p className="text-sm opacity-80">Tell us what you&apos;re dealing with — we&apos;ll point you in the right direction</p>
       </div>
 
-      <div ref={messagesContainerRef} className="p-4 min-h-[200px] max-h-[400px] overflow-y-auto space-y-3">
+      <div ref={messagesContainerRef} className="p-4 max-h-[400px] overflow-y-auto space-y-3">
         {messages.length === 0 && (
-          <p className="text-gray-400 text-sm text-center py-8">
+          <p className="text-gray-400 text-sm text-center py-6">
             Tell us about your situation — criminal, family, employment, landlord-tenant, anything — and we&apos;ll help you figure out next steps.
           </p>
         )}
