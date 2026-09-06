@@ -32,6 +32,25 @@ const supabaseAdmin = createClient(
 );
 
 export const UK_TABLE = "uk_solicitors";
+
+// SERVE-PATH READS GO HERE, NOT AT UK_TABLE (TDL #1222, enrichment-render-port-v1).
+//
+// `uk_solicitors_served` is uk_solicitors LEFT JOINed to uk_solicitors_enrichment on
+// listing_id = id, with COALESCE(enrichment, base) for website and email. It is the ONLY
+// way an enrichment fill reaches a page — base.website is 0/17,140, so before this the
+// "Website" block on every UK firm page was dead by construction. The 4,248 websites it
+// serves are the SRA's OWN declared website for the firm (website_source='sra-website-
+// fill-v1', match_confidence='strong'), not a guess at one.
+//
+// READ ON THE VIEW, WRITE ON THE TABLE. Every claim/verify/owner write in
+// app/api/uk/** stays on UK_TABLE: the view is a join and is not auto-updatable, and
+// provenance belongs on base regardless.
+//
+// NOT a drop-in rename of UK_TABLE: REGION_STATS_VIEW / REGION_COUNTY_STATS_VIEW are
+// built by string-interpolating UK_TABLE, and `uk_solicitors_served_region_stats` does
+// not exist. The stat views read geo + is_published only — no website, no email — so
+// they stay on the base table and are deliberately untouched.
+export const UK_SERVED = "uk_solicitors_served";
 export const COUNTY_STATS_VIEW = "uk_solicitors_county_stats";
 export const TOWN_STATS_VIEW = "uk_solicitors_town_stats";
 
@@ -258,7 +277,7 @@ export async function getUkAllTownHubs(minFirms = TOWN_PAGE_MIN_FIRMS): Promise<
 /** A single published firm by its uuid id. Null geo rows are never published. */
 export async function getUkFirm(id: string): Promise<UkFirm | null> {
   const { data, error } = await supabaseAdmin
-    .from(UK_TABLE)
+    .from(UK_SERVED)
     .select(RAW_FIRM_COLS)
     .eq("id", id)
     .eq("is_published", true)
@@ -280,7 +299,7 @@ export async function getUkFirmsByCounty(
   limit = FIRM_LIST_CAP
 ): Promise<UkFirm[]> {
   const { data, error } = await supabaseAdmin
-    .from(UK_TABLE)
+    .from(UK_SERVED)
     .select(RAW_FIRM_COLS)
     .eq("is_published", true)
     .eq("county", county)
@@ -300,7 +319,7 @@ export async function getUkFirmsByTown(
   limit = FIRM_LIST_CAP
 ): Promise<UkFirm[]> {
   const { data, error } = await supabaseAdmin
-    .from(UK_TABLE)
+    .from(UK_SERVED)
     .select(RAW_FIRM_COLS)
     .eq("is_published", true)
     .eq("county", county)
@@ -586,7 +605,7 @@ export async function getUkFirmsByRegion(
   limit = FIRM_LIST_CAP
 ): Promise<UkFirm[]> {
   const { data, error } = await supabaseAdmin
-    .from(UK_TABLE)
+    .from(UK_SERVED)
     .select(RAW_FIRM_COLS)
     .eq("is_published", true)
     .eq("region", region)
