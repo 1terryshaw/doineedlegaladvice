@@ -40,13 +40,20 @@ export default function FadeIn({
     // would flash it invisible. Elements near the bottom edge or below
     // the fold should still animate on scroll.
     const rect = el.getBoundingClientRect();
-    const threshold = window.innerHeight * 0.75;
-    if (rect.top < threshold && rect.bottom > 0) {
+    if (rect.top < window.innerHeight * 0.75 && rect.bottom > 0) {
       setVisible(true);
       return;
     }
 
-    // Below fold or near bottom edge: hide until scrolled into view, then animate
+    // Far below the fold (past 2x viewport): never hide it. A blank panel is
+    // worse than a missed animation, and on short/mobile viewports the
+    // observer's rootMargin can fail to fire before first paint.
+    if (rect.top > window.innerHeight * 2) {
+      setVisible(true);
+      return;
+    }
+
+    // Only fold-adjacent elements animate: hide until scrolled into view
     setShouldAnimate(true);
 
     const observer = new IntersectionObserver(
@@ -56,7 +63,10 @@ export default function FadeIn({
           observer.unobserve(el);
         }
       },
-      { threshold: 0.05 }
+      // rootMargin must reach the SAME 2x-viewport boundary as the never-hide
+      // check above, or blocks in the band between them animate but the observer
+      // can never fire for them — a permanent blank panel until the user scrolls.
+      { threshold: 0, rootMargin: `${window.innerHeight}px 0px` }
     );
     observer.observe(el);
     return () => observer.disconnect();
