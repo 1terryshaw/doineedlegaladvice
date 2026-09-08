@@ -4,6 +4,11 @@ import verticalConfig from "@/lib/vertical.config";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description: `Privacy Policy for ${verticalConfig.name}`,
+  // Self-canonical (static-canonical-fan-v1, donor stamper-donor-v16.9). This page set
+  // no `alternates`, so the canonical was inferred from whatever URL a crawler arrived
+  // on, while the page IS advertised in the sitemap. Relative, per the repo idiom:
+  // app/layout.tsx metadataBase (lib/seo.ts SITE_URL) resolves it to this site's origin.
+  alternates: { canonical: "/privacy" },
 };
 
 export default function PrivacyPage() {
