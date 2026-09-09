@@ -4,6 +4,22 @@
 import { sanitizeOrTerm, supabaseAdmin, LISTINGS_TABLE, type Listing } from "@/lib/supabase";
 import { DIRECTORY_COUNTRIES } from "@/lib/region-scope";
 
+// K216 — Next's prerender bail-out is NOT a DB fault and must not be laundered into one.
+// A statically prerendered route raises DynamicServerError through the no-store client;
+// supabase-js CATCHES it and hands it back as a normal `{ error }`, so throwing a generic
+// Error over it turns the BUILD RED. Re-emit it carrying Next's own digest so Next
+// recognises its bail-out and renders the route dynamically. Donor v16.13/v16.14 canon.
+const PRERENDER_BAILOUT = /Dynamic server usage|DYNAMIC_SERVER_USAGE/;
+
+function rethrowPrerenderBailout(error: unknown): void {
+  const message = String((error as { message?: unknown })?.message ?? "");
+  if (!PRERENDER_BAILOUT.test(message)) return;
+  const bail = new Error(message) as Error & { digest?: string };
+  bail.digest = "DYNAMIC_SERVER_USAGE";
+  throw bail;
+}
+
+
 export const REGION_PAGE_SIZE = 48;
 
 // TDL #458 — legal_listings region is disjoint: US filters by license_state
@@ -75,8 +91,16 @@ export async function getFilteredListingsPaged(filters: ListingFiltersPaged): Pr
 
   const { data, error } = await query.range(from, to);
   if (error) {
+    // FAIL-CLOSED (C2, getlistings-failclosed-fan-v1 2026-09-09). This returned the
+    // empty/zero value, which made a DB fault indistinguishable from a genuinely
+    // empty hub: the page served a 200 saying "nothing here", or a zero-row gate
+    // above it 404ed a live hub and ISR cached that 404. Log and rethrow —
+    // legit-empty is the K200/K205 gate's job, never this reader's.
+    rethrowPrerenderBailout(error);
     console.error("getFilteredListingsPaged error:", error);
-    return [];
+    throw new Error(
+      `getFilteredListingsPaged failed: ${(error as { message?: string })?.message ?? "unknown"}`
+    );
   }
   return data || [];
 }
@@ -103,8 +127,16 @@ export async function getRegionCounts(): Promise<RegionCount[]> {
     .select("country, province_state, n")
     .eq("country", "US");
   if (error) {
+    // FAIL-CLOSED (C2, getlistings-failclosed-fan-v1 2026-09-09). This returned the
+    // empty/zero value, which made a DB fault indistinguishable from a genuinely
+    // empty hub: the page served a 200 saying "nothing here", or a zero-row gate
+    // above it 404ed a live hub and ISR cached that 404. Log and rethrow —
+    // legit-empty is the K200/K205 gate's job, never this reader's.
+    rethrowPrerenderBailout(error);
     console.error("getRegionCounts error:", error);
-    return _regionCountsCache?.data ?? [];
+    throw new Error(
+      `getRegionCounts failed: ${(error as { message?: string })?.message ?? "unknown"}`
+    );
   }
   const rows = (data || []).map((r) => ({
     country: String(r.country),
@@ -130,8 +162,16 @@ export async function getDirectoryTotal(): Promise<number> {
     .eq("country", "US")
     .neq("is_published", false);
   if (error) {
+    // FAIL-CLOSED (C2, getlistings-failclosed-fan-v1 2026-09-09). This returned the
+    // empty/zero value, which made a DB fault indistinguishable from a genuinely
+    // empty hub: the page served a 200 saying "nothing here", or a zero-row gate
+    // above it 404ed a live hub and ISR cached that 404. Log and rethrow —
+    // legit-empty is the K200/K205 gate's job, never this reader's.
+    rethrowPrerenderBailout(error);
     console.error("getDirectoryTotal error:", error);
-    return 0;
+    throw new Error(
+      `getDirectoryTotal failed: ${(error as { message?: string })?.message ?? "unknown"}`
+    );
   }
   return count || 0;
 }
@@ -160,8 +200,16 @@ export async function getListingsByProvincePaged(
     .order("id", { ascending: true })
     .range(from, to);
   if (error) {
+    // FAIL-CLOSED (C2, getlistings-failclosed-fan-v1 2026-09-09). This returned the
+    // empty/zero value, which made a DB fault indistinguishable from a genuinely
+    // empty hub: the page served a 200 saying "nothing here", or a zero-row gate
+    // above it 404ed a live hub and ISR cached that 404. Log and rethrow —
+    // legit-empty is the K200/K205 gate's job, never this reader's.
+    rethrowPrerenderBailout(error);
     console.error(`getListingsByProvincePaged(${provinceCode}) error:`, error);
-    return [];
+    throw new Error(
+      `getListingsByProvincePaged failed: ${(error as { message?: string })?.message ?? "unknown"}`
+    );
   }
   return data || [];
 }

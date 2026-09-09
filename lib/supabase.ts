@@ -3,6 +3,22 @@ import verticalConfig from "@/lib/vertical.config";
 import { resolveRegionScope, DIRECTORY_COUNTRIES } from "@/lib/region-scope";
 import { applyAddressVisibility } from "@/lib/address-visibility";
 
+// K216 — Next's prerender bail-out is NOT a DB fault and must not be laundered into one.
+// A statically prerendered route raises DynamicServerError through the no-store client;
+// supabase-js CATCHES it and hands it back as a normal `{ error }`, so throwing a generic
+// Error over it turns the BUILD RED. Re-emit it carrying Next's own digest so Next
+// recognises its bail-out and renders the route dynamically. Donor v16.13/v16.14 canon.
+const PRERENDER_BAILOUT = /Dynamic server usage|DYNAMIC_SERVER_USAGE/;
+
+function rethrowPrerenderBailout(error: unknown): void {
+  const message = String((error as { message?: unknown })?.message ?? "");
+  if (!PRERENDER_BAILOUT.test(message)) return;
+  const bail = new Error(message) as Error & { digest?: string };
+  bail.digest = "DYNAMIC_SERVER_USAGE";
+  throw bail;
+}
+
+
 // BUG-S1 (audit 2026-07-02): PostgREST's .or() grammar treats , ( ) as structural,
 // so a raw search term containing them fails the whole filter with PGRST100 and the
 // page renders 0 results. Values must be double-quoted, with embedded \ and "
@@ -146,7 +162,7 @@ export async function getListings(regionSlug?: string): Promise<Listing[]> {
     }
 
     return query as unknown as PromiseLike<{ data: Listing[] | null; error: unknown }>;
-  }, { maxRows: USER_PAGE_MAX_ROWS });
+  }, { maxRows: USER_PAGE_MAX_ROWS, failClosed: true });
 }
 
 export interface ListingFilters {
@@ -213,7 +229,7 @@ export async function getListingsByCity(provinceCode: string, citySlug: string):
       .order("google_rating", { ascending: false, nullsFirst: false })
       .order("name_sortkey", { ascending: true }).order("id", { ascending: true }).limit(200);
     return query as unknown as PromiseLike<{ data: Listing[] | null; error: unknown }>;
-  }, { maxRows: USER_PAGE_MAX_ROWS });
+  }, { maxRows: USER_PAGE_MAX_ROWS, failClosed: true });
 }
 
 export async function getListing(slug: string): Promise<Listing | null> {
@@ -295,8 +311,16 @@ export async function getListingsCount(): Promise<number> {
     .select("id", { count: "exact", head: true })
     .in("country", DIRECTORY_COUNTRIES).neq("is_published", false);
   if (error) {
+    // FAIL-CLOSED (C2, getlistings-failclosed-fan-v1 2026-09-09). This returned the
+    // empty/zero value, which made a DB fault indistinguishable from a genuinely
+    // empty hub: the page served a 200 saying "nothing here", or a zero-row gate
+    // above it 404ed a live hub and ISR cached that 404. Log and rethrow —
+    // legit-empty is the K200/K205 gate's job, never this reader's.
+    rethrowPrerenderBailout(error);
     console.error("getListingsCount error:", error);
-    return 0;
+    throw new Error(
+      `getListingsCount failed: ${(error as { message?: string })?.message ?? "unknown"}`
+    );
   }
   return count || 0;
 }
@@ -482,8 +506,16 @@ export async function getFilteredListingsCount(filters: ListingFilters): Promise
   }
   const { count, error } = await query;
   if (error) {
+    // FAIL-CLOSED (C2, getlistings-failclosed-fan-v1 2026-09-09). This returned the
+    // empty/zero value, which made a DB fault indistinguishable from a genuinely
+    // empty hub: the page served a 200 saying "nothing here", or a zero-row gate
+    // above it 404ed a live hub and ISR cached that 404. Log and rethrow —
+    // legit-empty is the K200/K205 gate's job, never this reader's.
+    rethrowPrerenderBailout(error);
     console.error("getFilteredListingsCount error:", error);
-    return 0;
+    throw new Error(
+      `getFilteredListingsCount failed: ${(error as { message?: string })?.message ?? "unknown"}`
+    );
   }
   return count || 0;
 }
@@ -541,7 +573,7 @@ export async function getDirectoryRegions(): Promise<DirectoryRegion[]> {
         data: { province_state: string | null; city: string | null }[] | null;
         error: unknown;
       }>;
-  });
+  }, { failClosed: true });
 
   const seen = new Map<string, { name: string; province: string }>();
   for (const r of rows) {
