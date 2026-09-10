@@ -1,0 +1,203 @@
+{
+  "_doc": "PER-REPO DATA SOURCE MANIFEST — the input to /data-credits. THIS REPO'S sources only, never the fleet's. One entry per distinct `source` tag actually served by this directory's listings table. Materialised from the canonical research (empire-legal-audit/{authority_map.py,verdicts.json} + knowledge/attribution-contracts.json) and checked in, because the build runs on Vercel with no access to those files.",
+  "_rules": [
+    "NEVER invent a licence, a credit line, or a date. An unresearched source is written with authority \"UNMAPPED\" or licence \"UNRESEARCHED\" and the build FAILS until it is researched.",
+    "contract_status is mandatory on every entry. RESEARCHED = the licence page was read and quoted. NONE_ASSERTED = the provenance is irrecoverable, so we assert no licence over the rows; it demands a written note and a review_owed, and it renders publicly. There is no third value and no blank.",
+    "attribution_line is the credit the LICENCE REQUIRES, verbatim from the licence/terms page at source_url. It is not a courtesy phrase we compose.",
+    "attribution_required=true makes licence_url and attribution_line mandatory (scripts/verify-data-sources.mjs enforces it).",
+    "confidence HIGH = licence text located and quoted. LOW = inferred or not found; a LOW entry must still carry the URL that was actually read.",
+    "credit_line is a PRECAUTIONARY plain source credit, emitted when the licence text could not be read and quoted (a clean NOT FOUND, or an HTTP 403/404/socket CHANNEL BLOCK). It always carries verbatim_pending=true, the source_url that was actually attempted, and a written note saying why the read failed. It never claims the licence requires it — a blocked read is not proof that nothing is owed, and it is not proof that something is either.",
+    "plain_credit is a plain, NON-LICENCE source credit for rows whose provenance is IRRECOVERABLE. It is valid ONLY on a NONE_ASSERTED entry and is deliberately NOT credit_line: credit_line means a licence page exists and the read was BLOCKED, so a verbatim line is still owed; plain_credit means there is no page to read and no verbatim line will ever arrive. It asserts no licence and claims no permission — it exists so the credits page says something true about these rows rather than leaving them uncredited. It never appears on a RESEARCHED entry.",
+    "A source tag that resolves to NO authority, or to an authority deliberately held, is recorded in _unidentified_observed and is NEVER credited. An unidentified source is a provenance gap, not a licence finding; naming an authority for it would be a guess."
+  ],
+  "_schema_version": "1.2.0",
+  "_generated_by": "attribution-fan-v2/scripts/gen-manifest.py",
+  "_generated_on": "2026-09-10",
+  "_basis": "Rows with is_published = true, per table, as of the 2026-09-09 census (attribution-fan-v1/evidence/fleet-sources.psv). Contracts as of the 2026-09-10 knowledge/attribution-contracts.json.",
+  "repo": "doineedlegaladvice",
+  "table": "legal_listings, uk_solicitors",
+  "sources": [
+    {
+      "source_tag": "places_legal_2026_04",
+      "authority": "Google Places — audited paid corpus (dated tags only)",
+      "dataset": "Google Places API business records, legal vertical, April 2026 audited pull",
+      "contract_status": "RESEARCHED",
+      "licence": "Google Maps Platform Terms of Service (credentialed paid API)",
+      "licence_url": "https://developers.google.com/maps/documentation/places/web-service/policies",
+      "attribution_required": true,
+      "attribution_line": "Google Maps",
+      "source_url": "https://developers.google.com/maps/documentation/places/web-service/policies",
+      "last_seeded": "2026-04-17",
+      "confidence": "HIGH",
+      "note": "Verbatim: \"When displaying Places API data without a Google Map, you must include the Google logo, adhering to the provided style guidelines and attribution requirements.\" Google specifies the Google Maps logo, or the TEXT \"Google Maps\" where space is constrained. There is no \"Powered by Google\" string mandated for this case. Scope is the 51 dated audited tags ONLY — the bare `google_places` tag is a separate, unresearched tripwire authority."
+    },
+    {
+      "source_tag": "us_lawfirm_derived_2026_08",
+      "authority": "US law firms (derived from bar rosters, independently corroborated)",
+      "dataset": "US law firms derived from state bar rosters and independently corroborated, August 2026",
+      "contract_status": "RESEARCHED",
+      "licence": "Independently originated (derived practice/entity grain)",
+      "licence_url": null,
+      "attribution_required": false,
+      "attribution_line": null,
+      "source_url": null,
+      "last_seeded": "2026-08-24",
+      "confidence": "HIGH",
+      "note": "Not an external dataset. The held bar roster supplies only a discovery pointer (a firm trade name); every published field is taken independently from the firm’s own public website and must corroborate on name AND location. No roster field is republished, so no roster credit is owed. The UPSTREAM bar rosters remain separately unresearched — see the unmapped `*_bar_*` tags."
+    },
+    {
+      "source_tag": "legacy_pre_path_y",
+      "authority": "legacy_pre_path_y (unknown provenance)",
+      "dataset": "Pre-PathY legacy rows — originating authority not recorded at load time",
+      "contract_status": "NONE_ASSERTED",
+      "licence": "No licence asserted — provenance not recorded",
+      "licence_url": null,
+      "attribution_required": false,
+      "attribution_line": null,
+      "source_url": null,
+      "last_seeded": "2026-05-05",
+      "confidence": "LOW",
+      "review_owed": "Resolve or de-serve: re-derive provenance where a source identifier survives on the row, de-serve the remainder. attribution-fan-v1 re-derived 0 of 2,840 camp rows conclusively, so this is a ruling, not a backlog item.",
+      "plain_credit": "Compiled from publicly available listings (pre-2026 legacy data)",
+      "note": "IRRECOVERABLE, NOT UNRESEARCHED. The originating authority was never recorded at load time, so no licence can be asserted and no credit can honestly be given. This is not closable by research; it closes by re-deriving provenance where a source identifier survives on the row, or by de-serving the remainder. In campgroundsnearme alone this is 2,840 SERVED rows."
+    },
+    {
+      "source_tag": "eoir_2026_05_13",
+      "authority": "US DOJ Executive Office for Immigration Review (EOIR) — recognized organizations & accredited representatives roster",
+      "dataset": "US DOJ EOIR recognized organizations and accredited representatives roster",
+      "contract_status": "RESEARCHED",
+      "licence": "US federal public domain (DOJ legal policies)",
+      "licence_url": "https://www.justice.gov/legalpolicies",
+      "attribution_required": false,
+      "attribution_line": null,
+      "source_url": "https://www.justice.gov/legalpolicies",
+      "last_seeded": "2026-05-13",
+      "confidence": "HIGH",
+      "note": "Verbatim: \"Unless otherwise indicated, information on Department of Justice websites is in the public domain and may be copied and distributed without permission.\" Credit ask verbatim: \"Citation of the Department of Justice as source of the information is appreciated, as appropriate.\" — 'appreciated', therefore not required and no line is owed. This CONFIRMS the 17 U.S.C. §105 assumption the tag map recorded for eoir_2026_05_13 with the licence page unread; the page has now been read."
+    },
+    {
+      "source_tag": "self_serve",
+      "authority": "Self-serve (user submitted)",
+      "dataset": "Rows submitted by the business owner through /list-your-business",
+      "contract_status": "RESEARCHED",
+      "licence": "Submitted by the listing owner under the site’s own Terms",
+      "licence_url": null,
+      "attribution_required": false,
+      "attribution_line": null,
+      "source_url": null,
+      "last_seeded": "2026-07-14",
+      "confidence": "HIGH",
+      "note": "Not an external authority. The row is contributed by the business itself through /list-your-business; the governing document is our own Terms. No third-party credit is owed."
+    },
+    {
+      "source_tag": "ch_69102",
+      "authority": "UK Companies House (official open company register)",
+      "dataset": "UK Companies House public register — SIC 69102 (solicitors) companies",
+      "contract_status": "RESEARCHED",
+      "licence": "Open Government Licence v3.0 (Crown copyright)",
+      "licence_url": "https://www.gov.uk/government/publications/companies-house-accreditation-to-information-fair-traders-scheme/public-task-copyright-and-crown-copyright",
+      "attribution_required": true,
+      "attribution_line": "Contains public sector information licensed under the Open Government Licence v3.0.",
+      "source_url": "https://www.gov.uk/government/publications/companies-house-accreditation-to-information-fair-traders-scheme/public-task-copyright-and-crown-copyright",
+      "last_seeded": "2026-06-17",
+      "confidence": "HIGH",
+      "note": "Companies House verbatim: \"Material of this sort is subject to Crown copyright protection and is made available on GOV.UK under the Open Government Licence v3.0\" and \"if information is used from guidance notes, the website, publications or statistical tables the customer must credit Companies House as the source\". OGL v3.0 verbatim: \"acknowledge the source of the Information in your product or application by including or linking to any attribution statement specified by the Information Provider(s) and, where possible, provide a link to this licence\" — and the condition is self-executing: \"if you fail to comply with them the rights granted to you under this licence ... will end automatically\". CH specifies no bespoke attribution statement of its own, so the OGL default line above applies (re-confirmed 2026-09-10 on the bulk-download page http://download.companieshouse.gov.uk/en_output.html, which carries NO licence statement at all). TENSION, named not resolved: the same CH page also says \"Companies House imposes no rules or requirements on how the information on the public register is used.\" That sentence is about USE, not about the licence grant; it does not withdraw the OGL acknowledgement condition, and the safe reading (give the credit) is also the cheap one. Graded HIGH on the licence + line; the register-carve-out reading is recorded so a ruling can overturn it deliberately."
+    },
+    {
+      "source_tag": "ch_69109_gated",
+      "authority": "UK Companies House (official open company register)",
+      "dataset": "UK Companies House public register — SIC 69109 (other legal activities) companies",
+      "contract_status": "RESEARCHED",
+      "licence": "Open Government Licence v3.0 (Crown copyright)",
+      "licence_url": "https://www.gov.uk/government/publications/companies-house-accreditation-to-information-fair-traders-scheme/public-task-copyright-and-crown-copyright",
+      "attribution_required": true,
+      "attribution_line": "Contains public sector information licensed under the Open Government Licence v3.0.",
+      "source_url": "https://www.gov.uk/government/publications/companies-house-accreditation-to-information-fair-traders-scheme/public-task-copyright-and-crown-copyright",
+      "last_seeded": "2026-06-17",
+      "confidence": "HIGH",
+      "note": "Companies House verbatim: \"Material of this sort is subject to Crown copyright protection and is made available on GOV.UK under the Open Government Licence v3.0\" and \"if information is used from guidance notes, the website, publications or statistical tables the customer must credit Companies House as the source\". OGL v3.0 verbatim: \"acknowledge the source of the Information in your product or application by including or linking to any attribution statement specified by the Information Provider(s) and, where possible, provide a link to this licence\" — and the condition is self-executing: \"if you fail to comply with them the rights granted to you under this licence ... will end automatically\". CH specifies no bespoke attribution statement of its own, so the OGL default line above applies (re-confirmed 2026-09-10 on the bulk-download page http://download.companieshouse.gov.uk/en_output.html, which carries NO licence statement at all). TENSION, named not resolved: the same CH page also says \"Companies House imposes no rules or requirements on how the information on the public register is used.\" That sentence is about USE, not about the licence grant; it does not withdraw the OGL acknowledgement condition, and the safe reading (give the credit) is also the cheap one. Graded HIGH on the licence + line; the register-carve-out reading is recorded so a ruling can overturn it deliberately."
+    },
+    {
+      "source_tag": "ch_llp_name",
+      "authority": "UK Companies House (official open company register)",
+      "dataset": "UK Companies House public register — limited liability partnerships matched by name",
+      "contract_status": "RESEARCHED",
+      "licence": "Open Government Licence v3.0 (Crown copyright)",
+      "licence_url": "https://www.gov.uk/government/publications/companies-house-accreditation-to-information-fair-traders-scheme/public-task-copyright-and-crown-copyright",
+      "attribution_required": true,
+      "attribution_line": "Contains public sector information licensed under the Open Government Licence v3.0.",
+      "source_url": "https://www.gov.uk/government/publications/companies-house-accreditation-to-information-fair-traders-scheme/public-task-copyright-and-crown-copyright",
+      "last_seeded": "2026-06-17",
+      "confidence": "HIGH",
+      "note": "Companies House verbatim: \"Material of this sort is subject to Crown copyright protection and is made available on GOV.UK under the Open Government Licence v3.0\" and \"if information is used from guidance notes, the website, publications or statistical tables the customer must credit Companies House as the source\". OGL v3.0 verbatim: \"acknowledge the source of the Information in your product or application by including or linking to any attribution statement specified by the Information Provider(s) and, where possible, provide a link to this licence\" — and the condition is self-executing: \"if you fail to comply with them the rights granted to you under this licence ... will end automatically\". CH specifies no bespoke attribution statement of its own, so the OGL default line above applies (re-confirmed 2026-09-10 on the bulk-download page http://download.companieshouse.gov.uk/en_output.html, which carries NO licence statement at all). TENSION, named not resolved: the same CH page also says \"Companies House imposes no rules or requirements on how the information on the public register is used.\" That sentence is about USE, not about the licence grant; it does not withdraw the OGL acknowledgement condition, and the safe reading (give the credit) is also the cheap one. Graded HIGH on the licence + line; the register-carve-out reading is recorded so a ruling can overturn it deliberately."
+    }
+  ],
+  "_not_served_observed": [
+    {
+      "source_tag": null,
+      "table": "legal_listings",
+      "rows": 1,
+      "status": "Present in the table but NOT served — no rows from this source are published, so crediting it here would claim provenance this site does not show."
+    },
+    {
+      "source_tag": "il_bar_2026_05_21",
+      "table": "legal_listings",
+      "rows": 815,
+      "status": "Present in the table but NOT served — no rows from this source are published, so crediting it here would claim provenance this site does not show."
+    },
+    {
+      "source_tag": "mt_bar_2026_05_31",
+      "table": "legal_listings",
+      "rows": 4742,
+      "status": "Present in the table but NOT served — no rows from this source are published, so crediting it here would claim provenance this site does not show."
+    },
+    {
+      "source_tag": "tx_bar_2026_05_14",
+      "table": "legal_listings",
+      "rows": 2530,
+      "status": "Present in the table but NOT served — no rows from this source are published, so crediting it here would claim provenance this site does not show."
+    },
+    {
+      "source_tag": "ny_oca_2026_06_03",
+      "table": "legal_listings",
+      "rows": 133663,
+      "status": "Present in the table but NOT served — no rows from this source are published, so crediting it here would claim provenance this site does not show."
+    },
+    {
+      "source_tag": "pa_bar_2026_05_21",
+      "table": "legal_listings",
+      "rows": 45,
+      "status": "Present in the table but NOT served — no rows from this source are published, so crediting it here would claim provenance this site does not show."
+    },
+    {
+      "source_tag": "il_ardc_2026_05_27",
+      "table": "legal_listings",
+      "rows": 78966,
+      "status": "Present in the table but NOT served — no rows from this source are published, so crediting it here would claim provenance this site does not show."
+    },
+    {
+      "source_tag": "fl_bar_2026_05_26",
+      "table": "legal_listings",
+      "rows": 86248,
+      "status": "Present in the table but NOT served — no rows from this source are published, so crediting it here would claim provenance this site does not show."
+    },
+    {
+      "source_tag": "ca_bar_2026_05_14",
+      "table": "legal_listings",
+      "rows": 187864,
+      "status": "Present in the table but NOT served — no rows from this source are published, so crediting it here would claim provenance this site does not show."
+    },
+    {
+      "source_tag": "lsni_roster",
+      "table": "uk_solicitors",
+      "rows": 375,
+      "status": "Present in the table but NOT served — no rows from this source are published, so crediting it here would claim provenance this site does not show."
+    },
+    {
+      "source_tag": "lsni_overlap",
+      "table": "uk_solicitors",
+      "rows": 184,
+      "status": "Present in the table but NOT served — no rows from this source are published, so crediting it here would claim provenance this site does not show."
+    }
+  ]
+}
