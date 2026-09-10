@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import verticalConfig from "@/lib/vertical.config";
+// advisor-no-competitor v1 — K35: the prompt clause is a request, the guard is the control.
+import { withNoCompetitorRule, noCompetitor } from "@/lib/advisor-no-competitor";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +46,7 @@ export async function POST(request: NextRequest) {
     const response = await anthropic.messages.create({
       model: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6",
       max_tokens: 300,
-      system: verticalConfig.chatSystemPrompt,
+      system: withNoCompetitorRule(verticalConfig.chatSystemPrompt),
       messages: messages.map((m: { role: string; content: string }) => ({
         role: m.role as "user" | "assistant",
         content: m.content,
@@ -52,7 +54,7 @@ export async function POST(request: NextRequest) {
     });
 
     const textBlock = response.content.find((b) => b.type === "text");
-    return NextResponse.json({ message: textBlock?.text || "Sorry, I couldn't generate a response." });
+    return NextResponse.json({ message: noCompetitor(textBlock?.text || "Sorry, I couldn't generate a response.", messages, "") });
   } catch (err) {
     console.error("Chat error:", err);
     return NextResponse.json({ error: "Chat unavailable" }, { status: 500 });
