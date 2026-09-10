@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
     if (!reuseToken) {
       const { error: updateError } = await supabaseAdmin
         .from(LISTINGS_TABLE)
-        .update({ owner_auth_token: token, owner_email: email })
+        .update({ owner_auth_token: token, owner_auth_token_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), owner_email: email })
         .eq("id", listing.id);
 
       if (updateError) {

@@ -20,11 +20,16 @@ const ALERT_REPO = "doineedlegaladvice";
  *    EXPIRED token is MINTED, persisted, and mailed. A token that is present and unexpired
  *    is REUSED with no write at all, so live sessions survive untouched.
  *
- *    Token contract matches /api/claim exactly (read it before changing this): randomUUID()
- *    via generateToken(), and owner_auth_token_expires_at set to NULL — /api/claim/verify
- *    treats NULL as "never expires". Clearing it on mint is REQUIRED, not cosmetic: on an
- *    expired row a stale past expiry would otherwise reject the freshly-minted token at
- *    verify and reproduce the lockout we are fixing.
+ *    Token contract: randomUUID() via generateToken(), and owner_auth_token_expires_at set
+ *    to a FRESH +30d (Terry, 2026-09-10). It was NULL ("never expires") until then; the
+ *    requirement it satisfied is that a stale PAST expiry must never survive a mint, or it
+ *    would reject the freshly-minted token at verify and reproduce the lockout we are
+ *    fixing. Overwriting with a fresh future timestamp satisfies that just as NULL did.
+ *
+ *    30d, not the 24h that /api/claim uses, because this token IS the owner dashboard
+ *    session: hasValidOwnerAuthorization() (lib/owner-authorization.ts) rejects on expiry,
+ *    so a 24h TTL here would log every owner out daily. 24h is right for a one-shot claim
+ *    link; 30d is right for a session. Do not unify them.
  *
  * 2. THE SWALLOW, BRANCHED. Every PostgREST error used to fall into the anti-enumeration
  *    `return {success:true}`, so a column rename or a broken query would kill login for an
@@ -122,10 +127,12 @@ export async function POST(request: NextRequest) {
 
   if (!token || isExpired) {
     const minted = generateToken();
-    // expires_at MUST be cleared alongside the mint — see the header note.
+    // expires_at MUST be overwritten alongside the mint — see the header note. A fresh +30d
+    // window; never leave the row's old (possibly past) expiry in place.
+    const mintedExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
     const { error: mintErr, count } = await supabaseAdmin
       .from(LISTINGS_TABLE)
-      .update({ owner_auth_token: minted, owner_auth_token_expires_at: null }, { count: "exact" })
+      .update({ owner_auth_token: minted, owner_auth_token_expires_at: mintedExpiresAt }, { count: "exact" })
       .eq("id", listing.id);
 
     // FAIL-CLOSED: never mail a link for a token we did not persist. supabase-js RETURNS
