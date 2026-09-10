@@ -7,6 +7,8 @@ import { evaluateRepublish } from "@/lib/republish-guard";
 
 interface Props {
   params: Promise<{ slug: string }>;
+  // claim-src-attribution-v1: ?src=<campaign> carried through to /api/claim
+  searchParams: Promise<{ src?: string; lid?: string }>;
 }
 
 export const dynamic = "force-dynamic";
@@ -16,8 +18,9 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function ClaimPage({ params }: Props) {
+export default async function ClaimPage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const { src, lid } = await searchParams;
   const listing = await getListingForClaim(slug);
   if (!listing) notFound();
 
@@ -51,7 +54,7 @@ export default async function ClaimPage({ params }: Props) {
           claim it. Claiming gives you owner access and the ability to update or remove the record.
         </div>
       )}
-      <ClaimForm listingSlug={listing.slug} listingName={listing.name} />
+      <ClaimForm src={src} lid={lid} listingSlug={listing.slug} listingName={listing.name} />
       {/* Copy's "remove it, if you'd rather not be listed" bullet — human-reviewed request. */}
       <div className={staysUnpublished ? "mt-6 text-center" : "mt-8 text-center"}>
         <RemovalRequestButton listingSlug={listing.slug} listingId={String(listing.id)} />

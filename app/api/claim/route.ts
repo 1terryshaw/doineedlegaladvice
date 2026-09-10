@@ -3,12 +3,13 @@ import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
 import { generateToken } from "@/lib/auth";
 import { isOwnerTokenExpired } from "@/lib/owner-authorization";
 import { sendClaimEmail } from "@/lib/email";
+import { normalizeClaimSrc } from "@/lib/claim-attribution";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
-    const { slug, email, name } = await request.json();
+    const { slug, email, name, src, lid } = await request.json();
 
     if (!slug || !email || !name) {
       return NextResponse.json(
@@ -129,6 +130,19 @@ export async function POST(request: NextRequest) {
         );
       }
     }
+    // claim-src-attribution-v1 (2026-09-10): ADD-fresh attribution. Normalized via the
+    // shared allowlist; a row is written on EVERY claim (absent src -> 'unknown').
+    // Never fail the claim over analytics — the claim itself already succeeded.
+    {
+      const cleanLid = typeof lid === "string" ? lid.replace(/^i-/, "") : null;
+      const { error: attrErr } = await supabaseAdmin
+        .from("claim_attribution")
+        .insert({ lead_id: cleanLid || null, vertical: "doineedlegaladvice", listing_id: String(listing.id), src: normalizeClaimSrc(src), slug });
+      if (attrErr) {
+        console.error(`[claim] claim_attribution insert failed for ${slug} (claim itself SUCCEEDED): ${attrErr.message}`);
+      }
+    }
+
 
     return NextResponse.json({ success: true });
   } catch (unexpectedErr) {

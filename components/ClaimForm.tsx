@@ -3,7 +3,7 @@
 import { useState } from "react";
 import verticalConfig from "@/lib/vertical.config";
 
-export default function ClaimForm({ listingSlug, listingName }: { listingSlug: string; listingName: string }) {
+export default function ClaimForm({ listingSlug, listingName, src, lid }: { listingSlug: string; listingName: string; src?: string; lid?: string }) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
@@ -17,7 +17,7 @@ export default function ClaimForm({ listingSlug, listingName }: { listingSlug: s
       const res = await fetch("/api/claim", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug: listingSlug, email, name }),
+        body: JSON.stringify({ slug: listingSlug, email, name, src, lid }),
       });
       let data: { success?: boolean; error?: string; userMessage?: string } | null = null;
       try {
