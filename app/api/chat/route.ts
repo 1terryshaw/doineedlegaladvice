@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     });
 
     const textBlock = response.content.find((b) => b.type === "text");
-    return NextResponse.json({ message: noCompetitor(textBlock?.text || "Sorry, I couldn't generate a response.", messages, "") });
+    return NextResponse.json({ message: noCompetitor(textBlock?.text || "Sorry, I couldn't generate a response.", messages) });
   } catch (err) {
     console.error("Chat error:", err);
     return NextResponse.json({ error: "Chat unavailable" }, { status: 500 });
