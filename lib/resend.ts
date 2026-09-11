@@ -200,7 +200,10 @@ export async function sendClaimEmail(
   claimToken: string
 ): Promise<AuthSendResult> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  const verifyLink = `${baseUrl}/api/claim/verify?token=${claimToken}&slug=${slug}`;
+  // Mail the INTERSTITIAL, not the writer. /api/claim/verify is POST-only for the write
+  // (ruling R2, fan 2026-09-11) — a mail scanner prefetching this link now lands on a
+  // confirmation page and changes nothing. See app/api/claim/verify/route.ts for why.
+  const verifyLink = `${baseUrl}/claim/verify?token=${claimToken}&slug=${slug}`;
 
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
