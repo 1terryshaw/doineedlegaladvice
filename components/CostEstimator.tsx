@@ -171,7 +171,7 @@ export default function CostEstimator({
         currency — then get exact quotes from {NOUN_PLURAL} near you.
       </p>
 
-      <div className="grid gap-5 md:grid-cols-3 mb-8">
+      <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 mb-8">
         <div>
           <label htmlFor="ce-service" className="block text-sm font-semibold text-gray-700 mb-2">1. Service</label>
           <select id="ce-service" className={selectClass} value={serviceKey} onChange={(e) => setServiceKey(e.target.value)}>
