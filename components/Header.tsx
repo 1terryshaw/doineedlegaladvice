@@ -122,7 +122,7 @@ export default function Header() {
             {primaryItem && (
               <Link
                 href={primaryItem.href}
-                className={`${HEADER_FOCUS_RING} no-underline whitespace-nowrap px-2.5 sm:px-3 py-1.5 rounded-lg text-white font-semibold text-xs sm:text-sm hover:opacity-90 transition-opacity`}
+                className={`${HEADER_FOCUS_RING} no-underline whitespace-nowrap px-2.5 sm:px-3 py-1.5 max-md:inline-flex max-md:items-center max-md:min-h-11 rounded-lg text-white font-semibold text-xs sm:text-sm hover:opacity-90 transition-opacity`}
                 style={{ backgroundColor: (verticalConfig as { accentColor?: string }).accentColor || verticalConfig.primaryColor }}
                 aria-current={primaryItem.active ? "page" : undefined}
               >
