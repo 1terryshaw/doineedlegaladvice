@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getListingsByCity } from "@/lib/supabase";
+import { getListingsByCity, cityHubTrueCount, USER_PAGE_MAX_ROWS } from "@/lib/supabase";
 import { getCityBySlug, CITIES, PROVINCES } from "@/lib/constants";
 import ListingCard from "@/components/ListingCard";
 import verticalConfig from "@/lib/vertical.config";
@@ -56,6 +56,13 @@ export default async function CityPage({ params }: Props) {
   const { region, city } = await params;
   const cityData = getCityBySlug(region, city);
   const listings = await getListingsByCity(region, city);
+  // K222 (stamper v16.20): the "Browse N" header and the CollectionPage JSON-LD are two
+  // emitters of ONE number — the TRUE city total (cityHubTrueCount mirrors getListingsByCity's
+  // predicate), never the capped page array. Paid only once the array hits the cap.
+  const total =
+    listings.length < USER_PAGE_MAX_ROWS
+      ? listings.length
+      : Math.max(listings.length, await cityHubTrueCount(region, city));
   // Zero-listing guard (matches db962b6 obgyn/orthopedicsurgeon/pediatrician +
   // 9aee83e dentist + 19db8f9 hvac): 404 whenever there are no listings, regardless
   // of CITIES membership. Was `if (!cityData) notFound()`, which 404'd DB-backed
@@ -86,7 +93,7 @@ export default async function CityPage({ params }: Props) {
             hubCollectionPageSchema({
               path: `/${region}/${city}`,
               name: `Professionals in ${cityName}`,
-              total: listings.length,
+              total,
               items: listings.slice(0, ITEM_LIST_CAP).map((l) => ({ name: l.name ?? l.slug, path: `/directory/${l.slug}` })),
             })
           ),
@@ -96,7 +103,7 @@ export default async function CityPage({ params }: Props) {
         Professionals in {cityName}
       </h1>
       <p className="text-gray-600 mb-8">
-        Browse {listings.length} {listings.length === 1 ? "professional" : "professionals"} in {cityName}, {provinceName}.
+        Browse {total.toLocaleString("en-US")} {total === 1 ? "professional" : "professionals"} in {cityName}, {provinceName}.
       </p>
 
       <CityFacetSummary facets={facets} cityName={cityName} noun="lawyers" />

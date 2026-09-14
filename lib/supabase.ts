@@ -80,7 +80,7 @@ async function paginateAll<T>(
 }
 
 // User-facing pages cap their listing fetch — sitemap goes via getListingsRange.
-const USER_PAGE_MAX_ROWS = 200;
+export const USER_PAGE_MAX_ROWS = 200;
 
 
 // Table names derived from config prefix
@@ -231,6 +231,37 @@ export async function getListingsByCity(provinceCode: string, citySlug: string):
     return query as unknown as PromiseLike<{ data: Listing[] | null; error: unknown }>;
   }, { maxRows: USER_PAGE_MAX_ROWS, failClosed: true });
 }
+
+/**
+ * City-hub TRUE count — a GENERATED MIRROR of getListingsByCity() above, predicate-for-predicate
+ * (same client, same table, every filter incl. any .or(); .select -> count:"exact",head:true;
+ * .order/.limit/.range dropped). K222 (stamper v16.20, city-hub-truecount-fan-v1 2026-09-14):
+ * the visible "Browse N" header and the CollectionPage numberOfItems are two emitters of ONE
+ * number and must never print the capped page array. Paid only once the array hits
+ * USER_PAGE_MAX_ROWS. Throws on a fault, never 0 — a wrong number must not render (K200/K205);
+ * Next's prerender bail-out is re-emitted with its digest, not laundered into a DB fault (K216).
+ * If getListingsByCity's predicate changes, this changes with it (column-set asserted at generation).
+ */
+export async function cityHubTrueCount(provinceCode: string, citySlug: string): Promise<number> {
+  const { count, error } = await supabaseAdmin
+      .from(LISTINGS_TABLE)
+      .select("*", { count: "exact", head: true })
+      .eq("country", "US")
+      .neq("is_published", false)
+      .eq("province_state", provinceCode.toUpperCase())
+      .eq("region_slug", citySlug);
+  if (error) {
+    const msg = String((error as { message?: unknown })?.message ?? "");
+    if (/Dynamic server usage|DYNAMIC_SERVER_USAGE/.test(msg)) {
+      const bail = new Error(msg) as Error & { digest?: string };
+      bail.digest = "DYNAMIC_SERVER_USAGE";
+      throw bail;
+    }
+    throw new Error(`cityHubTrueCount(${provinceCode}/${citySlug}) failed: ${msg || "unknown"}`);
+  }
+  return count || 0;
+}
+
 
 export async function getListing(slug: string): Promise<Listing | null> {
   const { data, error } = await supabaseAdmin
