@@ -5,7 +5,7 @@ import { getCityBySlug, CITIES, PROVINCES } from "@/lib/constants";
 import ListingCard from "@/components/ListingCard";
 import verticalConfig from "@/lib/vertical.config";
 import FaqSection from "@/components/FaqSection";
-import { localizeFaqs } from "@/lib/seo";
+import { localizeFaqs, hubCollectionPageSchema, ITEM_LIST_CAP } from "@/lib/seo";
 
 const LEGAL_DISCLAIMER =
   "The information here is for informational purposes only and is not legal advice. Consult a licensed attorney in your jurisdiction about your specific situation.";
@@ -76,6 +76,19 @@ export default async function CityPage({ params }: Props) {
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(
             cityBreadcrumbSchema(region, provinceName, city, cityName)
+          ),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            hubCollectionPageSchema({
+              path: `/${region}/${city}`,
+              name: `Professionals in ${cityName}`,
+              total: listings.length,
+              items: listings.slice(0, ITEM_LIST_CAP).map((l) => ({ name: l.name ?? l.slug, path: `/directory/${l.slug}` })),
+            })
           ),
         }}
       />

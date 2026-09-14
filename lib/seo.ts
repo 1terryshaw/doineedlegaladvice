@@ -205,3 +205,54 @@ export function detailBreadcrumbSchema(trail: Array<{ name: string; path: string
     })),
   };
 }
+
+/**
+ * Cap on the ListItem entries embedded in a hub's CollectionPage. The ItemList's
+ * numberOfItems still carries the hub total — the elements are a sample, not the census.
+ */
+export const ITEM_LIST_CAP = 20;
+
+export interface HubItem {
+  name: string;
+  /** Site-relative path of the item's own page, e.g. "/directory/{slug}". */
+  path: string;
+}
+
+/**
+ * CollectionPage + nested ItemList for a HUB (region or city) — stamper v16.20 port
+ * (sitesurfer-v2-run1-fixes-v2, 2026-09-14).
+ *
+ * `total` MUST be the SAME number the visible "Browse N" header prints. K222: a page prints
+ * the count twice, from two sources, and disagrees with itself — the reader-facing element
+ * and this schema are two emitters of ONE number and must move together. `items` is sliced
+ * to ITEM_LIST_CAP; numberOfItems is `total`.
+ */
+export function hubCollectionPageSchema(opts: {
+  path: string;
+  name: string;
+  total: number;
+  items?: HubItem[];
+  /** Human location for the description; defaults to name. */
+  locationLabel?: string;
+}) {
+  const plural = (verticalConfig as { listingNounPlural?: string }).listingNounPlural ?? "listings";
+  const singular = (verticalConfig as { listingNoun?: string }).listingNoun ?? plural;
+  const noun = opts.total === 1 ? singular : plural;
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: opts.name,
+    url: canonicalUrl(opts.path),
+    description: `Browse ${opts.total} ${noun} in ${opts.locationLabel ?? opts.name}.`,
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: opts.total,
+      itemListElement: (opts.items ?? []).slice(0, ITEM_LIST_CAP).map((it, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        name: it.name,
+        url: canonicalUrl(it.path),
+      })),
+    },
+  };
+}
