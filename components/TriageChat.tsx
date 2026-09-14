@@ -72,7 +72,7 @@ export default function TriageChat() {
         <div className="text-sm font-semibold text-gray-700">
           Triage Helper &mdash; tells you what kind of attorney to look for
         </div>
-        <div className="text-[10px] uppercase tracking-wide text-gray-500">
+        <div className="text-xs uppercase tracking-wide text-gray-500">
           Not legal advice
         </div>
       </div>
@@ -168,7 +168,7 @@ export default function TriageChat() {
         </button>
       </form>
 
-      <div className="px-5 py-2 bg-gray-50 border-t text-[11px] text-gray-500 text-center">
+      <div className="px-5 py-2 bg-gray-50 border-t text-xs text-gray-500 text-center">
         Conversations may be processed by Anthropic Claude and stored to improve the service.
         Not attorney-client privileged. Don&apos;t share SSN or account credentials.
       </div>
