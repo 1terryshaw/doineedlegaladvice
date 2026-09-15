@@ -393,6 +393,7 @@ export default async function ListingPage({ params }: Props) {
               <EnrichmentBlock
                 enrichment={enrichment}
                 listingHasDescription={Boolean(listing.short_description || listing.description)}
+                listingDescription={(listing.short_description || listing.description) ?? null}
                 listingHasServices={services.length > 0}
                 listingHasServiceArea={serviceArea.length > 0}
               />
