@@ -75,9 +75,33 @@ AS $$
   -- US ONLY: this site is hard US-only and freelawyeradvice owns CA. Never widened.
   WHERE c.country = 'US'
     AND (
-         (v.v_phone  IS NOT NULL AND norm_phone(c.phone)     = v.v_phone)
-      OR (v.v_domain IS NOT NULL AND norm_domain(c.website)  = v.v_domain)
-      OR (v.v_postal IS NOT NULL
+         -- 🔴 `c.phone IS NOT NULL` / `c.postal_code IS NOT NULL` ARE LOAD-BEARING. DO NOT
+         -- "SIMPLIFY" THEM AWAY: they are semantically redundant (norm_phone(NULL) is NULL and
+         -- NULL = x is never true) and they are the ONLY reason the D-1 indexes can be used.
+         --
+         -- Both D-1 indexes are PARTIAL on `country='US' AND <col> IS NOT NULL`. Postgres will
+         -- only use a partial index when it can PROVE the query predicate implies the index
+         -- predicate, and it cannot derive "phone IS NOT NULL" from "norm_phone(phone) = $1" —
+         -- the function is a black box to the prover. Without these two clauses the planner
+         -- discards both indexes and falls back to a parallel sequential scan.
+         --
+         -- MEASURED ON PRODUCTION, same row, same predicate:
+         --   without them:  4,773 ms · 68,936 buffers · Parallel Seq Scan
+         --   with them:         0.167 ms · BitmapOr over both D-1 indexes
+         -- The indexes were created and were completely inert until this was added.
+         (v.v_phone  IS NOT NULL AND c.phone IS NOT NULL
+          AND norm_phone(c.phone) = v.v_phone)
+         -- ⚠️ THE DOMAIN BRANCH HAS NO INDEX, AND IT POISONS THE WHOLE PLAN WHEN IT IS LIVE.
+         -- A BitmapOr needs EVERY branch index-backed; one that is not forces a seq scan for
+         -- the entire OR. Measured: phone+postal alone = 0.167 ms; adding this branch =
+         -- 2,503 ms. It is kept because dropping it would remove a real retrieval signal, and
+         -- it is NOT indexed because D-1 authorised exactly two indexes on this table and a
+         -- third is the operator's call, not the build's. The residual is bounded: only 6,322
+         -- of 503,211 US rows carry a website at all, and the intake is rate-limited to 3 per
+         -- address per 24h. See the note at the foot of the D-1 index migration.
+      OR (v.v_domain IS NOT NULL AND c.website IS NOT NULL
+          AND norm_domain(c.website) = v.v_domain)
+      OR (v.v_postal IS NOT NULL AND c.postal_code IS NOT NULL
           AND nullif(upper(replace(trim(coalesce(c.postal_code,'')),' ','')),'') = v.v_postal
           AND similarity(norm_name(coalesce(c.name, c.business_name)), v.v_name) >= 0.3)
     )

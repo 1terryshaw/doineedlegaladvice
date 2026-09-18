@@ -37,6 +37,25 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_legal_listings_lane_postal_key
   ON legal_listings ((nullif(upper(replace(trim(coalesce(postal_code,'')),' ','')),'')))
   WHERE country = 'US' AND postal_code IS NOT NULL;
 
+-- ════════════════════════════════════════════════════════════════════════════════════════
+-- 🔴 THESE INDEXES ARE INERT ON THEIR OWN. The finder's OR branches MUST carry an explicit
+-- `c.phone IS NOT NULL` / `c.postal_code IS NOT NULL`, or Postgres cannot prove the query
+-- predicate implies these partial indexes' predicate and discards them. Measured on
+-- production, same row, same predicate: 4,773 ms Parallel Seq Scan without those clauses,
+-- 0.167 ms BitmapOr with them. Creating the indexes and stopping there fixes nothing — it was
+-- verified by measuring, not by observing that the CREATE INDEX succeeded.
+--
+-- ⚠️ RESIDUAL, REPORTED NOT FIXED: the finder's THIRD branch matches on `norm_domain(website)`
+-- and there is NO index for it. A BitmapOr needs every branch index-backed, so a submission
+-- that supplies a website falls back to a seq scan: 2,503 ms, against 0.167 ms without.
+-- A third index would close it —
+--     CREATE INDEX CONCURRENTLY idx_legal_listings_lane_domain_norm
+--       ON legal_listings (norm_domain(website)) WHERE country='US' AND website IS NOT NULL;
+-- — but D-1 authorised exactly TWO indexes on this table, so that is an operator decision, not
+-- a build one. The residual is bounded: only 6,322 of 503,211 US rows carry a website at all,
+-- and the intake is rate-limited to 3 submissions per address per 24 hours.
+-- ════════════════════════════════════════════════════════════════════════════════════════
+
 -- ROLLBACK (no data loss, no lock):
 --   DROP INDEX CONCURRENTLY IF EXISTS idx_legal_listings_lane_phone_norm;
 --   DROP INDEX CONCURRENTLY IF EXISTS idx_legal_listings_lane_postal_key;

@@ -1,10 +1,19 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 
-import { LANE_ACCENT, LANE_ROBOTS } from "@/lib/lane-gate";
+import { LANE_ACCENT, LANE_ROBOTS, laneOpen } from "@/lib/lane-gate";
 
 export const metadata: Metadata = { title: "Check your email", robots: LANE_ROBOTS };
 
 export default function SentPage() {
+  // Gated for the same reason the intake is. Measured on the step-4 deploy:
+  // /list-your-business 404'd while /list-your-business/sent answered 200 — a page telling a
+  // visitor to check their email for a form that does not exist. It names nothing and is
+  // noindex, so it is untidiness rather than a leak, but a lane surface that answers while the
+  // lane is shut is exactly the kind of inconsistency that later reads as "the flag doesn't
+  // actually gate anything".
+  if (!laneOpen()) notFound();
+
   return (
     <div style={{ maxWidth: 560, margin: "0 auto", padding: "48px 20px" }}>
       <h1 style={{ color: LANE_ACCENT, fontSize: 26, fontWeight: 700 }}>Check your email</h1>
