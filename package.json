@@ -14,7 +14,8 @@
     "verify:lane-logic": "node --import tsx scripts/verify-lane-logic.mts",
     "verify:lane-lifecycle": "bash scripts/verify-lane-lifecycle.sh",
     "verify:lane-claim-copy": "node --import tsx scripts/verify-lane-claim-copy.mts",
-    "verify:lane-e2e": "node --import tsx scripts/verify-lane-e2e.mts"
+    "verify:lane-e2e": "node --import tsx scripts/verify-lane-e2e.mts",
+    "verify:lane-t7": "node --import tsx scripts/verify-lane-t7.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
