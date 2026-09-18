@@ -1,0 +1,44 @@
+-- ════════════════════════════════════════════════════════════════════════════════════════
+-- THE THIRD INDEX · newbiz-submissions-dinla-index3-v1 · RULED BY THE OPERATOR
+--
+-- This closes the residual D-1 reported but did not fix: the finder's domain branch had no
+-- index, so a submission carrying a website fell back to a seq scan of the whole table.
+--
+-- 🔴 RUN OUTSIDE A TRANSACTION. `CREATE INDEX CONCURRENTLY` cannot run inside one.
+-- Apply as `postgres` over DATABASE_URL (session pooler, 5432), never the dashboard editor.
+--
+-- ── WHAT THIS IS ────────────────────────────────────────────────────────────────────────
+-- ONE read accelerator, byte-for-byte the statement written into the D-1 migration's footer.
+-- NO column. NO trigger. NO backfill. NO constraint. NO blocking lock. NO row written.
+-- This is the ONLY touch on legal_listings in this arc, and it creates, changes and deletes
+-- ZERO rows — which is why no row-level restore manifest is owed.
+--
+-- Asserted identical before and after, US-scoped: 513,962 rows · 503,211 US · 8,338 US
+-- published / 494,873 US held.
+--
+-- `norm_domain` is provolatile='i' (IMMUTABLE — verified), which is what makes it indexable.
+--
+-- ── WHY THE PARTIAL PREDICATE NEEDS THE FINDER'S GUARD ──────────────────────────────────
+-- Same lesson D-1 proved for the other two, and it already holds here: the index is PARTIAL
+-- on `country='US' AND website IS NOT NULL`, and the planner CANNOT derive non-nullity of
+-- `website` from `norm_domain(website) = $3` — the function is a black box to the prover.
+-- The finder's branch 2 ALREADY carries the explicit `c.website IS NOT NULL`, so no function
+-- change was needed: the branch was written index-ready and was merely waiting for this file.
+-- DO NOT "SIMPLIFY" THAT CLAUSE AWAY — it is what lets this index be used at all.
+--
+-- The branch also already carries its parameter-only guard `norm_domain(p_website) IS NOT
+-- NULL`, which is what keeps it index-backed under the GENERIC (prepared-statement) plan
+-- PostgREST actually executes.
+--
+-- ── MEASURED, ON THE GENERIC PLAN (a literal-arg EXPLAIN cannot see it — K276) ──────────
+--   BEFORE: Parallel Seq Scan · Buffers shared hit=68,294 · 102.5 ms (warm) / ~2.6 s (cold)
+--   AFTER:  Index Scan using idx_legal_listings_lane_domain_norm · see report
+-- Proven under `SET plan_cache_mode = force_generic_plan` AND via a prepared statement
+-- executed past the 5-execution custom→generic switch.
+-- ════════════════════════════════════════════════════════════════════════════════════════
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_legal_listings_lane_domain_norm
+  ON legal_listings (norm_domain(website)) WHERE country = 'US' AND website IS NOT NULL;
+
+-- ROLLBACK (no data loss, no lock, nothing depends on it):
+--   DROP INDEX CONCURRENTLY IF EXISTS idx_legal_listings_lane_domain_norm;

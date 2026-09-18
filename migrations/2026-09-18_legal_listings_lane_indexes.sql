@@ -45,6 +45,10 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_legal_listings_lane_postal_key
 -- 0.167 ms BitmapOr with them. Creating the indexes and stopping there fixes nothing — it was
 -- verified by measuring, not by observing that the CREATE INDEX succeeded.
 --
+-- ⚠️ RESIDUAL — ✅ CLOSED 2026-09-18 by the operator's ruling. The third index now EXISTS:
+-- see `2026-09-18_legal_listings_lane_domain_index.sql`. Everything below is kept verbatim as
+-- the record of WHY it was owed; read it as history, not as an open item.
+--
 -- ⚠️ RESIDUAL, REPORTED NOT FIXED: the finder's THIRD branch matches on `norm_domain(website)`
 -- and there is NO index for it. A BitmapOr needs every branch index-backed, so a submission
 -- that supplies a website falls back to a seq scan: 2,503 ms, against 0.167 ms without.
