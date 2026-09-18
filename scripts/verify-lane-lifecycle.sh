@@ -254,6 +254,24 @@ ZIP=$(Q "select cand_slug from legal_lane_find_candidates('Harbour Legal Partner
 check "L2-23 the postal branch retrieves on zip ∩ name similarity" "$ZIP" "served-firm"
 ZIPNO=$(Q "select count(*) from legal_lane_find_candidates('Totally Unrelated Widgets',null,null,null,'97201')")
 check "L2-24 the postal branch does NOT retrieve on a zip alone — the >= 0.3 similarity floor is explicit, never a GUC" "$ZIPNO" "0"
+# 🔴 THE `held_not_served` OUTCOME'S RETRIEVAL HALF, PROVEN HERE BECAUSE IT CANNOT BE PROVEN
+# ON PRODUCTION. Measured on the live directory DB this session: of 494,873 held US rows,
+# 494,872 carry `person_seeded_licensing_roster` (an ALLOW) and the single exception
+# (Meister & Steiner PLLC, deserve_reason NULL) has neither a phone nor a postcode, so the
+# finder cannot retrieve it by any branch. There is therefore NO production row that can drive
+# this outcome end-to-end, and manufacturing one would mean writing to legal_listings — which
+# this build does not do, at all, ever.
+#
+# So the chain is proven in two halves that meet at a typed boundary: HERE, that the finder
+# retrieves a held row carrying a DENY reason and reports that reason; and in
+# verify:lane-logic T5-4/T5-5, that `routeCandidates` sends exactly such a candidate to
+# `held_not_served` while writing nothing. Saying that plainly is better than a probe that
+# quietly tests something else.
+DENY=$(Q "select cand_slug || '|' || is_published::text || '|' || coalesce(deserve_reason,'(null)') from legal_lane_find_candidates('Rose City Counsel','5035550300',null,null,null)")
+check "L2-25a 🔴 the finder retrieves a HELD row carrying a DENY deserve_reason, and reports the reason (the held_not_served retrieval half — unreachable on the production corpus, see the note)" "$DENY" "held-deny|false|RESTRICTED_SOURCE_TERMS"
+ALLOWROW=$(Q "select cand_slug || '|' || is_published::text || '|' || coalesce(deserve_reason,'(null)') from legal_lane_find_candidates('Cascade Law Office','503-555-0200',null,null,null)")
+check "L2-25b the finder reports an ALLOW reason on a held row (the matched_existing_held half)" "$ALLOWROW" "held-allow|false|person_seeded_licensing_roster"
+
 NONE=$(Q "select count(*) from legal_lane_find_candidates('Nobody At All',null,null,null,null)")
 check "L2-25 a submission with no retrievable signal returns zero candidates (→ no_match → the only outcome that writes)" "$NONE" "0"
 

@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 
 import { LANE_ROBOTS, lanePublicUrl } from "@/lib/lane-gate";
 import {
-  laneMetaDescription, laneStructuredData, laneTitle, renderLaneBodyHtml, type LaneListing,
+  laneMetaDescription, laneStructuredData, laneTitle, renderLaneDisclaimerHtml,
+  renderLaneDetailHtml, LANE_DISCLAIMER_STYLE, LANE_DETAIL_STYLE, type LaneListing,
 } from "@/lib/lane-render";
 import { publishedLaneRowBySlug } from "@/lib/lane-store";
 
@@ -61,25 +62,39 @@ export default async function ListedPage({ params }: { params: { slug: string } 
   const graph = laneStructuredData(row);
 
   return (
-    <div style={{ maxWidth: 760, margin: "0 auto", padding: "32px 20px 64px" }}>
+    <>
       {/*
-        The body is a PURE STRING RENDER. §3.1's assertion is a BYTE OFFSET — the disclaimer
-        marker at offset 0 of the lane's own output, before the `<h1>` — and a JSX tree cannot
-        be asserted that way without a renderer. A pure function is assertable with no deploy,
-        no database and no React (`feedback_render_proof_needs_no_deploy`). This component's
-        whole job is to drop that string into `<main>`, which `app/layout.tsx:33` wraps around
-        `{children}` directly — so "first node this page returns" IS "first element inside
-        <main>".
+        The body is a PURE STRING RENDER, in TWO hosts. §3.1's assertion is a BYTE OFFSET — the
+        disclaimer marker before the `<h1>`, with nothing between `<main>` and it — and React
+        cannot inject raw HTML without a host element. So the DISCLAIMER IS ITS OWN HOST: this
+        `<aside>` is literally the first element inside `<main>` (`app/layout.tsx:33` wraps
+        `{children}` directly), and the marker is its first child.
+
+        A single wrapping `<div>` around both was the first build and the live E2E probe caught
+        it: `<main><div><!--lane-disclaimer-->` puts an element between them. Every unit test
+        passed, because a unit test sees the string and never the page
+        (`feedback_render_proof_needs_no_deploy` cuts both ways — a pure render is provable
+        without a deploy, but where it LANDS in the document is not).
       */}
-      <div dangerouslySetInnerHTML={{ __html: renderLaneBodyHtml(row) }} />
+      <aside
+        role="note"
+        aria-label="Self-submitted listing notice"
+        style={LANE_DISCLAIMER_STYLE}
+        dangerouslySetInnerHTML={{ __html: renderLaneDisclaimerHtml() }}
+      />
+      <div style={LANE_DETAIL_STYLE} dangerouslySetInnerHTML={{ __html: renderLaneDetailHtml(row) }} />
       {/*
         A bare LocalBusiness. NOT LegalService (a LocalBusiness subtype carrying exactly the
         professional-services implicature this page denies), no AggregateRating, no
         hasOfferCatalog, and NO BreadcrumbList — a breadcrumb would place this page inside the
         directory's own hierarchy, the graph-level version of the claim the disclaimer denies.
         `laneStructuredData` REFUSES (throws) on any banned key rather than omitting it.
+
+        ⚠️ This is the SECOND ld+json block on the page: `app/layout.tsx` renders the site-wide
+        `<OrgJsonLd />`. Anything asserting about the lane's graph must select the block that
+        names THIS listing, not the first one it finds.
       */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(graph) }} />
-    </div>
+    </>
   );
 }

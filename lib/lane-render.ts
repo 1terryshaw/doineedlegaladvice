@@ -39,6 +39,19 @@ export const DISCLAIMER_OPEN = "<!--lane-disclaimer-->";
 export const DISCLAIMER_CLOSE = "<!--/lane-disclaimer-->";
 
 /**
+ * Markers bounding THE LANE'S OWN OUTPUT within the finished page.
+ *
+ * 🔴 THEY EXIST BECAUSE THE PAGE IS NOT ALL OURS. `app/layout.tsx` wraps every route in the
+ * site's shared Header, Footer, Disclaimer and Organization JSON-LD, and those legitimately
+ * carry `verticalConfig.primaryColor` and the word "lawyer" — they are the site's chrome, not
+ * the lane's, and the lane neither owns nor may change them. An end-to-end assertion that
+ * scanned the WHOLE document would be measuring the site and reporting it as a lane defect.
+ * These markers give the probe a bounded region that is exactly what this module emitted.
+ */
+export const LANE_CONTENT_OPEN = "<!--lane-content-->";
+export const LANE_CONTENT_CLOSE = "<!--/lane-content-->";
+
+/**
  * THE DISCLAIMER — exact copy, exact position (§3.1).
  *
  * Rendered as the FIRST element inside `<main>`, BEFORE the `<h1>`. Never a footer, never
@@ -179,7 +192,55 @@ export function laneMetaDescription(row: LaneListing): string {
  * the prose and the design disagree about whether a page is a directory listing, the visitor
  * believes the design.
  */
-export function renderLaneBodyHtml(row: LaneListing): string {
+/**
+ * THE LANE PAGE, AS TWO INJECTION HOSTS.
+ *
+ * 🔴 THE SPLIT IS THE §3.1 CONTRACT, NOT A STYLE CHOICE.
+ *
+ * React cannot inject raw HTML without a HOST ELEMENT — `dangerouslySetInnerHTML` always
+ * belongs to a tag. The first build put the whole body inside one `<div>`, so the live page
+ * read `<main><div><!--lane-disclaimer-->…`, and that `<div>` is "another element between
+ * <main> and the marker". The live E2E probe caught it; every unit test had passed, because a
+ * unit test sees the string and never the page.
+ *
+ * So the DISCLAIMER IS ITS OWN HOST. The page renders `<aside>` first, with the marker as its
+ * first child, which makes the disclaimer literally the first element inside `<main>` — the
+ * only thing between them is the disclaimer's own opening tag. The detail follows in a second
+ * host.
+ *
+ * `renderLaneBodyHtml` composes both hosts so the Layer-1 harness asserts the same bytes the
+ * page produces; the page uses the two INNER functions with hosts carrying the same styles.
+ */
+export const LANE_DISCLAIMER_STYLE = {
+  background: LANE_NOTICE_BG,
+  borderLeft: `4px solid ${LANE_NOTICE_BORDER}`,
+  padding: "16px 24px",
+  margin: "0 0 24px",
+} as const;
+
+export const LANE_DETAIL_STYLE = {
+  maxWidth: 760,
+  margin: "0 auto",
+  padding: "8px 20px 64px",
+} as const;
+
+const styleAttr = (o: Record<string, string | number>): string =>
+  Object.entries(o)
+    .map(([k, v]) => `${k.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)}:${typeof v === "number" ? `${v}px` : v}`)
+    .join(";");
+
+/** The disclaimer host's INNER html. The marker is its first child. */
+export function renderLaneDisclaimerHtml(): string {
+  return (
+    `${DISCLAIMER_OPEN}` +
+    `<p style="margin:0;font-weight:700">${esc(DISCLAIMER_LEAD)}</p>` +
+    `<p style="margin:8px 0 0">${esc(DISCLAIMER_BODY)}</p>` +
+    `${DISCLAIMER_CLOSE}`
+  );
+}
+
+/** The detail host's INNER html. Never contains a banned token — see the token assertion. */
+export function renderLaneDetailHtml(row: LaneListing): string {
   const rows: string[] = [];
   const addr = [row.address_line, row.city, row.region_state, row.postal_code]
     .filter((v) => v && String(v).trim() !== "")
@@ -203,20 +264,26 @@ export function renderLaneBodyHtml(row: LaneListing): string {
   if (row.contact_name) {
     rows.push(`<div class="lane-field"><dt>Contact</dt><dd>${esc(row.contact_name)}</dd></div>`);
   }
-
   return (
-    `${DISCLAIMER_OPEN}` +
-    `<aside role="note" aria-label="Self-submitted listing notice" ` +
-    `style="background:${LANE_NOTICE_BG};border-left:4px solid ${LANE_NOTICE_BORDER};padding:16px 20px;margin:0 0 24px">` +
-    `<p style="margin:0;font-weight:700">${esc(DISCLAIMER_LEAD)}</p>` +
-    `<p style="margin:8px 0 0">${esc(DISCLAIMER_BODY)}</p>` +
-    `</aside>` +
-    `${DISCLAIMER_CLOSE}` +
+    `${LANE_CONTENT_OPEN}` +
     `<h1 style="color:${LANE_ACCENT};font-size:28px;font-weight:700;margin:0 0 4px">${esc(row.business_name)}</h1>` +
     `<p style="margin:0 0 20px;color:#64748b">${esc(row.city)}, ${esc(row.region_state)}</p>` +
     (rows.length ? `<dl style="margin:0 0 24px">${rows.join("")}</dl>` : "") +
     (row.description ? `<div style="margin:0 0 24px;line-height:1.6">${esc(row.description)}</div>` : "") +
-    `<p style="margin:0;font-size:13px;color:#64748b">Everything on this page was supplied by the submitter and confirmed only to the extent that they control the email address it was submitted from.</p>`
+    `<p style="margin:0;font-size:13px;color:#64748b">Everything on this page was supplied by the submitter and confirmed only to the extent that they control the email address it was submitted from.</p>` +
+    `${LANE_CONTENT_CLOSE}`
+  );
+}
+
+/** The whole fragment, hosts included — the exact shape the page renders. */
+export function renderLaneBodyHtml(row: LaneListing): string {
+  return (
+    `<aside role="note" aria-label="Self-submitted listing notice" style="${styleAttr(LANE_DISCLAIMER_STYLE)}">` +
+    renderLaneDisclaimerHtml() +
+    `</aside>` +
+    `<div style="${styleAttr(LANE_DETAIL_STYLE)}">` +
+    renderLaneDetailHtml(row) +
+    `</div>`
   );
 }
 

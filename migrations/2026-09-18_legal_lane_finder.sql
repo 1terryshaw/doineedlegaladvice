@@ -53,12 +53,86 @@ LANGUAGE sql
 STABLE
 PARALLEL SAFE
 AS $$
+  -- ════════════════════════════════════════════════════════════════════════════════════
+  -- 🔴 THE RETRIEVAL IS A **UNION OF THREE SEPARATELY-PLANNED BRANCHES**, NOT ONE `OR`.
+  -- REWRITING IT BACK INTO AN `OR` SILENTLY RESTORES A 27,000x REGRESSION.
+  --
+  -- The obvious shape is `WHERE country='US' AND (phone… OR domain… OR postal…)`, and it was
+  -- what shipped first. It is measurably wrong, for a reason that only appears in production:
+  --
+  --   * PostgREST calls this through a PREPARED STATEMENT. After five executions PostgreSQL
+  --     switches to a GENERIC plan, in which the parameter values are opaque.
+  --   * Under a generic plan the planner must pick ONE plan covering all three OR branches.
+  --     The domain branch has no index, so it discards the two D-1 indexes and scans the
+  --     whole table.
+  --
+  --   MEASURED ON PRODUCTION, same arguments, same function:
+  --     custom plan  (values known):  0.277 ms · BitmapOr over both D-1 indexes
+  --     generic plan (values opaque): 7,444 ms · scan over 510,668 rows
+  --
+  --   The live symptom was not slowness, it was a 503: the intake route's fail-closed
+  --   FINDER_UNAVAILABLE fired on a real preview submission. An EXPLAIN with literal arguments
+  --   shows 0.8 ms and looks perfect — the defect is invisible unless you measure the
+  --   parameterised path.
+  --
+  --   `ALTER FUNCTION … SET plan_cache_mode='force_custom_plan'` was tried and REJECTED: the
+  --   SET clause makes the function non-inlinable and the body still planned generically —
+  --   8,279 ms, measured, worse than doing nothing.
+  --
+  -- As a UNION, each branch is planned on its own, so the phone and postal branches use their
+  -- D-1 indexes even under a generic plan. Each branch is also guarded by a PARAMETER-ONLY
+  -- predicate (`norm_phone(p_phone) IS NOT NULL`), which is a runtime constant — so a branch
+  -- whose input was not supplied is skipped by a One-Time Filter instead of being scanned.
+  -- That is what keeps the unindexed domain branch from costing anything when no website was
+  -- submitted, which is the overwhelming majority of submissions.
+  --
+  -- The guards deliberately call the normalisers on the PARAMETER rather than reading them
+  -- from a CTE: a reference to a CTE column is not a runtime constant, and the One-Time Filter
+  -- would be lost.
+  -- ════════════════════════════════════════════════════════════════════════════════════
   WITH v AS (
     SELECT norm_name(p_name)      AS v_name,
            norm_phone(p_phone)    AS v_phone,
            norm_domain(p_website) AS v_domain,
            street_number(p_address) AS v_snum,
            nullif(upper(replace(trim(coalesce(p_postal_code,'')),' ','')),'') AS v_postal
+  ),
+  cand AS (
+    -- BRANCH 1 — phone exact. Uses idx_legal_listings_lane_phone_norm.
+    -- `c.phone IS NOT NULL` is LOAD-BEARING and semantically redundant: the index is PARTIAL
+    -- on `country='US' AND phone IS NOT NULL`, and the planner cannot derive non-nullity from
+    -- `norm_phone(phone) = $1` — the function is a black box to the prover. Without it the
+    -- index is discarded. DO NOT "SIMPLIFY" IT AWAY.
+    SELECT c.id
+      FROM legal_listings c
+     WHERE norm_phone(p_phone) IS NOT NULL
+       AND c.country = 'US'
+       AND c.phone IS NOT NULL
+       AND norm_phone(c.phone) = norm_phone(p_phone)
+    UNION
+    -- BRANCH 2 — domain exact. NO INDEX EXISTS FOR THIS, deliberately: D-1 authorised exactly
+    -- two indexes on legal_listings and a third is the operator's call. Isolated in its own
+    -- branch, it costs nothing unless a website was actually submitted, and only 6,322 of
+    -- 503,211 US rows carry one at all.
+    SELECT c.id
+      FROM legal_listings c
+     WHERE norm_domain(p_website) IS NOT NULL
+       AND c.country = 'US'
+       AND c.website IS NOT NULL
+       AND norm_domain(c.website) = norm_domain(p_website)
+    UNION
+    -- BRANCH 3 — postal key ∩ name similarity. Uses idx_legal_listings_lane_postal_key.
+    -- The `>= 0.3` is EXPLICIT, exactly as dedup_match's own comment says it keeps it, so
+    -- correctness never depends on the pg_trgm.similarity_threshold GUC — which the pooler
+    -- role cannot set anyway.
+    SELECT c.id
+      FROM legal_listings c
+     WHERE nullif(upper(replace(trim(coalesce(p_postal_code,'')),' ','')),'') IS NOT NULL
+       AND c.country = 'US'
+       AND c.postal_code IS NOT NULL
+       AND nullif(upper(replace(trim(coalesce(c.postal_code,'')),' ','')),'')
+           = nullif(upper(replace(trim(coalesce(p_postal_code,'')),' ','')),'')
+       AND similarity(norm_name(coalesce(c.name, c.business_name)), norm_name(p_name)) >= 0.3
   )
   SELECT c.id::text,
          c.slug,
@@ -70,43 +144,15 @@ AS $$
          (v.v_domain IS NOT NULL AND norm_domain(c.website) = v.v_domain),
          (v.v_postal IS NOT NULL AND nullif(upper(replace(trim(coalesce(c.postal_code,'')),' ','')),'') = v.v_postal),
          (v.v_snum   IS NOT NULL AND street_number(c.address) = v.v_snum)
-  FROM legal_listings c, v
-  -- 🔴 NO `is_published` FILTER. That omission IS the ruling.
-  -- US ONLY: this site is hard US-only and freelawyeradvice owns CA. Never widened.
-  WHERE c.country = 'US'
-    AND (
-         -- 🔴 `c.phone IS NOT NULL` / `c.postal_code IS NOT NULL` ARE LOAD-BEARING. DO NOT
-         -- "SIMPLIFY" THEM AWAY: they are semantically redundant (norm_phone(NULL) is NULL and
-         -- NULL = x is never true) and they are the ONLY reason the D-1 indexes can be used.
-         --
-         -- Both D-1 indexes are PARTIAL on `country='US' AND <col> IS NOT NULL`. Postgres will
-         -- only use a partial index when it can PROVE the query predicate implies the index
-         -- predicate, and it cannot derive "phone IS NOT NULL" from "norm_phone(phone) = $1" —
-         -- the function is a black box to the prover. Without these two clauses the planner
-         -- discards both indexes and falls back to a parallel sequential scan.
-         --
-         -- MEASURED ON PRODUCTION, same row, same predicate:
-         --   without them:  4,773 ms · 68,936 buffers · Parallel Seq Scan
-         --   with them:         0.167 ms · BitmapOr over both D-1 indexes
-         -- The indexes were created and were completely inert until this was added.
-         (v.v_phone  IS NOT NULL AND c.phone IS NOT NULL
-          AND norm_phone(c.phone) = v.v_phone)
-         -- ⚠️ THE DOMAIN BRANCH HAS NO INDEX, AND IT POISONS THE WHOLE PLAN WHEN IT IS LIVE.
-         -- A BitmapOr needs EVERY branch index-backed; one that is not forces a seq scan for
-         -- the entire OR. Measured: phone+postal alone = 0.167 ms; adding this branch =
-         -- 2,503 ms. It is kept because dropping it would remove a real retrieval signal, and
-         -- it is NOT indexed because D-1 authorised exactly two indexes on this table and a
-         -- third is the operator's call, not the build's. The residual is bounded: only 6,322
-         -- of 503,211 US rows carry a website at all, and the intake is rate-limited to 3 per
-         -- address per 24h. See the note at the foot of the D-1 index migration.
-      OR (v.v_domain IS NOT NULL AND c.website IS NOT NULL
-          AND norm_domain(c.website) = v.v_domain)
-      OR (v.v_postal IS NOT NULL AND c.postal_code IS NOT NULL
-          AND nullif(upper(replace(trim(coalesce(c.postal_code,'')),' ','')),'') = v.v_postal
-          AND similarity(norm_name(coalesce(c.name, c.business_name)), v.v_name) >= 0.3)
-    )
-  ORDER BY 4 DESC
-  LIMIT 25;
+    FROM legal_listings c
+    JOIN cand ON cand.id = c.id
+   CROSS JOIN v
+  -- 🔴 STILL NO `is_published` FILTER ANYWHERE ABOVE. That omission IS the ruling: the finder
+  -- must SEE held rows so it can route their subjects to the consent path instead of minting a
+  -- duplicate identity for them. Never widen it into a merging matcher — the recon measured
+  -- 49 of 3,000 (1.63%) submissions that would auto-claim a DIFFERENT named attorney's held row.
+   ORDER BY 4 DESC
+   LIMIT 25;
 $$;
 
 -- `pg_trgm.similarity_threshold` is NOT relied on: the `>= 0.3` above is explicit, exactly as

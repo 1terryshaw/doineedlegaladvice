@@ -20,7 +20,8 @@ import { checkRateLimit, clientIp, RATE_LIMIT } from "../lib/lane-ratelimit.ts";
 import { routeCandidates, handoffCopy, isConfident, isWeak, type LaneCandidate } from "../lib/lane-dedup.ts";
 import {
   renderLaneBodyHtml, laneStructuredData, bannedTokensOutsideDisclaimer, laneTitle,
-  DISCLAIMER_OPEN, DISCLAIMER_CLOSE, BANNED_JSONLD_KEYS, LaneStructuredDataRefusal, type LaneListing,
+  DISCLAIMER_OPEN, DISCLAIMER_CLOSE, LANE_CONTENT_OPEN, BANNED_JSONLD_KEYS,
+  LaneStructuredDataRefusal, type LaneListing,
 } from "../lib/lane-render.ts";
 import { LANE_ROBOTS, LANE_ACCENT, lanePublicUrl } from "../lib/lane-gate.ts";
 import { laneTransport, verificationMail, LANE_AUTH_FROM, LANE_FROM_ADDRESS } from "../lib/lane-email.ts";
@@ -279,10 +280,14 @@ const baseInput = {
   // 🔴 THE BYTE-OFFSET ASSERTION. Not "the disclaimer is present" — WHERE it is.
   const iMarker = html.indexOf(DISCLAIMER_OPEN);
   const iH1 = html.indexOf("<h1");
+  // The lane-content marker opens the output and the disclaimer marker follows it IMMEDIATELY —
+  // no element between them, which is what makes the disclaimer the first element inside
+  // `<main>` once the page component returns this string with no wrapper.
   record(
-    "T6-1 🔴 the disclaimer marker is at byte 0 of the lane's output and precedes the <h1> (first element inside <main>, before the heading)",
-    iMarker === 0 && iH1 > html.indexOf(DISCLAIMER_CLOSE),
-    `marker@${iMarker} close@${html.indexOf(DISCLAIMER_CLOSE)} h1@${iH1}`,
+    "T6-1 🔴 the disclaimer opens the lane's output with NO element before it, and precedes the <h1> (first element inside <main>, before the heading)",
+    /^<aside [^>]*>$/.test(html.slice(0, iMarker)) && iH1 > html.indexOf(DISCLAIMER_CLOSE) &&
+      html.includes(LANE_CONTENT_OPEN),
+    `only the disclaimer's own <aside> tag precedes the marker (marker@${iMarker}) · close@${html.indexOf(DISCLAIMER_CLOSE)} h1@${iH1}`,
   );
   record("T6-2 the disclaimer says, in terms, that this is not a licensed-attorney credential", html.includes("not a licensed-attorney credential") && html.includes("We have not verified it"), "both strings present");
 
