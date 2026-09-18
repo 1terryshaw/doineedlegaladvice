@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { resolveLaneSlugForReport } from "@/lib/lane-store";
 import { Resend } from "resend";
 
 export const dynamic = "force-dynamic";
@@ -150,6 +151,37 @@ export async function POST(req: NextRequest) {
   // Morning Report alerts on pending removal_requests (and on any older than 48h), so an
   // undelivered notification surfaces on the ops channel within a day. If a real queue is ever
   // warranted, this row is exactly what it would drain.
+  // ── THE SELF-SUBMITTED LANE'S ONE SANCTIONED BRIDGE (lane spec §7.4, PS-L6) ─────────
+  //
+  // R-7b asked for a third-party "this isn't my business" path for self-submitted rows. This
+  // route ALREADY IS that path for the whole estate, so the lane does not build `/api/report`
+  // — it teaches this one branch to resolve a lane slug, so the report a human reads names a
+  // real row instead of an unresolvable string.
+  //
+  // 🔴 IT RESOLVES ONLY. Nothing below unpublishes anything, and that is deliberate: this
+  // endpoint authenticates NOBODY, so a route that could unpublish would let anyone delist
+  // any business — a denial of service wearing a safety feature's clothes. Actual removal
+  // stays an operator action in `scripts/lane-remove-submission.mts`.
+  //
+  // A lane row's absence is silent: a slug that does not resolve is simply a directory slug
+  // (or a typo), and the report is delivered either way.
+  let laneNote = "";
+  if (listing_slug) {
+    try {
+      const laneRow = await resolveLaneSlugForReport(listing_slug);
+      if (laneRow) {
+        laneNote =
+          `\n\nSELF-SUBMITTED LANE ROW — submission_id ${laneRow.submission_id} ` +
+          `(${laneRow.business_name}). This is NOT a directory listing. Remove with ` +
+          `scripts/lane-remove-submission.mts, not scripts/removal-action.ts.`;
+      }
+    } catch (e) {
+      // A lane-store fault must never fail a compliance intake: the durable row has already
+      // landed and the request is safe. Resolution is an enrichment of the report, not a gate.
+      console.error("[removal-request] lane slug resolution failed:", e instanceof Error ? e.message : e);
+    }
+  }
+
   const listingRef = listing_slug || listing_id || "(unspecified)";
   const notified = await notifyPrivacyInbox({
     id: data.id as string,
@@ -157,7 +189,7 @@ export async function POST(req: NextRequest) {
     listing_slug,
     listing_id,
     requester_email,
-    reason,
+    reason: laneNote ? `${reason ?? ""}${laneNote}` : reason,
   });
 
   if (!notified) {
