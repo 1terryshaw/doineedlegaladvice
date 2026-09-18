@@ -93,9 +93,21 @@ export default function ClaimOrAddHub() {
         <section className="rounded-2xl border-2 border-slate-200 bg-slate-50 p-6 shadow-sm" aria-labelledby="missing-business-heading">
           <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">Route 2</p>
           <h2 id="missing-business-heading" className="mt-2 text-2xl font-bold text-slate-900">Business not listed?</h2>
-          <p className="mt-3 leading-7 text-slate-600">Add your business to the directory. You can also include its Google Maps link to make the listing easier to verify and complete.</p>
+          {/*
+            🔴 THE DONOR COPY CANNOT SHIP AS WRITTEN, and the amendment is the point of this
+            hunk. The original body promised "You can also include its Google Maps link to make
+            the listing easier to verify and complete", and the footnote promised "The
+            add-business form includes an optional Google Maps or Business Profile link."
+            THE LANE COLLECTS NO GOOGLE IDENTIFIER OF ANY KIND — no GBP URL, no place_id, no
+            cid — and the lane table has no column to hold one (lane spec §7.5). Flipping
+            HAS_LIST_YOUR_BUSINESS without amending this would ship a promise the form refuses.
+
+            Both replacement strings live INSIDE the same `HAS_LIST_YOUR_BUSINESS &&` block, so
+            the OFF state of this component is byte-identical to the pre-change golden.
+          */}
+          <p className="mt-3 leading-7 text-slate-600">Add your business to the directory as a self-submitted listing. We do not verify self-submitted listings, and they are not a licensed-attorney credential.</p>
           <Link href="/list-your-business" onClick={() => { selectRoute("missing_business_route_selected"); emitEvent({ surface: "directory", event_type: "listing_clicked", payload: { feature: "claim_add_hub", action: "add_business_cta_clicked" } }); }} className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-lg px-5 py-3 font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2" style={{ backgroundColor: verticalConfig.primaryColor }}>Add Your Business</Link>
-          <p className="mt-3 text-sm text-slate-500">The add-business form includes an optional Google Maps or Business Profile link.</p>
+          <p className="mt-3 text-sm text-slate-500">Self-submitted listings are not indexed by search engines and show no rating or badge.</p>
         </section>
         )}
       </div>

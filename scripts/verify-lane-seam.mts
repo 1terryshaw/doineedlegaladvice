@@ -420,7 +420,7 @@ function walkSources(dir: string, out: string[] = []): string[] {
     const p = join(dir, name);
     const st = statSync(p);
     if (st.isDirectory()) walkSources(p, out);
-    else if (/\.(ts|tsx|mts|sql)$/.test(name)) out.push(p);
+    else if (/\.(ts|tsx|mts|sql|sh)$/.test(name)) out.push(p);
   }
   return out;
 }
@@ -431,7 +431,7 @@ function walkSources(dir: string, out: string[] = []): string[] {
  * is a template literal, a quoted string, or (in a `.sql` file) a semicolon-delimited statement.
  */
 function sqlLiterals(path: string, src: string): string[] {
-  if (path.endsWith(".sql")) {
+  if (path.endsWith(".sql") || path.endsWith(".sh")) {
     // 🔴 COMMENTS FIRST, and SQL comments are `--`, not `//`. The migrations explain at length
     // that these two tables are never joined; an unstripped extractor reads that paragraph as
     // a statement joining them and fails the gate on its own documentation.
