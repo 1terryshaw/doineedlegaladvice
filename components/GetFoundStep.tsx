@@ -122,10 +122,10 @@ export default function GetFoundStep({
     setStatus("saving");
     setErrorMsg("");
     try {
-      const res = await fetch("/api/owner/gbp-url", {
+      const res = await fetch("/api/owner/gbp-connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gbpUrl: url }),
+        body: JSON.stringify({ slug, gbpUrl: url }),
       });
       const data: { ok?: boolean; message?: string } | null = await res.json().catch(() => null);
       if (res.ok && data?.ok) {
