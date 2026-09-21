@@ -45,6 +45,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "connection_not_saved", message: "We could not save the connection. Please try again." }, { status: 500 });
   }
 
+  // Prospective provenance — TDL #1256. Every owner-initiated GBP write funnels through
+  // this route, so it is the single choke point where "the owner supplied this link
+  // himself" can be recorded. Uses the EXISTING empire_places_refresh_log: no schema
+  // change, and no provenance column on *_listings. ZERO Google Places calls happen here
+  // (resolveGoogleBusinessProfileUrl only parses the URL / follows a short link), so
+  // places_called is false. Never throws: a failed audit row must not fail the owner's save.
+  await supabaseAdmin
+    .from("empire_places_refresh_log")
+    .insert({
+      vertical: process.env.BILLING_VERTICAL_SLUG ?? LISTINGS_TABLE.replace(/_listings$/, ""),
+      listing_table: LISTINGS_TABLE,
+      listing_id: listing.id,
+      listing_slug: listing.slug,
+      place_id: resolution.placeId,
+      outcome: "success",
+      caller: "owner",
+      authorization_ref: "provenance=owner_supplied (get-found save-link, TDL #1256)",
+      places_called: false,
+      detail: `gbp-connect resolve mode=${resolution.mode}`,
+    })
+    .then(() => {}, () => {});
+
   try {
     revalidatePath(`/owner/${listing.slug}`);
     revalidatePath(`/directory/${listing.slug}`);
