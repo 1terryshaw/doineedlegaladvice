@@ -14,8 +14,17 @@ export type GbpConnectorError =
   | "could_not_extract_place_id"
   | "resolver_timeout";
 
+/**
+ * The anchor carried by the redirect landing URL: the place's canonical NAME and
+ * its own coordinate. A Google share link carries no formatted street address, so
+ * this pair — not an address — is what a resolved ChIJ is verified against.
+ * `precise` is true when the coordinate came from the place pin (`!8m2!3d/!4d`)
+ * rather than the viewport centre (`@lat,lng`), which drifts with zoom.
+ */
+export type GbpAnchor = { name: string; lat: number; lng: number; precise: boolean };
+
 export type GbpResolution =
-  | { ok: true; placeId: string; normalizedUrl: string; mode: "literal" | "redirect" }
+  | { ok: true; placeId: string; normalizedUrl: string; mode: "literal" | "redirect"; anchor: GbpAnchor | null }
   | { ok: false; code: GbpConnectorError };
 
 type ResolverDependencies = {
@@ -98,6 +107,36 @@ function literalPlaceId(value: string): string | null {
   return value.match(PLACE_ID)?.[1] || value.match(FEATURE_ID)?.[1] || null;
 }
 
+// The landing URL of a Google share link looks like:
+//   /maps/place/<NAME>/@<vlat>,<vlng>,<zoom>/data=…!1s0x…:0x…!8m2!3d<lat>!4d<lng>!16s/g/…
+// NAME and the coordinate are the only identity signals it carries — there is no
+// street address anywhere in it. Pure URL parsing; no network, no Places call.
+const PLACE_NAME_PATH = /\/maps\/place\/([^/@?#]+)/;
+const PIN_COORDS = /!8m2!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/;
+const VIEWPORT_COORDS = /@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/;
+
+function parseAnchor(href: string): GbpAnchor | null {
+  const rawName = href.match(PLACE_NAME_PATH)?.[1];
+  if (!rawName) return null;
+  let name: string;
+  try {
+    name = decodeURIComponent(rawName.replace(/\+/g, " ")).trim();
+  } catch {
+    name = rawName.replace(/\+/g, " ").trim();
+  }
+  if (!name) return null;
+
+  // Prefer the place's own pin over the viewport centre.
+  const pin = href.match(PIN_COORDS);
+  const m = pin || href.match(VIEWPORT_COORDS);
+  if (!m) return null;
+  const lat = Number(m[1]);
+  const lng = Number(m[2]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  return { name, lat, lng, precise: Boolean(pin) };
+}
+
 async function assertSafeGoogleAddress(url: URL, lookup: typeof dnsLookup): Promise<GbpConnectorError | null> {
   try {
     const addresses = await lookup(url.hostname, { all: true, verbatim: true });
@@ -141,7 +180,7 @@ export async function resolveGoogleBusinessProfileUrl(
   if (!parsed.url) return { ok: false, code: parsed.error! };
   const initial = parsed.url;
   const literal = literalPlaceId(initial.href);
-  if (literal) return { ok: true, placeId: literal, normalizedUrl: normalizedStoredUrl(initial), mode: "literal" };
+  if (literal) return { ok: true, placeId: literal, normalizedUrl: normalizedStoredUrl(initial), mode: "literal", anchor: parseAnchor(initial.href) };
 
   const deps: Required<ResolverDependencies> = { fetch: dependencies.fetch || fetch, lookup: dependencies.lookup || dnsLookup };
   let current = initial;
@@ -159,7 +198,7 @@ export async function resolveGoogleBusinessProfileUrl(
       if (!REDIRECT_STATUS.has(response.status)) {
         const placeId = literalPlaceId(current.href);
         return placeId
-          ? { ok: true, placeId, normalizedUrl: normalizedStoredUrl(initial), mode: "redirect" }
+          ? { ok: true, placeId, normalizedUrl: normalizedStoredUrl(initial), mode: "redirect", anchor: parseAnchor(current.href) }
           : { ok: false, code: "could_not_extract_place_id" };
       }
       const location = response.headers.get("location");
@@ -171,7 +210,7 @@ export async function resolveGoogleBusinessProfileUrl(
       }
       current = nextParsed.url;
       const placeId = literalPlaceId(current.href);
-      if (placeId) return { ok: true, placeId, normalizedUrl: normalizedStoredUrl(initial), mode: "redirect" };
+      if (placeId) return { ok: true, placeId, normalizedUrl: normalizedStoredUrl(initial), mode: "redirect", anchor: parseAnchor(current.href) };
       if (hop === MAX_REDIRECTS) return { ok: false, code: "could_not_resolve_link" };
     }
   } catch (error) {
@@ -190,4 +229,4 @@ export const GBP_OWNER_MESSAGES: Record<GbpConnectorError, string> = {
   resolver_timeout: "Google took too long to respond. Please try again.",
 };
 
-export const __testables__ = { isApprovedGoogleHost, isUnsafeAddress, literalPlaceId, normalizedStoredUrl };
+export const __testables__ = { isApprovedGoogleHost, isUnsafeAddress, literalPlaceId, normalizedStoredUrl, parseAnchor };
