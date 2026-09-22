@@ -6,7 +6,16 @@ import FadeIn from "@/components/pizzazz/FadeIn";
 import ShareButtons from "@/components/pizzazz/ShareButtons";
 import { websiteSearchSchema, faqPageSchema } from "@/lib/seo";
 
-export const dynamic = "force-dynamic";
+// ISR (donor v16.25, TDL #1244). This page was `force-dynamic`, so every
+// request re-rendered it and any blip on the shared Supabase instance became a
+// user-visible 500 on the most valuable page of the site. It now renders from
+// cache and revalidates hourly; a failed revalidation serves the last good
+// render instead of an error.
+//
+// The reads go through supabaseCached, NOT supabaseAdmin. `revalidate` ALONE
+// does nothing here: a no-store fetch in the render keeps the route dynamic and
+// the conversion is silently inert.
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
