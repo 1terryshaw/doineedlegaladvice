@@ -41,6 +41,33 @@ export async function POST(request: NextRequest) {
     .eq("owner_auth_token", auth.token)
     .eq("claimed", true);
   if (updateError || count !== 1) {
+    // google_place_id is UNIQUE on every listings table. A collision means this Google
+    // profile is already linked to ANOTHER listing — an owner mistake, not a server
+    // fault — so it answers 409 already_linked instead of the bare 500 it used to be.
+    // Mirrors the shape of /api/owner/confirm-place-id: the other listing's identity is
+    // NEVER exposed, NO auto-merge / possible_duplicate_of / dedup machinery runs, and
+    // the attempt is logged to place_id_collision_log for separate adjudication.
+    const isUnique =
+      updateError?.code === "23505" || /unique|duplicate key/i.test(updateError?.message || "");
+    if (isUnique) {
+      const { data: existing } = await supabaseAdmin
+        .from(LISTINGS_TABLE)
+        .select("id")
+        .eq("google_place_id", resolution.placeId)
+        .maybeSingle();
+      await supabaseAdmin.from("place_id_collision_log").insert({
+        source_table: LISTINGS_TABLE,
+        vertical: process.env.BILLING_VERTICAL_SLUG ?? LISTINGS_TABLE.replace(/_listings$/, ""),
+        attempting_listing_id: listing.id,
+        existing_listing_id: (existing as { id?: string } | null)?.id ?? null,
+        place_id: resolution.placeId,
+      }).then(() => {}, () => {});
+      return NextResponse.json({
+        ok: false,
+        error: "already_linked",
+        message: "That Google listing is already linked to another business in our directory. If it belongs to you, contact support and we'll get it sorted.",
+      }, { status: 409 });
+    }
     if (updateError) console.error("[owner/gbp-connect] restricted write failed", updateError.code);
     return NextResponse.json({ ok: false, error: "connection_not_saved", message: "We could not save the connection. Please try again." }, { status: 500 });
   }

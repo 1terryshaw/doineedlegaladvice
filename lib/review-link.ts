@@ -63,3 +63,32 @@ export function resolvePlaceId(
   if (isUsablePlaceId(storedPlaceId)) return (storedPlaceId ?? "").trim();
   return placeIdFromGbpUrl(gbpUrl);
 }
+
+/**
+ * Resolve the review-link Place ID for a listing row, in the order the data
+ * actually lives (TDL #1256 follow-up):
+ *
+ *   1. `google_place_id` — the CANONICAL column. It is what /api/owner/gbp-connect
+ *      and /api/owner/confirm-place-id write, it is UNIQUE on every listings table,
+ *      and it is the column every "connected" surface already keys on.
+ *   2. `gbp_place_id` — the legacy column written by the retired /api/owner/gbp-url.
+ *      Absent entirely on some tables (unitedstatesforyou_listings has no such
+ *      column); a `select("*")` row simply yields undefined there, which is fine.
+ *   3. `gbp_url` — last-resort, network-free derive.
+ *
+ * Each candidate passes the ChIJ gate INDEPENDENTLY: a non-ChIJ value (a hex
+ * feature id, a cid-only save) is skipped rather than short-circuiting the
+ * search, because a broken writereview link is worse than the dashboard copy.
+ *
+ * Read-side only — this resolves nothing and writes nothing.
+ */
+export function resolveListingPlaceId(listing: {
+  google_place_id?: string | null;
+  gbp_place_id?: string | null;
+  gbp_url?: string | null;
+}): string | null {
+  for (const candidate of [listing.google_place_id, listing.gbp_place_id]) {
+    if (isUsablePlaceId(candidate)) return (candidate ?? "").trim();
+  }
+  return placeIdFromGbpUrl(listing.gbp_url);
+}

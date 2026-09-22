@@ -3,7 +3,7 @@ import { Metadata } from "next";
 import { verifyOwnerAccess } from "@/lib/auth";
 import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
 import GetFoundStep, { type PendingMatch } from "@/components/GetFoundStep";
-import { buildReviewLink, resolvePlaceId } from "@/lib/review-link";
+import { buildReviewLink, resolveListingPlaceId } from "@/lib/review-link";
 
 // claim-vsl-v1 Part 2 — the post-claim "Get found on Google" step.
 //
@@ -62,7 +62,11 @@ export default async function GetFoundPage({ params }: Props) {
   // ChIJ-format Place ID, because that is the only form the writereview
   // endpoint resolves — a hex feature id or a cid-only save falls back to the
   // dashboard instructions rather than rendering a link that 404s.
-  const reviewLink = buildReviewLink(resolvePlaceId(listing.gbp_place_id, listing.gbp_url));
+  //
+  // Reads google_place_id FIRST (TDL #1256 follow-up): it is the canonical column
+  // gbp-connect and confirm-place-id write, and the one every connected surface
+  // keys on. gbp_place_id — the retired gbp-url column — is now only a fallback.
+  const reviewLink = buildReviewLink(resolveListingPlaceId(listing));
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-12">
