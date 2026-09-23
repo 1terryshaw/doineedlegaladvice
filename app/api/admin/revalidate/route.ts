@@ -110,5 +110,20 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // THE HOME PAGE. `/` became ISR in the #1244 fan (`export const revalidate = 3600`)
+  // and this route did not purge it, so a claim or a publish left the most valuable
+  // page on the site up to an HOUR stale with no way to evict it. Fired ONCE per
+  // call, after the per-slug loop -- not once per slug.
+  //
+  // revalidatePath("/") and NOT a tag: this repo exports no HOME_LISTINGS_TAG. Its
+  // home reads go through `supabaseCached`, whose fetches carry a revalidate but no
+  // tag, so there is nothing for a tag purge to bind to and one stamped here "for
+  // parity" would be a purge path that purges nothing.
+  try {
+    revalidatePath("/");
+  } catch (e) {
+    errors.push(`home: ${(e as Error)?.message || "unknown"}`);
+  }
+
   return NextResponse.json({ revalidated, vertical: VERTICAL, errors });
 }
