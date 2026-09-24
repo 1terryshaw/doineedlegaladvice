@@ -243,9 +243,9 @@ export default async function ListingPage({ params }: Props) {
 
 
         {heroImageUrl && (
-          <div className="mb-6 rounded-xl overflow-hidden bg-gray-100 max-h-[420px]">
+          <div className="mb-6 rounded-xl overflow-hidden bg-gray-100 max-h-[420px] sm:max-h-none [container-type:inline-size]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={heroImageUrl} alt={listing.name} className="w-full h-auto object-cover" />
+            <img src={heroImageUrl} alt={listing.name} className="w-full h-auto object-cover sm:max-h-[max(420px,56.25cqw)]" />
           </div>
         )}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
