@@ -139,7 +139,16 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot }: { li
       setConnectedGbpUrl(data.gbpUrl || gbpUrl);
       setEditingGbp(false);
       setGbpUrl("");
-      setGbpResult("Google Business Profile connected. You can refresh reviews when you are ready.");
+      // claimant-edit-ux-stamp-v1: the success message tells the truth about reviews (audit §G.4).
+      setGbpResult(
+        typeof data.placeId === "string" && data.placeId.startsWith("ChIJ")
+          ? "Connected. Your Google rating can show on your listing."
+          : data.chij === "refused_no_anchor"
+            ? "Connected, but Google didn't let us verify it for reviews. On Google Maps, open your business, tap Share, Copy link, and paste it here again."
+            : data.chij === "refused_unresolved"
+              ? "Connected. Google doesn't list your business in its search results yet, so reviews can't be shown. Your profile stays linked."
+              : "Connected, but this link can't be verified for reviews yet. On Google Maps, open your business, tap Share, Copy link, and paste it here again.",
+      );
       router.refresh();
     } catch (error) {
       setGbpResult(error instanceof Error ? error.message : "We could not connect Google.");

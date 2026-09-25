@@ -1,4 +1,7 @@
 "use client";
+import GbpStatusCard from "@/components/owner-edit/GbpStatusCard";
+import AddressFields from "@/components/owner-edit/AddressFields";
+import type { OwnerGbpStatus } from "@/lib/owner-gbp-status";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -25,11 +28,18 @@ interface Props {
   initialProvince: string;
   initialPhotos: ListingPhoto[];
   initialLogo: ListingPhoto | null;
+  /** claimant-edit-ux-stamp-v1: resolved server-side from the row's source class (R2). */
+  addressEditable?: boolean;
+  gbpStatus?: OwnerGbpStatus;
+  gbpConnectHref?: string | null;
 }
 
 interface FormState {
   /** ADDRESS SHOW/HIDE (Phase 2 fan) — owner-controlled public visibility of the street. */
   show_address: boolean;
+  /** claimant-edit-ux-stamp-v1 (R2) — sent only when addressEditable. */
+  address: string;
+  postal_code: string;
   name: string;
   short_description: string;
   description: string;
@@ -64,6 +74,9 @@ export default function OwnerEditForm({
   initialProvince,
   initialPhotos,
   initialLogo,
+  addressEditable = false,
+  gbpStatus,
+  gbpConnectHref = null,
 }: Props) {
   const router = useRouter();
   const currentYear = new Date().getFullYear();
@@ -75,6 +88,8 @@ export default function OwnerEditForm({
     // on a business vertical and unticked on a person vertical without this component knowing
     // which one it is. `=== true` so a NULL/absent column reads unticked — the safe direction.
     show_address: lst.show_address === true,
+    address: (listing as { address?: string | null }).address ?? "",
+    postal_code: (listing as { postal_code?: string | null }).postal_code ?? "",
     name: initialName,
     short_description: listing.short_description || "",
     description: listing.description || "",
@@ -126,6 +141,7 @@ export default function OwnerEditForm({
     const payload = {
       slug: listing.slug,
       show_address: form.show_address,
+      ...(addressEditable ? { address: form.address, postal_code: form.postal_code } : {}),
       name: form.name,
       short_description: form.short_description,
       description: form.description,
@@ -183,6 +199,8 @@ export default function OwnerEditForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-8 max-w-3xl">
       <h1 className="text-2xl font-bold">Edit: {form.name || initialName}</h1>
+
+      {gbpStatus && <GbpStatusCard status={gbpStatus} connectHref={gbpConnectHref} />}
 
       {status === "saved" && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-green-800 text-sm">
@@ -252,6 +270,10 @@ export default function OwnerEditForm({
             </select>
           </div>
         </div>
+        {/* claimant-edit-ux-stamp-v1 (R2): street + postal; read-only unless the row's source class allows it. */}
+        <AddressFields editable={addressEditable} address={form.address} postalCode={form.postal_code}
+          country={String((listing as { country?: string | null }).country ?? "").toUpperCase()}
+          onChange={(f, v) => update(f, v)} />
         {/* ADDRESS SHOW/HIDE (Phase 2 fan, 2026-09-04). The ONLY writer of `show_address`. */}
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
           <label htmlFor="show-address" className="flex items-start gap-3 cursor-pointer">

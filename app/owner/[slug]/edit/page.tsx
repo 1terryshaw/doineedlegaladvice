@@ -4,6 +4,8 @@ import { verifyOwnerAccess } from "@/lib/auth";
 import { listPhotosForListing } from "@/lib/listing-photos";
 import { BUCKET } from "@/lib/owner-form-bucket";
 import OwnerEditForm from "@/components/OwnerEditForm";
+import { addressEditClass, addressEditAllowed } from "@/lib/owner-location-edit";
+import { getOwnerGbpStatus } from "@/lib/owner-gbp-status";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +28,14 @@ export default async function OwnerEditPage({ params }: Props) {
   const { photos, logo } = await listPhotosForListing(result.listing.id);
   const lst = result.listing as Record<string, unknown>;
 
+  // claimant-edit-ux-stamp-v1: R2 street/postal gate (source class) + R1 GBP status (read-only).
+  const addressEditable = addressEditAllowed(await addressEditClass(lst.source as string | null));
+  const gbpStatus = await getOwnerGbpStatus({
+    id: result.listing.id as string,
+    google_place_id: lst.google_place_id as string | null,
+    gbp_url: lst.gbp_url as string | null,
+  });
+
   // Bucket-aware reads: pull whichever column actually exists for this repo.
   const initialName = (typeof lst[BUCKET.nameColumn] === "string"
     ? (lst[BUCKET.nameColumn] as string)
@@ -42,6 +52,9 @@ export default async function OwnerEditPage({ params }: Props) {
         initialProvince={initialProvince}
         initialPhotos={photos}
         initialLogo={logo}
+        addressEditable={addressEditable}
+        gbpStatus={gbpStatus}
+        gbpConnectHref={`/owner/${slug}#google-gbp-heading`}
       />
     </div>
   );

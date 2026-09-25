@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
 import { getAuthFromCookies } from "@/lib/auth";
 import { sanitizeExtras, EXTRA_UPDATE_FIELDS } from "@/lib/listing-extras";
+import { planOwnerLocationEdit } from "@/lib/owner-location-edit";
 import { BUCKET } from "@/lib/owner-form-bucket";
 
 export const dynamic = "force-dynamic";
@@ -77,6 +78,17 @@ export async function POST(request: NextRequest) {
   }
   Object.assign(safeUpdates, sanitizeExtras(extrasInput));
 
+  // claimant-edit-ux-stamp-v1 (R2/R3): bounded street/postal, safe city/province (slug
+  // re-derive + validation), owner_edit_log written BEFORE the update (no log, no write).
+  const locationPlan = await planOwnerLocationEdit(String(listing.id), updates, safeUpdates);
+  if (!locationPlan.ok) {
+    return NextResponse.json({ error: locationPlan.error, detail: locationPlan.message }, { status: locationPlan.status });
+  }
+  const logged = await locationPlan.commit();
+  if (!logged.ok) {
+    return NextResponse.json({ error: "Failed to update", detail: logged.message }, { status: 500 });
+  }
+
   safeUpdates.updated_at = new Date().toISOString();
   safeUpdates.owner_last_action_at = new Date().toISOString();
 
@@ -92,5 +104,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  locationPlan.afterWrite();
   return NextResponse.json({ success: true });
 }

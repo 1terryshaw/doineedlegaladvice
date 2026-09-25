@@ -32,7 +32,8 @@ export async function POST(request: NextRequest) {
 
   const resolution = await resolveGoogleBusinessProfileUrl(body.gbpUrl);
   if (!resolution.ok) {
-    return NextResponse.json({ ok: false, error: resolution.code, message: GBP_OWNER_MESSAGES[resolution.code] }, { status: 400 });
+    // claimant-edit-ux-stamp-v1 (iii): every refusal carries the Share → Copy link hint.
+    return NextResponse.json({ ok: false, error: resolution.code, message: GBP_OWNER_MESSAGES[resolution.code] + " Tip: on Google Maps, open your business, tap Share, then Copy link, and paste that link here." }, { status: 400 });
   }
 
   // ── Paste-time ChIJ upgrade — gbp-connect-chij-resolve-v1, TDL #1256 ──────────
@@ -123,5 +124,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("[owner/gbp-connect] cache invalidation failed", error instanceof Error ? error.name : "unknown");
   }
-  return NextResponse.json({ ok: true, placeId: effectivePlaceId, gbpUrl: resolution.normalizedUrl, mode: resolution.mode });
+  // claimant-edit-ux-stamp-v1: tell the UI whether the link is review-capable (audit §E.2).
+  return NextResponse.json({ ok: true, placeId: effectivePlaceId, gbpUrl: resolution.normalizedUrl, mode: resolution.mode, chij: chijUpgrade.outcome });
 }
