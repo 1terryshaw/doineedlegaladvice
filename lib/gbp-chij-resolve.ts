@@ -45,7 +45,11 @@ export const AUTHORIZATION_REF = "gbp-connect-chij-resolve-v1 (Terry 2026-09-22)
 export const MATCH_RADIUS_M = 75;
 export const DAILY_CALL_CAP = 200;
 const TEXTSEARCH_URL = "https://places.googleapis.com/v1/places:searchText";
-const FIELD_MASK = "places.id,places.displayName,places.formattedAddress,places.location";
+// googleMapsUri carries the place's CID; pureServiceAreaBusiness is audit context. Both sit in the
+// same Text Search Pro SKU as location/formattedAddress — no price change per call.
+const FIELD_MASK =
+  "places.id,places.displayName,places.formattedAddress,places.location,places.googleMapsUri,places.pureServiceAreaBusiness";
+const MAX_CANDIDATES = 5;
 
 /** Places Details v1 and every reviews path accept ONLY a canonical ChIJ id. */
 export const isChIJPlaceId = (id: unknown): boolean =>
@@ -54,6 +58,29 @@ export const isChIJPlaceId = (id: unknown): boolean =>
 /** A Google share link's feature-id / CID-hex pair — connected, but review-inert. */
 export const isFeatureId = (id: unknown): boolean =>
   typeof id === "string" && /^0x[0-9a-f]+:0x[0-9a-f]+$/i.test(id);
+
+/**
+ * The CID (decimal) carried by a feature-id's second half. `0x…:0x7563…` → "8458…".
+ * gbp-resolve-name-mismatch-v1: this is the IDENTITY key. A Text Search candidate whose
+ * googleMapsUri carries `cid=<this>` IS the place the owner shared — no name or distance
+ * judgement needed. Returns null for `0x0` or anything unparseable.
+ */
+export function cidOfFeatureId(featureId: string): string | null {
+  const hex = featureId.match(/^0x[0-9a-f]+:(0x[0-9a-f]+)$/i)?.[1];
+  if (!hex) return null;
+  try {
+    const cid = BigInt(hex);
+    return cid > BigInt(0) ? cid.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The `cid=` parameter of a Places googleMapsUri, or null. */
+export function cidOfMapsUri(uri: unknown): string | null {
+  if (typeof uri !== "string") return null;
+  return uri.match(/[?&]cid=(\d+)/)?.[1] ?? null;
+}
 
 const NAME_STOPWORDS = new Set([
   "the", "and", "inc", "ltd", "llc", "corp", "company", "services", "service",
@@ -118,15 +145,25 @@ type MinimalSupabase = {
 /**
  * ONE verified Text Search. Returns the candidate ChIJ only on a confident match.
  * Never throws — a failure here must never fail the owner's save.
+ *
+ * gbp-resolve-name-mismatch-v1 (2026-09-25): a SERVICE-AREA business (a Maps outline, no
+ * street pin) is EXCLUDED from Text Search unless `includePureServiceAreaBusinesses` is set —
+ * that, not a name mismatch, is why "SMARTWEBSITE MANAGEMENT" returned zero candidates.
+ * Such a candidate also comes back with NO location, so the 75 m gate cannot run on it.
+ * It is accepted instead on IDENTITY: its googleMapsUri `cid=` equals the CID inside the
+ * owner's own feature-id — exact, and strictly tighter than name + distance.
+ * Still ONE call: the extra candidates ride the same request.
  */
 async function verifiedChijFor(
   anchor: GbpAnchor,
+  featureId: string,
   apiKey: string,
   fetchImpl: typeof fetch,
 ): Promise<{ chij: string | null; detail: string; called: boolean }> {
   const body: Record<string, unknown> = {
     textQuery: anchor.name,
-    maxResultCount: 1,
+    maxResultCount: MAX_CANDIDATES,
+    includePureServiceAreaBusinesses: true,
     // Bias to the landing coordinate so the top candidate is the right place to
     // begin with. The ACCEPT decision below is still made on our own measurement.
     locationBias: {
@@ -155,6 +192,8 @@ async function verifiedChijFor(
       id?: string;
       displayName?: { text?: string };
       location?: { latitude?: number; longitude?: number };
+      googleMapsUri?: string;
+      pureServiceAreaBusiness?: boolean;
     }>;
   };
   try {
@@ -163,16 +202,33 @@ async function verifiedChijFor(
     return { chij: null, called: true, detail: "places_bad_json" };
   }
 
-  const c = (data.places || [])[0];
-  if (!c?.id) return { chij: null, called: true, detail: "no_candidate" };
+  const places = (data.places || []).filter((p) => p?.id);
+  if (places.length === 0) return { chij: null, called: true, detail: "no_candidate" };
+
+  // 1. Identity: the candidate IS the shared place. Name is still reported, never required —
+  //    the CID is Google's own key for the exact place the owner shared.
+  const cid = cidOfFeatureId(featureId);
+  const exact = cid ? places.find((p) => cidOfMapsUri(p.googleMapsUri) === cid) : undefined;
+  if (exact?.id) {
+    if (!isChIJPlaceId(exact.id)) return { chij: null, called: true, detail: "candidate_not_chij" };
+    const nameOk = nameTokenOverlap(anchor.name, exact.displayName?.text ?? "");
+    return {
+      chij: exact.id,
+      called: true,
+      detail: `matched cid=${cid} nameOk=${nameOk} sab=${exact.pureServiceAreaBusiness === true} precise=${anchor.precise}`,
+    };
+  }
+
+  // 2. Fallback — the pre-existing gate, unchanged in substance: the top candidate that HAS a
+  //    location (i.e. the top physical place, what maxResultCount=1 returned before service-area
+  //    businesses were included) must pass name-token overlap AND sit within MATCH_RADIUS_M.
+  const c = places.find((p) => typeof p.location?.latitude === "number" && typeof p.location?.longitude === "number");
+  if (!c?.id) return { chij: null, called: true, detail: `candidate_no_location n=${places.length} cid_match=false` };
   if (!isChIJPlaceId(c.id)) return { chij: null, called: true, detail: "candidate_not_chij" };
 
   const nameOk = nameTokenOverlap(anchor.name, c.displayName?.text ?? "");
-  const lat = c.location?.latitude;
-  const lng = c.location?.longitude;
-  if (typeof lat !== "number" || typeof lng !== "number") {
-    return { chij: null, called: true, detail: "candidate_no_location" };
-  }
+  const lat = c.location!.latitude as number;
+  const lng = c.location!.longitude as number;
   const metres = Math.round(haversineMeters(anchor.lat, anchor.lng, lat, lng));
   const coordOk = metres <= MATCH_RADIUS_M;
 
@@ -180,7 +236,7 @@ async function verifiedChijFor(
     return {
       chij: null,
       called: true,
-      detail: `refused nameOk=${nameOk} distance_m=${metres} limit=${MATCH_RADIUS_M} precise=${anchor.precise}`,
+      detail: `refused nameOk=${nameOk} distance_m=${metres} limit=${MATCH_RADIUS_M} precise=${anchor.precise} cid_match=false`,
     };
   }
   return { chij: c.id, called: true, detail: `matched distance_m=${metres} precise=${anchor.precise}` };
@@ -263,7 +319,7 @@ export async function upgradeFeatureIdToChij(opts: {
     return done(keep("refused_rate_limited", `cap_check_threw:${e instanceof Error ? e.name : "unknown"}`));
   }
 
-  const { chij, detail, called } = await verifiedChijFor(anchor, apiKey, fetchImpl);
+  const { chij, detail, called } = await verifiedChijFor(anchor, placeId, apiKey, fetchImpl);
   if (!chij) {
     const r: ChijUpgrade = {
       placeId, outcome: called ? "refused_unresolved" : "error_places", detail, placesCalled: called,
@@ -309,4 +365,4 @@ export async function upgradeFeatureIdToChij(opts: {
   return ok;
 }
 
-export const __testables__ = { normalize, nameTokenOverlap, haversineMeters, isFeatureId, isChIJPlaceId };
+export const __testables__ = { normalize, nameTokenOverlap, haversineMeters, isFeatureId, isChIJPlaceId, cidOfFeatureId, cidOfMapsUri };

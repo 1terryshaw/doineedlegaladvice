@@ -146,7 +146,7 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot }: { li
           : data.chij === "refused_no_anchor"
             ? "Connected, but Google didn't let us verify it for reviews. On Google Maps, open your business, tap Share, Copy link, and paste it here again."
             : data.chij === "refused_unresolved"
-              ? "Connected. Google doesn't list your business in its search results yet, so reviews can't be shown. Your profile stays linked."
+              ? "We linked your Google profile, but couldn't automatically match it to Google's review data yet, so reviews can't be shown. Your profile stays linked."
               : "Connected, but this link can't be verified for reviews yet. On Google Maps, open your business, tap Share, Copy link, and paste it here again.",
       );
       router.refresh();
@@ -359,11 +359,24 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot }: { li
           </>
         ) : (
           <>
-            <h3 id="google-gbp-heading" className="font-semibold mb-2 text-green-700">✓ Google connected</h3>
-            {connectedGbpUrl && (
-              <p className="text-sm text-gray-600 mb-2 break-all">Linked profile:{" "}<a href={connectedGbpUrl} target="_blank" rel="noopener noreferrer" className="underline">{connectedGbpUrl}</a></p>
+            {/* gbp-resolve-name-mismatch-v1: agree with the Edit Listing status — only a ChIJ is review-capable; a feature-id is linked but review-inert. */}
+            {connectedPlaceId.startsWith("ChIJ") ? (
+              <>
+                <h3 id="google-gbp-heading" className="font-semibold mb-2 text-green-700">✓ Connected — reviews on</h3>
+                {connectedGbpUrl && (
+                  <p className="text-sm text-gray-600 mb-2 break-all">Linked profile:{" "}<a href={connectedGbpUrl} target="_blank" rel="noopener noreferrer" className="underline">{connectedGbpUrl}</a></p>
+                )}
+                <p className="text-sm text-gray-600 mb-4">Once your Google rating is available it shows on your public listing, which earns the &ldquo;Reviews verified&rdquo; badge.</p>
+              </>
+            ) : (
+              <>
+                <h3 id="google-gbp-heading" className="font-semibold mb-2 text-amber-700">Connected — reviews not available yet</h3>
+                {connectedGbpUrl && (
+                  <p className="text-sm text-gray-600 mb-2 break-all">Linked profile:{" "}<a href={connectedGbpUrl} target="_blank" rel="noopener noreferrer" className="underline">{connectedGbpUrl}</a></p>
+                )}
+                <p className="text-sm text-gray-600 mb-4">We linked your Google profile, but couldn&rsquo;t automatically match it to Google&rsquo;s review data yet, so reviews can&rsquo;t be shown. Your profile stays linked.</p>
+              </>
             )}
-            <p className="text-sm text-gray-600 mb-4">Once your Google rating is available it shows on your public listing, which earns the &ldquo;Reviews verified&rdquo; badge.</p>
             {editingGbp ? (
               <form onSubmit={handleConnectGbp} className="space-y-3">
                 <label htmlFor="gbp-url" className="block text-sm font-medium text-gray-700">Replace Google Business Profile link</label>

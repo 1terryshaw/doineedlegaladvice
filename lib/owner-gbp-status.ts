@@ -13,7 +13,7 @@ const REASONS: Record<string, string> = {
   refused_no_anchor:
     "Google's link didn't include your map pin. On Google Maps, open your business, tap Share, Copy link, and paste it again.",
   refused_unresolved:
-    "Google doesn't list your business in its search results yet, so reviews can't be shown. Your profile stays linked.",
+    "We linked your Google profile, but couldn't automatically match it to Google's review data yet, so reviews can't be shown. Your profile stays linked.",
   refused_collision:
     "That Google listing is already linked to another business in our directory. Contact us and we'll sort it out.",
   refused_rate_limited: "We couldn't verify the link with Google today. Paste your Share link again tomorrow.",
