@@ -6,10 +6,11 @@ import { GBP_OWNER_MESSAGES, resolveGoogleBusinessProfileUrl } from "@/lib/gbp-c
 import { upgradeFeatureIdToChij } from "@/lib/gbp-chij-resolve";
 import { LISTINGS_TABLE, supabaseAdmin } from "@/lib/supabase";
 import { fetchInitialRating } from "@/lib/gbp-initial-rating";
+import { logGbpConnectAttempt } from "@/lib/owner-events";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(request: NextRequest) {
+async function handlePost(request: NextRequest) {
   const auth = getAuthFromCookies(await cookies());
   if (!auth) return NextResponse.json({ ok: false, error: "unauthenticated", message: "Please sign in to connect Google." }, { status: 401 });
 
@@ -152,4 +153,14 @@ export async function POST(request: NextRequest) {
     try { revalidatePath(`/directory/${listing.slug}`); } catch { /* best effort */ }
   }
   return NextResponse.json({ ok: true, initialRating, placeId: effectivePlaceId, gbpUrl: resolution.normalizedUrl, mode: resolution.mode, chij: chijUpgrade.outcome });
+}
+
+// P4 (owner-funnel-recovery): every connect attempt is recorded (status, outcome class, URL host class —
+// never the URL). Fail-open: logging can never change the response.
+export async function POST(request: NextRequest) {
+  let reqBody: { slug?: unknown; gbpUrl?: unknown } | null = null;
+  try { reqBody = await request.clone().json(); } catch { reqBody = null; }
+  const response = await handlePost(request);
+  try { await logGbpConnectAttempt(response.status, await response.clone().json(), reqBody); } catch { /* fail-open */ }
+  return response;
 }
