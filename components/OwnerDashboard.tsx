@@ -43,7 +43,7 @@ function formatPrice(tier: TierSlug | null): string {
   return t ? `$${t.priceMonthlyUSD} USD/mo` : "";
 }
 
-export default function OwnerDashboard({ listing, reviewSlot, healthSlot }: { listing: Listing; reviewSlot?: ReactNode; healthSlot?: ReactNode }) {
+export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextStepSlot }: { listing: Listing; reviewSlot?: ReactNode; healthSlot?: ReactNode; nextStepSlot?: ReactNode }) {
   const tier = (listing.tier || listing.subscription_tier || "free") as TierSlug;
   const tierLabel = getTierDisplayName(tier);
   const nextTier = getNextTier(tier);
@@ -180,6 +180,9 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot }: { li
           Logout
         </button>
       </div>
+
+      {/* owner-next-step-card-canary-v1: the one next action. */}
+      {nextStepSlot}
 
       {/* Payment error banner */}
       {tier === "payment_error_review" && (

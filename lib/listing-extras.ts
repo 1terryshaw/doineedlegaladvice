@@ -29,7 +29,9 @@ export interface DayHours {
   closes: string; // "HH:MM"
 }
 
-export type HoursJson = Record<DayKey, DayHours>;
+// A day that is absent is "not set" — never assume closed or open. Stored rows can carry
+// any subset of the seven days (or none), so every reader must tolerate a missing day.
+export type HoursJson = Partial<Record<DayKey, DayHours>>;
 
 export const DEFAULT_DAY: DayHours = {
   closed: true,
@@ -38,17 +40,19 @@ export const DEFAULT_DAY: DayHours = {
   closes: "17:00",
 };
 
-export function emptyHours(): HoursJson {
+export function emptyHours(): Record<DayKey, DayHours> {
   return DAY_KEYS.reduce((acc, d) => {
     acc[d] = { ...DEFAULT_DAY };
     return acc;
-  }, {} as HoursJson);
+  }, {} as Record<DayKey, DayHours>);
 }
 
 export function normalizeHours(input: unknown): HoursJson | null {
   if (!input || typeof input !== "object") return null;
+  // Keep only the days actually present. A missing day stays missing: saving must never
+  // invent hours (or "Closed") for a day the owner hasn't set.
   const src = input as Record<string, Partial<DayHours>>;
-  const out = emptyHours();
+  const out: HoursJson = {};
   let any = false;
   for (const k of DAY_KEYS) {
     const d = src[k];
@@ -77,7 +81,7 @@ export function buildOpeningHoursSpec(h: HoursJson) {
   const specs: Array<Record<string, unknown>> = [];
   for (const k of DAY_KEYS) {
     const d = h[k];
-    if (d.closed) continue;
+    if (!d || d.closed) continue;
     if (d.open24) {
       specs.push({
         "@type": "OpeningHoursSpecification",

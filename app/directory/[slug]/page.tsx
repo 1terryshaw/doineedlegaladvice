@@ -17,6 +17,7 @@ import {
   HoursJson,
   formatHoursLine,
   buildOpeningHoursSpec,
+  normalizeHours,
 } from "@/lib/listing-extras";
 import { canonical } from "@/lib/vertical-canonical";
 import ListingGallery from "@/components/ListingGallery";
@@ -92,7 +93,10 @@ export default async function ListingPage({ params }: Props) {
     social_facebook?: string | null;
     social_linkedin?: string | null;
   };
-  const hours = (lst.hours_json as HoursJson | null) ?? null;
+  // Normalised on read: a stored row may carry any subset of days (or a foreign shape);
+  // only days that are actually set render. A missing day is "not set", never a crash.
+  const hours = normalizeHours(lst.hours_json);
+  const hourDays = hours ? DAY_KEYS.filter((d) => hours[d]) : [];
   const services = lst.services ?? [];
   const serviceArea = lst.service_area ?? [];
   const sameAsLinks = [
@@ -374,14 +378,14 @@ export default async function ListingPage({ params }: Props) {
             )}
 
             {/* Hours */}
-            {hours && (
+            {hours && hourDays.length > 0 && (
               <div className="mt-6">
                 <h3 className="font-semibold mb-3">Hours</h3>
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm max-w-sm">
-                  {DAY_KEYS.map((day) => (
+                  {hourDays.map((day) => (
                     <div key={day} className="contents">
                       <dt className="text-gray-500">{DAY_LABELS[day]}</dt>
-                      <dd className="text-gray-800">{formatHoursLine(hours[day])}</dd>
+                      <dd className="text-gray-800">{formatHoursLine(hours[day]!)}</dd>
                     </div>
                   ))}
                 </dl>
