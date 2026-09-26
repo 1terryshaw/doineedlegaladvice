@@ -11,6 +11,9 @@ function getResend(): Resend {
   return new Resend(process.env.RESEND_API_KEY);
 }
 const FROM_ADDRESS = "notifications@smartwebsitemanagement.ca";
+// owner-funnel-recovery-p1p4-v1 (2026-09-26): this digest goes ONLY to paid owners, so it rides the
+// owner-only transactional domain. replyTo = FROM_ADDRESS preserves reply routing (doineedanetwork.com has no MX).
+const OWNER_FROM_ADDRESS = "notifications@doineedanetwork.com";
 
 export async function GET(request: NextRequest) {
   const authError = verifyCron(request);
@@ -92,7 +95,8 @@ export async function GET(request: NextRequest) {
 
     try {
       await getResend().emails.send({
-        from: `${directoryName} <${FROM_ADDRESS}>`,
+        from: `${directoryName} <${OWNER_FROM_ADDRESS}>`,
+        replyTo: FROM_ADDRESS,
         to: listing.owner_email,
         subject: `${directoryName} — ${count} lead${count === 1 ? "" : "s"} this week`,
         html,
