@@ -305,7 +305,7 @@ export async function upgradeFeatureIdToChij(opts: {
     const { count, error } = await supabase
       .from("empire_places_refresh_log")
       .select("id", { count: "exact", head: true })
-      .eq("authorization_ref", AUTHORIZATION_REF)
+      .in("authorization_ref", [AUTHORIZATION_REF, "gbp-connect-initial-rating-v1 (COO P2 addendum 2026-09-26; owner-triggered, already-seeded row)"]) // P2c: shared tripwire
       .eq("places_called", true)
       .gte("called_at", since.toISOString());
     if (error) return done(keep("refused_rate_limited", `cap_unreadable:${error.code ?? "err"}`));
@@ -348,7 +348,8 @@ export async function upgradeFeatureIdToChij(opts: {
     }
   } catch (e) {
     const r: ChijUpgrade = {
-      placeId, outcome: "refused_collision",
+      // P2c: a FAILED collision check is a temporary Google/DB problem, not a real collision.
+      placeId, outcome: "error_places",
       detail: `collision_check_failed:${e instanceof Error ? e.name : "unknown"}`,
       placesCalled: called,
     };

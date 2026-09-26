@@ -144,7 +144,7 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
       // owner-funnel-recovery P2: ONE honest outcome per paste (lib/gbp-connect-result.ts).
       const result = gbpConnectResult(response.status, data);
       setGbpResult(result.message);
-      if (response.ok && data && data.ok !== false && typeof data.placeId === "string") {
+      if (response.ok && data && data.ok !== false && typeof data.placeId === "string" && data.placeId) {
         setConnectedPlaceId(data.placeId);
         setConnectedGbpUrl(data.gbpUrl || gbpUrl);
         setEditingGbp(false);

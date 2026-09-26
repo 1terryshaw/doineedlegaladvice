@@ -23,12 +23,14 @@ const TEMPORARY_STATUS = new Set([429, 502, 503, 504]);
 
 export function gbpConnectResult(
   status: number,
-  data: { ok?: boolean; placeId?: unknown; chij?: unknown; error?: unknown; message?: unknown } | null,
+  data: { ok?: boolean; placeId?: unknown; chij?: unknown; initialRating?: unknown; error?: unknown; message?: unknown } | null,
 ): { outcome: GbpConnectOutcome; message: string } {
   const d = data ?? {};
   // Success needs a parsed body with a real place id — never label a half-response "connected".
   if (status >= 200 && status < 300 && data && d.ok !== false && typeof d.placeId === "string" && d.placeId) {
     if (d.placeId.startsWith("ChIJ")) {
+      // P2c: the connect route fetched the initial rating (initialRating) — ruled phrase G2.
+      if (d.initialRating === "initial_rating_written") return { outcome: "connected_review_ready", message: "Connected to Google — your rating is showing" };
       return { outcome: "connected_review_ready", message: "Connected to Google — your rating will show once Google shares it" };
     }
     if (d.chij === "refused_collision") {

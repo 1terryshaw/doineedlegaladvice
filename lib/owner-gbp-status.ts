@@ -2,6 +2,7 @@
 // READ-ONLY. /api/owner/gbp-connect stays the sole GBP writer; this only tells the owner the
 // truth about what is stored and where to fix it. No Places call, no Google call.
 import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
+import { REPASTE_PROMPT } from "@/lib/gbp-repaste-hold";
 
 export type OwnerGbpStatus =
   | { state: "not_connected"; linkOnFile: boolean }
@@ -24,6 +25,20 @@ const REASONS: Record<string, string> = {
 const DEFAULT_REASON =
   "This kind of Google link can't be matched to Google's review data. On Google Maps, open your business, tap Share, then Copy link, and paste it on your dashboard.";
 
+// owner-funnel-recovery-p1p4-v1 P2c: "paste it again" instructions go ONLY to the REPASTE_PROMPT allow-list (the
+// still-impaired owners). Everyone else — protected cohorts included — sees a neutral, true line.
+const NEUTRAL_REASONS: Record<string, string> = {
+  refused_no_anchor: "Your Google profile is linked, but its link didn't include your map pin, so reviews can't be shown yet.",
+  refused_rate_limited: "Your Google profile is linked. We couldn't check it with Google today, so reviews aren't on yet.",
+  refused_unconfigured: "Your Google profile is linked. We couldn't check it with Google right now, so reviews aren't on yet.",
+  error_places: "Your Google profile is linked. We couldn't check it with Google right now, so reviews aren't on yet.",
+};
+const NEUTRAL_DEFAULT = "Your Google profile is linked, but we couldn't match it to Google's review data yet, so reviews can't be shown.";
+function reasonFor(listingId: string | number, outcome: string | undefined): string {
+  if (REPASTE_PROMPT.has(String(listingId))) return (outcome && REASONS[outcome]) || DEFAULT_REASON;
+  return (outcome && (NEUTRAL_REASONS[outcome] || REASONS[outcome])) || NEUTRAL_DEFAULT;
+}
+
 export async function getOwnerGbpStatus(listing: {
   id: string | number;
   google_place_id?: string | null;
@@ -45,8 +60,8 @@ export async function getOwnerGbpStatus(listing: {
       .order("called_at", { ascending: false })
       .limit(1);
     const outcome = (data as Array<{ outcome: string }> | null)?.[0]?.outcome;
-    return { state: "reviews_unavailable", reason: (outcome && REASONS[outcome]) || DEFAULT_REASON, ratingShowing };
+    return { state: "reviews_unavailable", reason: reasonFor(listing.id, outcome), ratingShowing };
   } catch {
-    return { state: "reviews_unavailable", reason: DEFAULT_REASON, ratingShowing };
+    return { state: "reviews_unavailable", reason: reasonFor(listing.id, undefined), ratingShowing };
   }
 }
