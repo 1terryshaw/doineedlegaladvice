@@ -10,7 +10,7 @@ import { can, getTierDisplayName, getNextTier, TierSlug } from "@/lib/tier-capab
 import { TIERS } from "@/lib/pricing-canonical";
 import UpgradeReturnRefresher from "./UpgradeReturnRefresher";
 import { gbpConnectResult } from "@/lib/gbp-connect-result";
-import { REPASTE_HOLD } from "@/lib/gbp-repaste-hold";
+import { REPASTE_PROMPT } from "@/lib/gbp-repaste-hold";
 
 // Type-erase config for fields that only some verticals define
 const vc = verticalConfig as unknown as {
@@ -139,7 +139,7 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
       // owner-funnel-recovery P2: ONE honest outcome per paste (lib/gbp-connect-result.ts).
       const result = gbpConnectResult(response.status, data);
       setGbpResult(result.message);
-      if (response.ok && data?.ok !== false) {
+      if (response.ok && data && data.ok !== false && typeof data.placeId === "string") {
         setConnectedPlaceId(data.placeId);
         setConnectedGbpUrl(data.gbpUrl || gbpUrl);
         setEditingGbp(false);
@@ -351,10 +351,10 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
             <form onSubmit={handleConnectGbp} className="space-y-3">
               <label htmlFor="gbp-url" className="block text-sm font-medium text-gray-700">Google Business Profile link</label>
               <div className="flex flex-col gap-2 sm:flex-row"><input id="gbp-url" type="url" required value={gbpUrl} onChange={(event) => setGbpUrl(event.target.value)} placeholder="https://maps.app.goo.gl/..." className="min-w-0 flex-1 rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" /><button type="submit" disabled={connectingGbp} className="rounded px-4 py-2 text-sm font-medium text-white disabled:opacity-50" style={{ backgroundColor: verticalConfig.primaryColor }}>{connectingGbp ? "Connecting…" : "Connect Google"}</button></div>
-              {connectedGbpUrl && (REPASTE_HOLD.has(String(listing.id)) ? (
-                <p className="text-sm text-gray-600">A Google Business Profile link is on file.</p>
-              ) : (
+              {connectedGbpUrl && (REPASTE_PROMPT.has(String(listing.id)) ? (
                 <p className="text-sm font-medium text-amber-700">Your Google link didn&rsquo;t connect. Please paste it again above and click Connect Google.</p>
+              ) : (
+                <p className="text-sm text-gray-600">A Google Business Profile link is on file.</p>
               ))}
             </form>
           </>

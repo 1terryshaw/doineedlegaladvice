@@ -27,7 +27,7 @@ export default function GbpStatusCard({
       ? status.reason
       : status.state === "not_connected"
         ? status.linkOnFile
-          ? "A Google link is on file but it didn't connect. Please paste it again on the dashboard and click Connect Google."
+          ? "A Google link is on file but isn't connected yet. You can connect it from your dashboard."
           : "Connect your Google Business Profile so customers can find your Google rating."
         : "Your Google rating can show on your listing.";
   const action =
