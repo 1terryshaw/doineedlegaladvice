@@ -9,6 +9,8 @@ import { Listing } from "@/lib/supabase";
 import { can, getTierDisplayName, getNextTier, TierSlug } from "@/lib/tier-capabilities";
 import { TIERS } from "@/lib/pricing-canonical";
 import UpgradeReturnRefresher from "./UpgradeReturnRefresher";
+import { gbpConnectResult } from "@/lib/gbp-connect-result";
+import { REPASTE_HOLD } from "@/lib/gbp-repaste-hold";
 
 // Type-erase config for fields that only some verticals define
 const vc = verticalConfig as unknown as {
@@ -133,25 +135,19 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slug: listing.slug, gbpUrl }),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "We could not connect Google.");
-      setConnectedPlaceId(data.placeId);
-      setConnectedGbpUrl(data.gbpUrl || gbpUrl);
-      setEditingGbp(false);
-      setGbpUrl("");
-      // claimant-edit-ux-stamp-v1: the success message tells the truth about reviews (audit §G.4).
-      setGbpResult(
-        typeof data.placeId === "string" && data.placeId.startsWith("ChIJ")
-          ? "Connected. Your Google rating can show on your listing."
-          : data.chij === "refused_no_anchor"
-            ? "Connected, but Google didn't let us verify it for reviews. On Google Maps, open your business, tap Share, Copy link, and paste it here again."
-            : data.chij === "refused_unresolved"
-              ? "We linked your Google profile, but couldn't automatically match it to Google's review data yet, so reviews can't be shown. Your profile stays linked."
-              : "Connected, but this link can't be verified for reviews yet. On Google Maps, open your business, tap Share, Copy link, and paste it here again.",
-      );
-      router.refresh();
-    } catch (error) {
-      setGbpResult(error instanceof Error ? error.message : "We could not connect Google.");
+      const data = await response.json().catch(() => null);
+      // owner-funnel-recovery P2: ONE honest outcome per paste (lib/gbp-connect-result.ts).
+      const result = gbpConnectResult(response.status, data);
+      setGbpResult(result.message);
+      if (response.ok && data?.ok !== false) {
+        setConnectedPlaceId(data.placeId);
+        setConnectedGbpUrl(data.gbpUrl || gbpUrl);
+        setEditingGbp(false);
+        setGbpUrl("");
+        router.refresh();
+      }
+    } catch {
+      setGbpResult("We could not connect Google. Nothing was changed — please try again.");
     } finally {
       setConnectingGbp(false);
     }
@@ -355,9 +351,11 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
             <form onSubmit={handleConnectGbp} className="space-y-3">
               <label htmlFor="gbp-url" className="block text-sm font-medium text-gray-700">Google Business Profile link</label>
               <div className="flex flex-col gap-2 sm:flex-row"><input id="gbp-url" type="url" required value={gbpUrl} onChange={(event) => setGbpUrl(event.target.value)} placeholder="https://maps.app.goo.gl/..." className="min-w-0 flex-1 rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" /><button type="submit" disabled={connectingGbp} className="rounded px-4 py-2 text-sm font-medium text-white disabled:opacity-50" style={{ backgroundColor: verticalConfig.primaryColor }}>{connectingGbp ? "Connecting…" : "Connect Google"}</button></div>
-              {connectedGbpUrl && (
-                <p className="text-sm text-blue-700">A Google Business Profile link is on file — click Connect to verify it</p>
-              )}
+              {connectedGbpUrl && (REPASTE_HOLD.has(String(listing.id)) ? (
+                <p className="text-sm text-gray-600">A Google Business Profile link is on file.</p>
+              ) : (
+                <p className="text-sm font-medium text-amber-700">Your Google link didn&rsquo;t connect. Please paste it again above and click Connect Google.</p>
+              ))}
             </form>
           </>
         ) : (
@@ -365,7 +363,7 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
             {/* gbp-resolve-name-mismatch-v1: agree with the Edit Listing status — only a ChIJ is review-capable; a feature-id is linked but review-inert. */}
             {connectedPlaceId.startsWith("ChIJ") ? (
               <>
-                <h3 id="google-gbp-heading" className="font-semibold mb-2 text-green-700">✓ Connected — reviews on</h3>
+                <h3 id="google-gbp-heading" className="font-semibold mb-2 text-green-700">✓ Google connected</h3>
                 {connectedGbpUrl && (
                   <p className="text-sm text-gray-600 mb-2 break-all">Linked profile:{" "}<a href={connectedGbpUrl} target="_blank" rel="noopener noreferrer" className="underline">{connectedGbpUrl}</a></p>
                 )}
@@ -373,7 +371,7 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
               </>
             ) : (
               <>
-                <h3 id="google-gbp-heading" className="font-semibold mb-2 text-amber-700">Connected — reviews not available yet</h3>
+                <h3 id="google-gbp-heading" className="font-semibold mb-2 text-amber-700">✓ Google connected — reviews not available yet</h3>
                 {connectedGbpUrl && (
                   <p className="text-sm text-gray-600 mb-2 break-all">Linked profile:{" "}<a href={connectedGbpUrl} target="_blank" rel="noopener noreferrer" className="underline">{connectedGbpUrl}</a></p>
                 )}

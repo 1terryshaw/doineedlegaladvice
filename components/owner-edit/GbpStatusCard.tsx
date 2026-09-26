@@ -12,9 +12,9 @@ export default function GbpStatusCard({
 }) {
   const label =
     status.state === "reviews_on"
-      ? "Connected — reviews on"
+      ? "✓ Google connected"
       : status.state === "reviews_unavailable"
-        ? "Connected — reviews not available yet"
+        ? "✓ Google connected — reviews not available yet"
         : "Not connected";
   const tone =
     status.state === "reviews_on"
@@ -27,9 +27,9 @@ export default function GbpStatusCard({
       ? status.reason
       : status.state === "not_connected"
         ? status.linkOnFile
-          ? "A Google link is on file but not connected yet. Open the dashboard and click Connect to verify it."
+          ? "A Google link is on file but it didn't connect. Please paste it again on the dashboard and click Connect Google."
           : "Connect your Google Business Profile so customers can find your Google rating."
-        : "Your Google profile is linked and verified for reviews.";
+        : "Your Google rating can show on your listing.";
   const action =
     status.state === "reviews_on" ? "Manage on dashboard →" : status.state === "not_connected" ? "Connect on dashboard →" : "Fix on dashboard →";
 
