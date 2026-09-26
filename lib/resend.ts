@@ -210,13 +210,13 @@ export async function sendClaimEmail(
     const { data, error } = await resend.emails.send({
       from: AUTH_FROM,
       to: email,
-      subject: `Verify your claim on ${verticalConfig.name}`,
-      text: `Claim your listing on ${verticalConfig.name}\n\nVerify your ownership claim by opening this link:\n${verifyLink}\n\nIf you didn't request this, you can safely ignore this email.`,
+      subject: `Confirm your listing claim on ${verticalConfig.name}`,
+      text: `Claim your listing on ${verticalConfig.name}\n\nVerify your ownership claim by opening this link:\n${verifyLink}\n\nYou received this because this email address was entered on ${String(baseUrl).replace(/^https?:\/\//, "").replace(/\/.*$/, "")}. If that wasn't you, ignore this email — nothing changes unless the link is used.\n\n${verticalConfig.name} · owner mail from Do I Need A Network · https://doineedanetwork.com`,
       html: `
-      <h2>Claim Your Listing on ${verticalConfig.name}</h2>
+      <h2>Confirm your listing claim on ${verticalConfig.name}</h2>
       <p>Click the button below to verify your ownership claim:</p>
-      <p><a href="${verifyLink}" style="display:inline-block;padding:12px 24px;background:${verticalConfig.primaryColor};color:white;text-decoration:none;border-radius:6px;">Verify Claim</a></p>
-      <p style="color:#666;font-size:12px;">If you didn't request this, you can safely ignore this email.</p>
+      <p><a href="${verifyLink}" style="display:inline-block;padding:12px 24px;background:${verticalConfig.primaryColor};color:white;text-decoration:none;border-radius:6px;">Verify Claim</a></p><p>Or copy this link: ${verifyLink}</p>
+      <p style="color:#666;font-size:12px;">You received this because this email address was entered on ${String(baseUrl).replace(/^https?:\/\//, "").replace(/\/.*$/, "")}. If that wasn't you, ignore this email — nothing changes unless the link is used.</p><p style="color:#666;font-size:12px;">${verticalConfig.name} · owner mail from Do I Need A Network · <a href="https://doineedanetwork.com" style="color:#666;">doineedanetwork.com</a></p>
     `,
     });
     if (error) return { ok: false, error: error.message };

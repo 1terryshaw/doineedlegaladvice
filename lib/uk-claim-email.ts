@@ -25,14 +25,14 @@ export async function sendUkClaimEmail(
     const { data, error } = await resend.emails.send({
       from: AUTH_FROM,
       to: email,
-      subject: `Verify your claim on ${verticalConfig.name}`,
+      subject: `Confirm your listing claim on ${verticalConfig.name}`,
       html: `
       <h2>Claim ${firmName} on ${verticalConfig.name}</h2>
       <p>Click the link below to verify you control this business and add a free
          <strong>Claimed</strong> badge to your listing:</p>
       <p><a href="${verifyLink}" style="display:inline-block;padding:12px 24px;background:${verticalConfig.primaryColor};color:white;text-decoration:none;border-radius:6px;">Verify Claim</a></p>
       <p>Or copy this link: ${verifyLink}</p>
-      <p style="color:#666;font-size:12px;">If you didn't request this, you can safely ignore this email.</p>
+      <p style="color:#666;font-size:12px;">You received this because this email address was entered on ${String(baseUrl).replace(/^https?:\/\//, "").replace(/\/.*$/, "")}. If that wasn't you, ignore this email — nothing changes unless the link is used.</p><p style="color:#666;font-size:12px;">${verticalConfig.name} · owner mail from Do I Need A Network · <a href="https://doineedanetwork.com" style="color:#666;">doineedanetwork.com</a></p>
     `,
     });
     if (error) return { ok: false, error: error.message };
