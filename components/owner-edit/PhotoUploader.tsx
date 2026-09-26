@@ -15,6 +15,9 @@ export default function PhotoUploader({ photos, onUploaded, onDeleted, max }: Pr
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [drag, setDrag] = useState(false);
+  // owner-journey-friction-fix-v1: photos save the moment they upload, so say so; delete asks first.
+  const [notice, setNotice] = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
 
   const slotsLeft = max - photos.length;
 
@@ -29,6 +32,7 @@ export default function PhotoUploader({ photos, onUploaded, onDeleted, max }: Pr
     }
     setBusy(true);
     setError(null);
+    setNotice(null);
     try {
       const fd = new FormData();
       fd.append("file", file);
@@ -39,6 +43,7 @@ export default function PhotoUploader({ photos, onUploaded, onDeleted, max }: Pr
         setError(data.error || "Upload failed.");
         return;
       }
+      setNotice("Photo added — saved.");
       onUploaded({
         id: data.id,
         public_url: data.public_url,
@@ -62,6 +67,8 @@ export default function PhotoUploader({ photos, onUploaded, onDeleted, max }: Pr
   async function deletePhoto(id: string) {
     setBusy(true);
     setError(null);
+    setNotice(null);
+    setConfirmId(null);
     try {
       const res = await fetch(`/api/photos/${id}`, { method: "DELETE" });
       if (!res.ok) {
@@ -100,13 +107,39 @@ export default function PhotoUploader({ photos, onUploaded, onDeleted, max }: Pr
             )}
             <button
               type="button"
-              onClick={() => deletePhoto(p.id)}
+              onClick={() => setConfirmId(p.id)}
               disabled={busy}
               className="absolute top-2 right-2 bg-white/90 hover:bg-white text-red-600 text-xs font-medium px-2 py-1 rounded shadow disabled:opacity-50"
               aria-label="Delete photo"
             >
               Delete
             </button>
+            {confirmId === p.id && (
+              <div
+                role="alertdialog"
+                aria-label="Delete this photo?"
+                data-photo-delete-confirm
+                className="absolute inset-0 z-10 bg-white/95 flex flex-col items-center justify-center gap-1.5 p-1 text-center"
+              >
+                <p className="text-[11px] leading-tight font-medium text-gray-800">Delete this photo?</p>
+                <div className="flex flex-wrap justify-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => deletePhoto(p.id)}
+                    className="px-2 py-1 rounded bg-red-600 text-white text-xs font-semibold"
+                  >
+                    Delete
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmId(null)}
+                    className="px-2 py-1 rounded border bg-white text-xs font-medium text-gray-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ))}
 
@@ -135,6 +168,10 @@ export default function PhotoUploader({ photos, onUploaded, onDeleted, max }: Pr
           </div>
         )}
       </div>
+      <p className="text-xs text-gray-500 mt-2" data-photos-save-note>Photos save as soon as you add them.</p>
+      {notice && !error && (
+        <p role="status" data-photo-notice className="text-sm text-green-700 mt-1">{notice}</p>
+      )}
       {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
     </div>
   );

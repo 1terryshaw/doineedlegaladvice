@@ -7,6 +7,7 @@ import HealthScore from "@/components/HealthScore";
 import { listPhotosForListing } from "@/lib/listing-photos";
 import { computeListingHealth } from "@/lib/listing-health";
 import NextStepCard from "@/components/NextStepCard";
+import SavedNotice from "@/components/SavedNotice";
 import { deriveNextStep } from "@/lib/owner-next-step";
 import { addressEditClass, addressEditAllowed } from "@/lib/owner-location-edit";
 import ReviewKit from "@/components/ReviewKit";
@@ -14,6 +15,7 @@ import { buildReviewKit, reviewKitPlaceId } from "@/lib/review-kit";
 
 interface Props {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export const dynamic = "force-dynamic";
@@ -22,8 +24,9 @@ export const metadata: Metadata = {
   title: "Owner Dashboard",
 };
 
-export default async function OwnerDashboardPage({ params }: Props) {
+export default async function OwnerDashboardPage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const saved = (await searchParams).saved === "1"; // owner-journey-friction-fix-v1
   const result = await verifyOwnerAccess(slug);
 
   if (!result) {
@@ -90,6 +93,7 @@ export default async function OwnerDashboardPage({ params }: Props) {
         healthSlot={healthSlot}
         nextStepSlot={
           <>
+            {saved && <SavedNotice />}
             <NextStepCard step={nextStep} />
             {reviewKit && <ReviewKit kit={reviewKit} slug={listing.slug} />}
           </>

@@ -1,3 +1,4 @@
+// owner-journey-friction-fix-v1: rulings 3-4.
 import GuideShell, { ConnectLink, H2, guideMetadata } from "@/components/guides/GuideShell";
 import { contactHref } from "@/lib/contact-link";
 import verticalConfig from "@/lib/vertical.config";
@@ -29,12 +30,12 @@ export default function GoogleBusinessProfileGuide() {
         <li>Open Google Maps and search your business name.</li>
         <li>Click your business, then tap Share, then Copy link.</li>
         <li>
-          On your dashboard, click Connect Google and paste the link: <ConnectLink />
+          On <ConnectLink />, click Connect Google and paste the link.
         </li>
       </ol>
       <p className="mt-3">
-        Once we can read your Google reviews, your listing shows the Reviews verified badge and your Google rating, and
-        you unlock your personal review link and QR code.
+        Once it&apos;s connected, you unlock your personal review link and QR code. When Google shares your rating with
+        us, your listing also shows the Reviews verified badge and your Google rating.
       </p>
 
       <H2>Step 2: Make it complete and accurate</H2>

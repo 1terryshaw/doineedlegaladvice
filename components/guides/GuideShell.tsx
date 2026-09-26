@@ -43,10 +43,11 @@ export function H3({ children }: { children: ReactNode }) {
   return <h3 className="font-semibold text-gray-900 mt-6 mb-2">{children}</h3>;
 }
 
+// owner-journey-friction-fix-v1: shown as the linked words "your dashboard", never the raw URL.
 export function ConnectLink() {
   return (
-    <a href={CONNECT_GOOGLE_LINK} className="font-medium underline break-all" style={{ color: primary }}>
-      {CONNECT_GOOGLE_LINK}
+    <a href={CONNECT_GOOGLE_LINK} data-guide-dashboard-link className="font-medium underline" style={{ color: primary }}>
+      your dashboard
     </a>
   );
 }

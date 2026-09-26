@@ -1,3 +1,4 @@
+// owner-journey-friction-fix-v1 B: rulings 1, 6, 8, 15, 17.
 // pricing-version: 2026-05-12-usd-v2
 "use client";
 
@@ -11,6 +12,7 @@ import { TIERS } from "@/lib/pricing-canonical";
 import UpgradeReturnRefresher from "./UpgradeReturnRefresher";
 import { gbpConnectResult } from "@/lib/gbp-connect-result";
 import { REPASTE_PROMPT } from "@/lib/gbp-repaste-hold";
+import { formatPhoneDisplay } from "@/lib/phone-display";
 
 // Type-erase config for fields that only some verticals define
 const vc = verticalConfig as unknown as {
@@ -72,6 +74,9 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
   const [connectedPlaceId, setConnectedPlaceId] = useState<string | null>((listing as { google_place_id?: string | null }).google_place_id || null);
   const [connectedGbpUrl, setConnectedGbpUrl] = useState<string>((listing as { gbp_url?: string | null }).gbp_url || "");
   const [editingGbp, setEditingGbp] = useState(false);
+  // owner-journey-friction-fix-v1 B (ruling 1): exactly three Google states, the same words on every owner screen.
+  const ratingShowing = (listing as { google_rating?: number | null }).google_rating != null;
+  const googleStatus = ratingShowing ? "Connected to Google — your rating is showing" : "Connected to Google — your rating will show once Google shares it";
   const router = useRouter();
 
   async function handleLogout() {
@@ -347,7 +352,8 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
         {!connectedPlaceId ? (
           <>
             <h3 id="google-gbp-heading" className="font-semibold mb-2">Connect your Google Business Profile</h3>
-            <p className="text-sm text-gray-600 mb-4">Paste the HTTPS Google Maps or Business Profile share link for this listing. We only save a valid Google Place ID; reviews will not refresh automatically.</p>
+            <p data-google-status className="text-sm font-medium text-gray-800 mb-1">Not connected to Google yet</p>
+            <p className="text-sm text-gray-600 mb-4">On Google Maps, open your business, tap Share, then Copy link, and paste it here. We&apos;ll check the link matches your business on Google.</p>
             <form onSubmit={handleConnectGbp} className="space-y-3">
               <label htmlFor="gbp-url" className="block text-sm font-medium text-gray-700">Google Business Profile link</label>
               <div className="flex flex-col gap-2 sm:flex-row"><input id="gbp-url" type="url" required value={gbpUrl} onChange={(event) => setGbpUrl(event.target.value)} placeholder="https://maps.app.goo.gl/..." className="min-w-0 flex-1 rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" /><button type="submit" disabled={connectingGbp} className="rounded px-4 py-2 text-sm font-medium text-white disabled:opacity-50" style={{ backgroundColor: verticalConfig.primaryColor }}>{connectingGbp ? "Connecting…" : "Connect Google"}</button></div>
@@ -363,15 +369,15 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
             {/* gbp-resolve-name-mismatch-v1: agree with the Edit Listing status — only a ChIJ is review-capable; a feature-id is linked but review-inert. */}
             {connectedPlaceId.startsWith("ChIJ") ? (
               <>
-                <h3 id="google-gbp-heading" className="font-semibold mb-2 text-green-700">✓ Google connected</h3>
+                <h3 id="google-gbp-heading" data-google-status className="font-semibold mb-2 text-green-700">{googleStatus}</h3>
                 {connectedGbpUrl && (
                   <p className="text-sm text-gray-600 mb-2 break-all">Linked profile:{" "}<a href={connectedGbpUrl} target="_blank" rel="noopener noreferrer" className="underline">{connectedGbpUrl}</a></p>
                 )}
-                <p className="text-sm text-gray-600 mb-4">Once your Google rating is available it shows on your public listing, which earns the &ldquo;Reviews verified&rdquo; badge.</p>
+                {!ratingShowing && <p className="text-sm text-gray-600 mb-4">When Google shares your rating with us, your listing also shows the Reviews verified badge and your Google rating.</p>}
               </>
             ) : (
               <>
-                <h3 id="google-gbp-heading" className="font-semibold mb-2 text-amber-700">✓ Google connected — reviews not available yet</h3>
+                <h3 id="google-gbp-heading" data-google-status className="font-semibold mb-2 text-amber-700">{googleStatus}</h3>
                 {connectedGbpUrl && (
                   <p className="text-sm text-gray-600 mb-2 break-all">Linked profile:{" "}<a href={connectedGbpUrl} target="_blank" rel="noopener noreferrer" className="underline">{connectedGbpUrl}</a></p>
                 )}
@@ -380,11 +386,11 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
             )}
             {editingGbp ? (
               <form onSubmit={handleConnectGbp} className="space-y-3">
-                <label htmlFor="gbp-url" className="block text-sm font-medium text-gray-700">Replace Google Business Profile link</label>
-                <div className="flex flex-col gap-2 sm:flex-row"><input id="gbp-url" type="url" required value={gbpUrl} onChange={(event) => setGbpUrl(event.target.value)} placeholder="https://maps.app.goo.gl/..." className="min-w-0 flex-1 rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" /><button type="submit" disabled={connectingGbp} className="rounded px-4 py-2 text-sm font-medium text-white disabled:opacity-50" style={{ backgroundColor: verticalConfig.primaryColor }}>{connectingGbp ? "Saving…" : "Replace"}</button><button type="button" onClick={() => { setEditingGbp(false); setGbpUrl(""); }} className="rounded px-4 py-2 text-sm font-medium text-gray-600 underline">Cancel</button></div>
+                <label htmlFor="gbp-url" className="block text-sm font-medium text-gray-700">New Google Business Profile link</label>
+                <div className="flex flex-col gap-2 sm:flex-row"><input id="gbp-url" type="url" required value={gbpUrl} onChange={(event) => setGbpUrl(event.target.value)} placeholder="https://maps.app.goo.gl/..." className="min-w-0 flex-1 rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" /><button type="submit" disabled={connectingGbp} className="rounded px-4 py-2 text-sm font-medium text-white disabled:opacity-50" style={{ backgroundColor: verticalConfig.primaryColor }}>{connectingGbp ? "Connecting…" : "Connect Google"}</button><button type="button" onClick={() => { setEditingGbp(false); setGbpUrl(""); }} className="rounded px-4 py-2 text-sm font-medium text-gray-600 underline">Cancel</button></div>
               </form>
             ) : (
-              <button type="button" onClick={() => { setEditingGbp(true); setGbpUrl(connectedGbpUrl); }} className="text-sm font-medium underline" style={{ color: verticalConfig.primaryColor }}>Edit / Replace link</button>
+              <button type="button" onClick={() => { setEditingGbp(true); setGbpUrl(connectedGbpUrl); }} className="text-sm font-medium underline" style={{ color: verticalConfig.primaryColor }}>Change Google link</button>
             )}
           </>
         )}
@@ -416,7 +422,7 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
           <dl className="space-y-2 text-sm">
             <div><dt className="text-gray-500">Name</dt><dd>{listing.name}</dd></div>
             <div><dt className="text-gray-500">City</dt><dd>{listing.city || "Not set"}</dd></div>
-            <div><dt className="text-gray-500">Phone</dt><dd>{listing.phone || "Not set"}</dd></div>
+            <div><dt className="text-gray-500">Phone</dt><dd data-owner-phone>{formatPhoneDisplay(listing.phone, (listing as { country?: string | null }).country) || "Not set"}</dd></div>
             <div><dt className="text-gray-500">Email</dt><dd>{listing.email || "Not set"}</dd></div>
             <div><dt className="text-gray-500">Website</dt><dd>{listing.website || "Not set"}</dd></div>
           </dl>
@@ -461,7 +467,7 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
                 </button>
               </form>
             </div>
-          ) : (
+          ) : tier === "free" || tier === "seed" ? null : (
             <Link
               href={`/directory/${listing.slug}?upgrade=true`}
               className="inline-block mt-4 text-sm font-medium hover:underline"

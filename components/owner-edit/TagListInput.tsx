@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, KeyboardEvent } from "react";
+import { useId, useState, KeyboardEvent } from "react";
 
 interface Props {
   label: string;
@@ -12,6 +12,7 @@ interface Props {
 }
 
 export default function TagListInput({ label, value, onChange, max, placeholder, hint }: Props) {
+  const inputId = useId(); // owner-journey-friction-fix-v1: label tied to the text input
   const [draft, setDraft] = useState("");
 
   function commit(raw: string) {
@@ -44,7 +45,7 @@ export default function TagListInput({ label, value, onChange, max, placeholder,
 
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
       <div className="border rounded-lg px-2 py-1.5 flex flex-wrap items-center gap-1 focus-within:ring-2 focus-within:ring-blue-500">
         {value.map((t, i) => (
           <span key={`${t}-${i}`} className="inline-flex items-center gap-1 bg-blue-50 text-blue-800 text-sm rounded-full pl-3 pr-1 py-0.5">
@@ -60,6 +61,7 @@ export default function TagListInput({ label, value, onChange, max, placeholder,
           </span>
         ))}
         <input
+          id={inputId}
           type="text"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}

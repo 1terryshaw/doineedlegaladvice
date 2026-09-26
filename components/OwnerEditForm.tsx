@@ -147,6 +147,20 @@ export default function OwnerEditForm({
     el.scrollIntoView({ block: "center" });
     if (el.matches("input, textarea, select")) el.focus({ preventScroll: true });
     setHashTarget(null); // once — later "more details" toggles must not re-scroll
+    // owner-journey-friction-fix-v1: photos above the field load after this first scroll and push it
+    // off-screen on a phone, so re-anchor while the layout settles unless the owner scrolls first.
+    let userScrolled = false;
+    const stop = () => { userScrolled = true; };
+    window.addEventListener("wheel", stop, { once: true, passive: true });
+    window.addEventListener("touchmove", stop, { once: true, passive: true });
+    // No cleanup: setHashTarget(null) above re-runs this effect, which must not cancel the re-anchors.
+    for (const ms of [200, 600, 1200, 2000]) {
+      window.setTimeout(() => {
+        if (userScrolled || !el.isConnected) return;
+        const r = el.getBoundingClientRect();
+        if (r.top < 0 || r.top > window.innerHeight * 0.6) el.scrollIntoView({ block: "start" });
+      }, ms);
+    }
   }, [hashTarget, moreOpen]);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -193,7 +207,7 @@ export default function OwnerEditForm({
         setStatus("saved");
         setTimeout(() => {
           router.refresh();
-          router.push(`/owner/${listing.slug}`);
+          router.push(`/owner/${listing.slug}?saved=1`); // owner-journey-friction-fix-v1: dashboard confirms the save
         }, 1000);
       } else {
         let msg = "Failed to save. Please try again.";
@@ -237,48 +251,48 @@ export default function OwnerEditForm({
       {/* === Existing core fields === */}
       <section className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
-          <input type="text" required value={form.name} onChange={(e) => update("name", e.target.value)}
+          <label htmlFor="owner-f-business-name" className="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
+          <input id="owner-f-business-name" type="text" required value={form.name} onChange={(e) => update("name", e.target.value)}
             className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Short Description</label>
-          <input type="text" value={form.short_description} onChange={(e) => update("short_description", e.target.value)}
+          <label htmlFor="owner-f-short-description" className="block text-sm font-medium text-gray-700 mb-1">Short Description</label>
+          <input id="owner-f-short-description" type="text" value={form.short_description} onChange={(e) => update("short_description", e.target.value)}
             maxLength={160} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
           <small className="block text-xs text-gray-500 mt-1">{form.short_description.length} / 160</small>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Full Description</label>
+          <label htmlFor="owner-description" className="block text-sm font-medium text-gray-700 mb-1">Full Description</label>
           <textarea id="owner-description" rows={5} value={form.description} onChange={(e) => update("description", e.target.value)}
             className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+            <label htmlFor="owner-phone" className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
             <input id="owner-phone" type="tel" value={form.phone} onChange={(e) => update("phone", e.target.value)}
               className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input type="email" value={form.email} onChange={(e) => update("email", e.target.value)}
+            <label htmlFor="owner-f-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input id="owner-f-email" type="email" value={form.email} onChange={(e) => update("email", e.target.value)}
               className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
+          <label htmlFor="owner-website" className="block text-sm font-medium text-gray-700 mb-1">Website</label>
           <input id="owner-website" type="text" value={form.website} onChange={(e) => update("website", e.target.value)}
             placeholder="www.example.com"
             className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-            <input type="text" value={form.city} onChange={(e) => update("city", e.target.value)}
+            <label htmlFor="owner-f-city" className="block text-sm font-medium text-gray-700 mb-1">City</label>
+            <input id="owner-f-city" type="text" value={form.city} onChange={(e) => update("city", e.target.value)}
               className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Province/State</label>
-            <select value={form.province_state} onChange={(e) => update("province_state", e.target.value)}
+            <label htmlFor="owner-f-province-state" className="block text-sm font-medium text-gray-700 mb-1">Province/State</label>
+            <select id="owner-f-province-state" value={form.province_state} onChange={(e) => update("province_state", e.target.value)}
               className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
               <option value="">Select region...</option>
               <optgroup label="🇨🇦 Canada">
@@ -382,8 +396,8 @@ export default function OwnerEditForm({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Year established</label>
-              <input
+              <label htmlFor="owner-f-year-established" className="block text-sm font-medium text-gray-700 mb-1">Year established</label>
+              <input id="owner-f-year-established"
                 type="number"
                 min={1800}
                 max={currentYear}
@@ -400,8 +414,8 @@ export default function OwnerEditForm({
                 payment types say nothing about where a person lives, so unlike the address
                 there is no visibility toggle and no per-vertical default. */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Number of employees</label>
-              <input
+              <label htmlFor="owner-f-number-of-employees" className="block text-sm font-medium text-gray-700 mb-1">Number of employees</label>
+              <input id="owner-f-number-of-employees"
                 type="number"
                 min={1}
                 max={1000000}
@@ -417,8 +431,8 @@ export default function OwnerEditForm({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Payment methods accepted</label>
-              <input
+              <label htmlFor="owner-f-payment-methods-accepted" className="block text-sm font-medium text-gray-700 mb-1">Payment methods accepted</label>
+              <input id="owner-f-payment-methods-accepted"
                 type="text"
                 maxLength={200}
                 value={form.payment_methods}

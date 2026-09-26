@@ -58,6 +58,8 @@ export default function GetFoundStep({
   existingGbpUrl,
   reviewLink,
   pendingMatch: initialPending,
+  connected = false,
+  ratingShowing = false,
 }: {
   slug: string;
   businessName: string;
@@ -67,6 +69,10 @@ export default function GetFoundStep({
   reviewLink: string | null;
   /** Machine-resolved, UNCONFIRMED Google match awaiting owner approval (two-tier display). */
   pendingMatch?: PendingMatch | null;
+  /** owner-journey-friction-fix-v1: a Google link is on file (google_place_id). */
+  connected?: boolean;
+  /** …and Google has shared a rating (google_rating), so it shows on the listing. */
+  ratingShowing?: boolean;
 }) {
   const router = useRouter();
 
@@ -101,6 +107,8 @@ export default function GetFoundStep({
     }
   }
   const [url, setUrl] = useState(existingGbpUrl);
+  // owner-journey-friction-fix-v1 (ruling 7): a connected owner sees their status, not an empty paste box.
+  const [changing, setChanging] = useState(false);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [copied, setCopied] = useState(false);
@@ -212,14 +220,33 @@ export default function GetFoundStep({
         </div>
       )}
 
-      {/* Optional GBP link capture */}
+      {/* Google status + link capture. Connected owners see their status (ruling 1 wording) and
+          "Change Google link"; everyone else gets the paste box. */}
+      {connected && !changing && status !== "saved" && (
+        <div data-gf-connected className="bg-gray-50 border rounded-xl p-5 mb-8">
+          <p className="font-semibold text-green-700">
+            {ratingShowing
+              ? "Connected to Google — your rating is showing"
+              : "Connected to Google — your rating will show once Google shares it"}
+          </p>
+          <button
+            type="button"
+            onClick={() => setChanging(true)}
+            className="mt-3 text-sm font-medium underline"
+            style={{ color: verticalConfig.primaryColor }}
+          >
+            Change Google link
+          </button>
+        </div>
+      )}
+      {(!connected || changing || status === "saved") && (
       <form onSubmit={handleSave} className="bg-gray-50 border rounded-xl p-5 mb-8">
         <label htmlFor="gbp-url" className="block font-semibold mb-1">
           Paste your Google Business Profile link
         </label>
         <p className="text-sm text-gray-500 mb-3">
-          Optional. Open your business on Google Maps and copy the address bar. We use it to link
-          the two profiles together — nothing is posted to Google.
+          Optional. Open your business on Google Maps, tap Share, then Copy link, and paste it here. We&apos;ll
+          check the link matches your business on Google. Nothing is posted to Google.
         </p>
         <div className="flex flex-col sm:flex-row gap-2">
           <input
@@ -240,12 +267,15 @@ export default function GetFoundStep({
             className="px-5 py-2 rounded-lg text-white font-medium text-sm disabled:opacity-50"
             style={{ backgroundColor: verticalConfig.primaryColor }}
           >
-            {status === "saving" ? "Saving..." : "Save link"}
+            {status === "saving" ? "Connecting..." : "Connect Google"}
           </button>
         </div>
         {status === "error" && <p className="text-red-600 text-sm mt-2">{errorMsg}</p>}
-        {status === "saved" && <p className="text-green-700 text-sm mt-2">Saved. Thanks!</p>}
+        {status === "saved" && (
+          <p className="text-green-700 text-sm mt-2">Connected to Google — your rating will show once Google shares it</p>
+        )}
       </form>
+      )}
 
       {/* Static checklist — no API calls */}
       <h2 className="text-lg font-bold mb-4">Your 4-step Google checklist</h2>

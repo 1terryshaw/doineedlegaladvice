@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import verticalConfig from "@/lib/vertical.config";
+import { contactHref } from "@/lib/contact-link";
+
+const HELP_HREF = contactHref();
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
@@ -38,13 +42,19 @@ export default function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
-      <h2 className="text-2xl font-bold text-center">Owner Login</h2>
+      {/* owner-journey-friction-fix-v1: page H1, labelled input, claim + help links. */}
+      <h1 className="text-2xl font-bold text-center">Owner Login</h1>
       <p className="text-gray-600 text-center text-sm">
         Enter the email associated with your listing to receive a login link.
       </p>
       <div>
+        <label htmlFor="owner-login-email" className="block text-sm font-medium text-gray-700 mb-1">
+          Email address
+        </label>
         <input
+          id="owner-login-email"
           type="email"
+          autoComplete="email"
           required
           placeholder="your@email.com"
           value={email}
@@ -63,6 +73,20 @@ export default function LoginForm() {
       >
         {status === "sending" ? "Sending..." : "Send Login Link"}
       </button>
+      <p className="text-sm text-gray-600 text-center" data-login-claim>
+        Haven&apos;t claimed your listing?{" "}
+        <Link href="/claim" className="font-medium underline" style={{ color: verticalConfig.primaryColor }}>
+          Claim it
+        </Link>
+      </p>
+      {HELP_HREF && (
+        <p className="text-sm text-gray-600 text-center" data-login-help>
+          Need help?{" "}
+          <a href={HELP_HREF} className="font-medium underline" style={{ color: verticalConfig.primaryColor }}>
+            Contact us
+          </a>
+        </p>
+      )}
     </form>
   );
 }

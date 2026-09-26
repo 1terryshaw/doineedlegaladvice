@@ -1,3 +1,4 @@
+// owner-journey-friction-fix-v1: ruling 4.
 import GuideShell, { ConnectLink, H2, H3, guideMetadata } from "@/components/guides/GuideShell";
 
 export const dynamic = "force-static";
@@ -46,8 +47,8 @@ export default function ReviewsGuide() {
         code for your counter, invoices, business cards or truck.
       </p>
       <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm" data-review-kit>
-        Owners: your personal review link and QR code are on your dashboard. Not connected to Google yet? Connect it
-        there first: <ConnectLink />
+        Owners: your personal review link and QR code are on <ConnectLink />. Not connected to Google yet? Connect it
+        there first.
       </div>
       <p className="mt-4">Keep the ask short and human. For example:</p>
       <ul className="list-disc pl-6 space-y-2 mt-2">

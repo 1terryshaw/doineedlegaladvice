@@ -100,7 +100,8 @@ export function deriveNextStep(
   if (blank(listing.google_place_id)) {
     return {
       kind: "connect_google",
-      title: "Connect your Google Business Profile",
+      // owner-journey-friction-fix-v1: distinct from the dashboard section's own heading; the CTA scrolls to it.
+      title: "Your next step: connect Google",
       body: "Link your Google profile so customers can see your rating on your listing.",
       cta: { label: "Connect Google", href: `/owner/${listing.slug}#google-gbp-heading` },
       guide: { label: "How to connect, step by step", href: GUIDE_PATHS.gbp },
@@ -117,9 +118,9 @@ export function deriveNextStep(
       ...(opts.reviewKit
         ? {
             cta: { label: "Get your review link and QR code", href: `/owner/${listing.slug}#review-kit` },
-            guide: { label: "Read the reviews guide", href: GUIDE_PATHS.reviews },
+            guide: { label: "How to get more reviews", href: GUIDE_PATHS.reviews },
           }
-        : { cta: { label: "Read the reviews guide", href: GUIDE_PATHS.reviews } }),
+        : { cta: { label: "How to get more reviews", href: GUIDE_PATHS.reviews } }),
     };
   }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import { useId, ReactNode } from "react";
 import { isValidGbpUrl, isValidSocial } from "@/lib/listing-extras";
 
 type Kind = "gbp" | "instagram" | "facebook" | "linkedin" | "generic";
@@ -31,15 +31,17 @@ function isValid(value: string, kind: Kind): boolean {
 }
 
 export default function UrlInput({ label, value, onChange, kind, placeholder, hint, helpSlot }: Props) {
+  const inputId = useId(); // owner-journey-friction-fix-v1: label tied to the input
   const showWarning = !isValid(value, kind);
 
   return (
     <div>
       <div className="flex items-center mb-1">
-        <label className="block text-sm font-medium text-gray-700">{label}</label>
+        <label htmlFor={inputId} className="block text-sm font-medium text-gray-700">{label}</label>
         {helpSlot}
       </div>
       <input
+        id={inputId}
         type="url"
         value={value}
         onChange={(e) => onChange(e.target.value)}

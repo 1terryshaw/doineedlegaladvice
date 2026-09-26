@@ -1,8 +1,9 @@
 // owner-funnel-recovery-p1p4-v1 P2 (2026-09-26) — the ONE mapping from a /api/owner/gbp-connect
 // response to what the owner is told. Every paste ends in exactly one honest outcome; nothing fails
-// silently. Owner-facing words are plain: "✓ Google connected" is the only success label — never
+// silently. Owner-facing words are plain: success opens with "Connected to Google — …" (the three ruled status phrases) — never
 // "Google verified". The other listing's identity is never exposed on already_linked.
 // Every lib/gbp-chij-resolve ChijOutcome is mapped explicitly (independent review P2 #4/#5).
+// owner-journey-friction-fix-v1 B (ruling 1): success messages use the three Google status phrases.
 export type GbpConnectOutcome =
   | "connected_review_ready"         // ChIJ — the rating/reviews features can work
   | "connected_not_yet_review_ready" // feature-id kept; Google's review data not matched yet
@@ -28,23 +29,23 @@ export function gbpConnectResult(
   // Success needs a parsed body with a real place id — never label a half-response "connected".
   if (status >= 200 && status < 300 && data && d.ok !== false && typeof d.placeId === "string" && d.placeId) {
     if (d.placeId.startsWith("ChIJ")) {
-      return { outcome: "connected_review_ready", message: "✓ Google connected. Your Google rating can show on your listing." };
+      return { outcome: "connected_review_ready", message: "Connected to Google — your rating will show once Google shares it" };
     }
     if (d.chij === "refused_collision") {
       return {
         outcome: "already_linked",
-        message: "✓ Google connected — your link is saved, but that Google profile's reviews are already linked to another business in our directory, so they can't show here yet. If it belongs to you, contact support and we'll sort it out.",
+        message: "Connected to Google — your rating will show once Google shares it. Your link is saved, but that Google profile's reviews are already linked to another business in our directory, so they can't show here yet. If it belongs to you, contact support and we'll sort it out.",
       };
     }
     if (typeof d.chij === "string" && TEMPORARY_CHIJ.has(d.chij)) {
       return {
         outcome: "temporarily_cant_check",
-        message: "✓ Google connected — your link is saved. We couldn't check it with Google right now, so reviews aren't on yet. Please try pasting it again later.",
+        message: "Connected to Google — your rating will show once Google shares it. We couldn't check it with Google right now, so reviews aren't on yet. Please try pasting it again later.",
       };
     }
     return {
       outcome: "connected_not_yet_review_ready",
-      message: "✓ Google connected — your link is saved. We couldn't match it to Google's review data yet, so reviews won't show for now." +
+      message: "Connected to Google — your rating will show once Google shares it. We couldn't match it to Google's review data yet, so reviews won't show for now." +
         (typeof d.chij !== "string" || REPASTE_CHIJ.has(d.chij) ? " " + GBP_PASTE_HINT : ""),
     };
   }

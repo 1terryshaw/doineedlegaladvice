@@ -15,7 +15,10 @@ export default function NextStepCard({ step }: { step: NextStep }) {
       className="border rounded-lg p-5 sm:p-6 border-l-4"
       style={{ borderLeftColor: verticalConfig.primaryColor }}
     >
-      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Your next step</p>
+      {/* owner-journey-friction-fix-v1: no eyebrow when the title already says it */}
+      {!step.title.startsWith("Your next step") && (
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Your next step</p>
+      )}
       <h2 id="next-step-heading" className="text-lg sm:text-xl font-bold mt-1">{step.title}</h2>
       <p className="text-sm text-gray-600 mt-1">{step.body}</p>
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">

@@ -17,6 +17,9 @@ function dayOf(hours: HoursJson, day: DayKey): DayHours | null {
   return d && typeof d === "object" ? d : null;
 }
 
+// Mon–Fri, in DAY_KEYS order.
+const WEEKDAYS: DayKey[] = DAY_KEYS.slice(0, 5);
+
 export default function HoursEditor({ value, onChange }: Props) {
   const hours: HoursJson = value && typeof value === "object" ? value : {};
 
@@ -39,14 +42,37 @@ export default function HoursEditor({ value, onChange }: Props) {
     onChange({ ...hours, [day]: { ...prev } });
   }
 
+  // owner-journey-friction-fix-v1: once the first weekday (Mon–Fri) is set, one tap copies it
+  // to every weekday. Weekends are left alone.
+  const firstWeekday = WEEKDAYS.find((day) => !!dayOf(hours, day)) ?? null;
+  function copyToWeekdays() {
+    if (!firstWeekday) return;
+    const src = dayOf(hours, firstWeekday);
+    if (!src) return;
+    const next: HoursJson = { ...hours };
+    for (const day of WEEKDAYS) next[day] = { ...src };
+    onChange(next);
+  }
+
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Business hours</label>
+      <p className="block text-sm font-medium text-gray-700 mb-1" id="owner-hours-label">Business hours</p>
       <small className="block text-gray-500 mb-3">
-        Closed/24hr toggles available per day. Weekly hours show on your listing. Days you leave
-        &ldquo;Not set&rdquo; are left off your listing.
+        Tap &ldquo;Set hours&rdquo; on each day you&rsquo;re open, then choose Custom times, Closed or 24 hours.
+        Days you leave &ldquo;Not set&rdquo; are left off your listing.
       </small>
-      <div className="space-y-2">
+      {firstWeekday && (
+        <button
+          type="button"
+          data-hours-copy-weekdays
+          title={`Copy ${DAY_LABELS[firstWeekday]} to Mon–Fri`}
+          onClick={copyToWeekdays}
+          className="mb-3 text-xs font-medium text-blue-600 hover:underline"
+        >
+          Copy to all weekdays
+        </button>
+      )}
+      <div className="space-y-2" role="group" aria-labelledby="owner-hours-label">
         {DAY_KEYS.map((d, i) => {
           const row = dayOf(hours, d);
           const prevSet = i > 0 && !!dayOf(hours, DAY_KEYS[i - 1]);
@@ -57,6 +83,7 @@ export default function HoursEditor({ value, onChange }: Props) {
               {row ? (
                 <>
                   <select
+                    aria-label={`${DAY_LABELS[d]} hours`}
                     value={mode ?? "custom"}
                     onChange={(e) => {
                       const v = e.target.value;
@@ -76,6 +103,7 @@ export default function HoursEditor({ value, onChange }: Props) {
                       <input
                         type="time"
                         value={row.opens}
+                        aria-label={`${DAY_LABELS[d]} opens`}
                         onChange={(e) => update(d, { opens: e.target.value })}
                         className="border rounded px-2 py-1 text-sm"
                       />
@@ -83,6 +111,7 @@ export default function HoursEditor({ value, onChange }: Props) {
                       <input
                         type="time"
                         value={row.closes}
+                        aria-label={`${DAY_LABELS[d]} closes`}
                         onChange={(e) => update(d, { closes: e.target.value })}
                         className="border rounded px-2 py-1 text-sm"
                       />

@@ -34,6 +34,7 @@ export default async function OwnerEditPage({ params }: Props) {
     id: result.listing.id as string,
     google_place_id: lst.google_place_id as string | null,
     gbp_url: lst.gbp_url as string | null,
+    google_rating: lst.google_rating as number | null, // owner-journey-friction-fix-v1 B
   });
 
   // Bucket-aware reads: pull whichever column actually exists for this repo.

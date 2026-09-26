@@ -5,13 +5,14 @@ import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
 
 export type OwnerGbpStatus =
   | { state: "not_connected"; linkOnFile: boolean }
-  | { state: "reviews_on" }
-  | { state: "reviews_unavailable"; reason: string };
+  | { state: "reviews_on"; ratingShowing: boolean }
+  | { state: "reviews_unavailable"; reason: string; ratingShowing: boolean };
+// owner-journey-friction-fix-v1 B: ratingShowing = google_rating is stored, i.e. the rating is on the listing (ruling 1).
 
 // One honest line per resolver outcome (lib/gbp-chij-resolve.ts ChijOutcome).
 const REASONS: Record<string, string> = {
   refused_no_anchor:
-    "Google's link didn't include your map pin. On Google Maps, open your business, tap Share, Copy link, and paste it again.",
+    "Google's link didn't include your map pin. On Google Maps, open your business, tap Share, then Copy link, and paste it again.",
   refused_unresolved:
     "We linked your Google profile, but couldn't automatically match it to Google's review data yet, so reviews can't be shown. Your profile stays linked.",
   refused_collision:
@@ -21,16 +22,18 @@ const REASONS: Record<string, string> = {
   error_places: "We couldn't check the link with Google right now. Paste your Share link again later.",
 };
 const DEFAULT_REASON =
-  "This kind of Google link can't be matched to Google's review data. On Google Maps, open your business, tap Share, Copy link, and paste it on your dashboard.";
+  "This kind of Google link can't be matched to Google's review data. On Google Maps, open your business, tap Share, then Copy link, and paste it on your dashboard.";
 
 export async function getOwnerGbpStatus(listing: {
   id: string | number;
   google_place_id?: string | null;
   gbp_url?: string | null;
+  google_rating?: number | null;
 }): Promise<OwnerGbpStatus> {
+  const ratingShowing = listing.google_rating != null;
   const pid = (listing.google_place_id ?? "").trim();
   if (!pid) return { state: "not_connected", linkOnFile: Boolean((listing.gbp_url ?? "").trim()) };
-  if (pid.startsWith("ChIJ")) return { state: "reviews_on" };
+  if (pid.startsWith("ChIJ")) return { state: "reviews_on", ratingShowing };
   try {
     const { data } = await supabaseAdmin
       .from("empire_places_refresh_log")
@@ -42,8 +45,8 @@ export async function getOwnerGbpStatus(listing: {
       .order("called_at", { ascending: false })
       .limit(1);
     const outcome = (data as Array<{ outcome: string }> | null)?.[0]?.outcome;
-    return { state: "reviews_unavailable", reason: (outcome && REASONS[outcome]) || DEFAULT_REASON };
+    return { state: "reviews_unavailable", reason: (outcome && REASONS[outcome]) || DEFAULT_REASON, ratingShowing };
   } catch {
-    return { state: "reviews_unavailable", reason: DEFAULT_REASON };
+    return { state: "reviews_unavailable", reason: DEFAULT_REASON, ratingShowing };
   }
 }

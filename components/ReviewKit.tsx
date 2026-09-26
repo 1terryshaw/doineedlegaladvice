@@ -1,4 +1,5 @@
 "use client";
+// owner-journey-friction-fix-v1: ruling 14 (one label for /guides/reviews).
 
 import { useState } from "react";
 import Link from "next/link";
@@ -76,7 +77,7 @@ export default function ReviewKit({ kit, slug }: { kit: ReviewKitData; slug: str
         Send this link, or show the QR code, to customers after a job. It opens Google&apos;s review form for your
         business.{" "}
         <Link href={GUIDE_PATHS.reviews} data-review-kit-guide className="font-medium underline" style={{ color: vc.primaryColor }}>
-          How to ask for reviews
+          How to get more reviews
         </Link>
       </p>
 

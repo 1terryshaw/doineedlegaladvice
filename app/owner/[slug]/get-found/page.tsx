@@ -10,6 +10,7 @@ import { buildReviewLink, resolveListingPlaceId } from "@/lib/review-link";
 // Reached automatically on the first owner-dashboard visit after a claim (see
 // app/owner/[slug]/page.tsx), and linkable directly afterwards. Entirely
 // ADDITIVE: nothing in /api/claim or /api/claim/verify was touched to build it.
+// owner-journey-friction-fix-v1: passes the Google status to the step (ruling 7).
 export const dynamic = "force-dynamic";
 
 interface Props {
@@ -34,6 +35,7 @@ export default async function GetFoundPage({ params }: Props) {
     gbp_url?: string | null;
     gbp_place_id?: string | null;
     google_place_id?: string | null;
+    google_rating?: number | null;
   };
 
   // Two-tier display: surface a machine-resolved, UNCONFIRMED Google match (if any) for
@@ -77,6 +79,8 @@ export default async function GetFoundPage({ params }: Props) {
         existingGbpUrl={listing.gbp_url || ""}
         reviewLink={reviewLink}
         pendingMatch={pendingMatch}
+        connected={!!listing.google_place_id}
+        ratingShowing={!!listing.google_place_id && listing.google_rating != null}
       />
     </div>
   );
