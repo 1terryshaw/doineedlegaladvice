@@ -66,7 +66,9 @@ export async function POST(request: NextRequest) {
 
   const { error: updateError, count } = await supabaseAdmin
     .from(LISTINGS_TABLE)
-    .update({ google_place_id: effectivePlaceId, gbp_url: resolution.normalizedUrl }, { count: "exact" })
+    .update({ google_place_id: effectivePlaceId, gbp_url: resolution.normalizedUrl,
+      // P2d: a CHANGED identity never keeps the previous business's rating (refilled by the connect-time fetch below).
+      ...((listing as { google_place_id?: string | null }).google_place_id !== effectivePlaceId ? { google_rating: null, google_review_count: null } : {}) }, { count: "exact" })
     .eq("id", listing.id)
     .eq("owner_auth_token", auth.token)
     .eq("claimed", true);
