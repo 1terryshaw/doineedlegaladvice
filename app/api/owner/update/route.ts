@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
-import { getAuthFromCookies } from "@/lib/auth";
+import { getActiveOwnerAuth } from "@/lib/auth";
 import { sanitizeExtras, EXTRA_UPDATE_FIELDS } from "@/lib/listing-extras";
 import { planOwnerLocationEdit } from "@/lib/owner-location-edit";
 import { BUCKET } from "@/lib/owner-form-bucket";
@@ -30,7 +30,7 @@ function normalizeWebsite(input: string): string {
 
 export async function POST(request: NextRequest) {
   const cookieStore = await cookies();
-  const auth = getAuthFromCookies(cookieStore);
+  const auth = await getActiveOwnerAuth(cookieStore);
 
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

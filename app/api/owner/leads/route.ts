@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getAuthFromCookies } from "@/lib/auth";
+import { getActiveOwnerAuth } from "@/lib/auth";
 import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
 import verticalConfig from "@/lib/vertical.config";
 
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const cookieStore = await cookies();
-  const auth = getAuthFromCookies(cookieStore);
+  const auth = await getActiveOwnerAuth(cookieStore);
 
   if (!auth) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });

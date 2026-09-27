@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { randomUUID } from "crypto";
 import sharp from "sharp";
 import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
-import { getAuthFromCookies } from "@/lib/auth";
+import { getActiveOwnerAuth } from "@/lib/auth";
 import { canonical } from "@/lib/vertical-canonical";
 import {
   ACCEPTED_MIME,
@@ -25,7 +25,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   const cookieStore = await cookies();
-  const auth = getAuthFromCookies(cookieStore);
+  const auth = await getActiveOwnerAuth(cookieStore);
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

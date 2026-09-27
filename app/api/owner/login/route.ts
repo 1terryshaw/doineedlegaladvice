@@ -3,6 +3,7 @@ import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
 import { sendMagicLink } from "@/lib/email";
 import { logOwnerAuthEvent } from "@/lib/owner-events";
 import { generateToken } from "@/lib/auth";
+import { isOwnerSessionRevoked } from "@/lib/owner-session-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -127,7 +128,10 @@ export async function POST(request: NextRequest) {
   const expiresAt = listing.owner_auth_token_expires_at as string | null;
   const isExpired = !!expiresAt && new Date(expiresAt).getTime() < Date.now();
 
-  if (!token || isExpired) {
+  // owner-auth-hardening: a token revoked server-side is never re-mailed (that would be a
+  // permanent lockout: the landing refuses it) — mint a fresh one exactly as for an expired token.
+  const isRevoked = !!token && !isExpired && (await isOwnerSessionRevoked(token, listing.slug as string));
+  if (!token || isExpired || isRevoked) {
     const minted = generateToken();
     // expires_at MUST be overwritten alongside the mint — see the header note. A fresh +30d
     // window; never leave the row's old (possibly past) expiry in place.
@@ -165,7 +169,7 @@ export async function POST(request: NextRequest) {
         event: "owner_login_token_minted",
         email_redacted: emailRedacted,
         slug: listing.slug,
-        reason: isExpired ? "expired" : "null",
+        reason: isExpired ? "expired" : isRevoked ? "revoked" : "null",
       })
     );
   }

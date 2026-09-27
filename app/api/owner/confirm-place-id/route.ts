@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
-import { getAuthFromCookies } from "@/lib/auth";
+import { getActiveOwnerAuth } from "@/lib/auth";
 import { normalizeGbpUrl } from "@/lib/gbp-url";
 
 /**
@@ -30,7 +30,7 @@ async function proDetails(placeId: string) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = getAuthFromCookies(await cookies());
+  const auth = await getActiveOwnerAuth(await cookies());
   if (!auth) return NextResponse.json({ ok: false, error: "unauthenticated" }, { status: 401 });
 
   let body: { action?: string; gbpUrl?: string };

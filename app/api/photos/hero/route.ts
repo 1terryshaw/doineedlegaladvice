@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { randomUUID } from "crypto";
 import sharp from "sharp";
 import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
-import { getAuthFromCookies } from "@/lib/auth";
+import { getActiveOwnerAuth } from "@/lib/auth";
 import { PHOTO_BUCKET, VERTICAL_KEY, publicUrlFor } from "@/lib/listing-photos";
 import { can } from "@/lib/tier-capabilities";
 
@@ -21,7 +21,7 @@ interface AuthedListing {
 
 async function authListing(): Promise<AuthedListing | null> {
   const cookieStore = await cookies();
-  const auth = getAuthFromCookies(cookieStore);
+  const auth = await getActiveOwnerAuth(cookieStore);
   if (!auth) return null;
   const { data: listing } = await supabaseAdmin
     .from(LISTINGS_TABLE)

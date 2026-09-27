@@ -9,6 +9,7 @@ import {
   type ControlledOwnerListing,
   type OwnerAuthorizationListing,
 } from "@/lib/owner-authorization";
+import { isOwnerSessionRevoked, withoutOwnerSecrets } from "@/lib/owner-session-guard";
 
 export {
   controlledOwnerListingsFromRows,
@@ -53,6 +54,18 @@ export function getAuthFromCookies(
   return { slug, token };
 }
 
+// owner-auth-hardening-and-edit-log-v1: THE cookie gate for owner routes that match the token
+// themselves. getAuthFromCookies only parses the cookie; this also refuses a session revoked
+// server-side (owner_session_meta.revoked_at). Protected owner routes use this, never the parser.
+export async function getActiveOwnerAuth(
+  cookieStore: Awaited<ReturnType<typeof cookies>>
+): Promise<{ slug: string; token: string } | null> {
+  const auth = getAuthFromCookies(cookieStore);
+  if (!auth) return null;
+  if (await isOwnerSessionRevoked(auth.token, auth.slug)) return null;
+  return auth;
+}
+
 // The one canonical database authorization path for owner-sensitive operations.
 // It scopes to the cookie/requested listing before matching the opaque token, demands
 // a claimed row, rejects every query cardinality error via `.single()`, and finally
@@ -73,6 +86,8 @@ export async function getAuthorizedOwnerListing<T extends object = Record<string
 
   const listing = data as unknown as OwnerAuthorizationListing | null;
   if (error || !hasValidOwnerAuthorization(listing, scope.token)) return null;
+  // owner-auth-hardening: a server-side-revoked session is refused on every owner surface.
+  if (await isOwnerSessionRevoked(scope.token, scope.slug)) return null;
   return data as unknown as T;
 }
 
@@ -87,6 +102,7 @@ export async function getControlledOwnerListings(token: string): Promise<Control
     .eq("claimed", true)
     .order("slug");
   if (error || !data) return null;
+  if (await isOwnerSessionRevoked(token)) return null;
   return controlledOwnerListingsFromRows(data, token);
 }
 
@@ -96,7 +112,7 @@ export async function verifyOwnerAccess(slug: string): Promise<{ listing: any } 
   if (!auth || auth.slug !== slug) return null;
   const listing = await getAuthorizedOwnerListing(auth);
   if (!listing) return null;
-  return { listing };
+  return { listing: withoutOwnerSecrets(listing) };
 }
 
 export function clearAuthCookie(response: NextResponse): void {

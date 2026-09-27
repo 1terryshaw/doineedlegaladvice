@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { stripe } from "@/lib/stripe";
 import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
-import { getAuthFromCookies } from "@/lib/auth";
+import { getActiveOwnerAuth } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   const cookieStore = await cookies();
-  const auth = getAuthFromCookies(cookieStore);
+  const auth = await getActiveOwnerAuth(cookieStore);
   const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
   if (!auth) {

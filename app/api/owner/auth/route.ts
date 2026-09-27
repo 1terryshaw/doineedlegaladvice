@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
 import { setAuthCookie, isOwnerTokenExpired } from "@/lib/auth";
 import { logOwnerAuthEvent, recordSessionStart } from "@/lib/owner-events";
+import { isOwnerSessionRevoked } from "@/lib/owner-session-guard";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -30,6 +31,10 @@ export async function GET(request: NextRequest) {
   if (isOwnerTokenExpired(listing.owner_auth_token_expires_at as string | null)) {
     await logOwnerAuthEvent("link_expired", { slug });
     return NextResponse.redirect(`${siteUrl}/owner/login?error=expired`);
+  }
+  // owner-auth-hardening: a server-side-revoked session never gets a cookie here.
+  if (await isOwnerSessionRevoked(token, slug)) {
+    return NextResponse.redirect(`${siteUrl}/owner/login?error=invalid`);
   }
   const reused = await recordSessionStart(slug, token);
   await logOwnerAuthEvent("link_clicked", { slug });
