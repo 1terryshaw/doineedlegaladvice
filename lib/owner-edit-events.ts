@@ -18,7 +18,7 @@ import { getAuthFromCookies } from "@/lib/auth";
 
 export type OwnerMutationClass =
   | "profile_edit" | "profile_proposal" | "photo_upload" | "photo_edit" | "photo_delete" | "hero_image"
-  | "gbp_connect" | "place_confirm" | "place_reject" | "place_find" | "content_publish";
+  | "gbp_connect" | "place_confirm" | "place_reject" | "place_edit" | "place_find" | "content_publish";
 
 // Bookkeeping or derived columns: written by the route itself, never an owner change on their own.
 const NOT_OWNER_FIELDS = new Set([
@@ -100,7 +100,7 @@ export async function recordOwnerEdit(
 }
 
 /** One action event for the listing behind the caller's (already authorised) owner cookie. Never throws. */
-export async function recordOwnerAction(action: OwnerMutationClass, genuine = true): Promise<void> {
+export async function recordOwnerAction(action: OwnerMutationClass, genuine: boolean | null = true): Promise<void> {
   try {
     const auth = getAuthFromCookies(await cookies());
     if (!auth) return;
@@ -116,30 +116,50 @@ export async function recordOwnerAction(action: OwnerMutationClass, genuine = tr
 
 type Handler<A extends unknown[]> = (...args: A) => Promise<Response>;
 
+/** True when the caller's listing currently has a non-empty `column` (null = could not be read). */
+export async function ownerListingHas(column: string): Promise<boolean | null> {
+  try {
+    if (!/^[a-z_][a-z0-9_]*$/.test(column)) return null;
+    const auth = getAuthFromCookies(await cookies());
+    if (!auth) return null;
+    const res = await bounded(supabaseAdmin.from(LISTINGS_TABLE).select(column).eq("slug", auth.slug).eq("owner_auth_token", auth.token).maybeSingle());
+    const row = (res as { data?: Record<string, unknown> | null; error?: unknown } | null);
+    if (!row || row.error || !row.data) return null;
+    return canon(row.data[column]) !== "";
+  } catch { return null; }
+}
+
 /**
  * Wrap an owner mutation route handler: after a 2xx response (the handler has authorised the owner
- * and written the change) record one activation event. `classify` may read the JSON body (a clone;
- * the handler still gets the original) to name the action or mark a non-change (e.g. a rejection).
+ * and written the change) record one activation event. `classify` may read the body (a clone, parsed
+ * as JSON whatever the content-type; the handler still gets the original) to name the action or mark a
+ * non-change (e.g. a rejection). `precheck` runs BEFORE the handler and decides genuineness for
+ * actions that can be no-ops (e.g. clearing a hero that was never set).
  */
 export function withOwnerMutationLog<A extends unknown[]>(
   handler: Handler<A>,
   action: OwnerMutationClass,
   classify?: (body: Record<string, unknown> | null) => { action: OwnerMutationClass; genuine: boolean },
+  precheck?: () => Promise<boolean | null>,
 ): Handler<A> {
   return async (...args: A): Promise<Response> => {
     let body: Record<string, unknown> | null = null;
     if (classify) {
       try {
-        const req = args[0] as Request;
-        const ct = req.headers.get("content-type") || "";
-        if (ct.includes("application/json")) body = await req.clone().json();
+        const txt = await (args[0] as Request).clone().text();
+        const parsed = txt ? JSON.parse(txt) : null;
+        body = parsed && typeof parsed === "object" ? parsed : null;
       } catch { body = null; }
+    }
+    let pre: boolean | null = true;
+    if (precheck) {
+      try { pre = await precheck(); } catch { pre = null; }
     }
     const res = await handler(...args);
     if (res.status >= 200 && res.status < 300) {
       try {
         const c = classify ? classify(body) : { action, genuine: true };
-        await recordOwnerAction(c.action, c.genuine);
+        await recordOwnerAction(c.action, c.genuine && pre === true ? true : c.genuine === false || pre === false ? false : null);
       } catch { /* non-blocking */ }
     }
     return res;

@@ -121,4 +121,4 @@ async function POST_owner(request: NextRequest) {
 }
 
 // owner-auth-hardening-and-edit-log-v1 B: one activation event per successful owner mutation (non-blocking).
-export const POST = withOwnerMutationLog(POST_owner, "place_confirm", (b) => b?.action === "approve" ? { action: "place_confirm" as const, genuine: true } : b?.action === "reject" ? { action: "place_reject" as const, genuine: false } : { action: "gbp_connect" as const, genuine: true });
+export const POST = withOwnerMutationLog(POST_owner, "place_confirm", (b) => b?.action === "approve" ? { action: "place_confirm" as const, genuine: true } : b?.action === "reject" ? { action: "place_reject" as const, genuine: false } : { action: "place_edit" as const, genuine: true });

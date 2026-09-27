@@ -6,7 +6,7 @@ import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
 import { getActiveOwnerAuth } from "@/lib/auth";
 import { PHOTO_BUCKET, VERTICAL_KEY, publicUrlFor } from "@/lib/listing-photos";
 import { can } from "@/lib/tier-capabilities";
-import { withOwnerMutationLog } from "@/lib/owner-edit-events";
+import { withOwnerMutationLog, ownerListingHas } from "@/lib/owner-edit-events";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -115,4 +115,5 @@ async function DELETE_owner() {
 
 // owner-auth-hardening-and-edit-log-v1 B: one activation event per successful owner mutation (non-blocking).
 export const POST = withOwnerMutationLog(POST_owner, "hero_image");
-export const DELETE = withOwnerMutationLog(DELETE_owner, "hero_image");
+// DELETE is a genuine change only if a hero was set (clearing nothing is a no-op).
+export const DELETE = withOwnerMutationLog(DELETE_owner, "hero_image", undefined, () => ownerListingHas("hero_image_url"));

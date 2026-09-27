@@ -3,7 +3,7 @@ import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
 import { sendMagicLink } from "@/lib/email";
 import { logOwnerAuthEvent } from "@/lib/owner-events";
 import { generateToken } from "@/lib/auth";
-import { isOwnerSessionRevoked } from "@/lib/owner-session-guard";
+import { ownerSessionState } from "@/lib/owner-session-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -130,7 +130,8 @@ export async function POST(request: NextRequest) {
 
   // owner-auth-hardening: a token revoked server-side is never re-mailed (that would be a
   // permanent lockout: the landing refuses it) — mint a fresh one exactly as for an expired token.
-  const isRevoked = !!token && !isExpired && (await isOwnerSessionRevoked(token, listing.slug as string));
+  // Only a CONFIRMED revocation re-mints: an unreadable state reuses the token (the landing still fails closed).
+  const isRevoked = !!token && !isExpired && (await ownerSessionState(token, listing.slug as string)) === "revoked";
   if (!token || isExpired || isRevoked) {
     const minted = generateToken();
     // expires_at MUST be overwritten alongside the mint — see the header note. A fresh +30d
