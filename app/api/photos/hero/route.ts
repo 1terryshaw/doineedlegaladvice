@@ -6,6 +6,7 @@ import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
 import { getActiveOwnerAuth } from "@/lib/auth";
 import { PHOTO_BUCKET, VERTICAL_KEY, publicUrlFor } from "@/lib/listing-photos";
 import { can } from "@/lib/tier-capabilities";
+import { withOwnerMutationLog } from "@/lib/owner-edit-events";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -33,7 +34,7 @@ async function authListing(): Promise<AuthedListing | null> {
 }
 
 // POST — upload a hero cover image and store its URL on the listing.
-export async function POST(request: NextRequest) {
+async function POST_owner(request: NextRequest) {
   const listing = await authListing();
   if (!listing) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest) {
 }
 
 // DELETE — clear the hero cover image.
-export async function DELETE() {
+async function DELETE_owner() {
   const listing = await authListing();
   if (!listing) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -111,3 +112,7 @@ export async function DELETE() {
   }
   return NextResponse.json({ ok: true });
 }
+
+// owner-auth-hardening-and-edit-log-v1 B: one activation event per successful owner mutation (non-blocking).
+export const POST = withOwnerMutationLog(POST_owner, "hero_image");
+export const DELETE = withOwnerMutationLog(DELETE_owner, "hero_image");

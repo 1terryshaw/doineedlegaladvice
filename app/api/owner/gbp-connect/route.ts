@@ -7,6 +7,7 @@ import { upgradeFeatureIdToChij } from "@/lib/gbp-chij-resolve";
 import { LISTINGS_TABLE, supabaseAdmin } from "@/lib/supabase";
 import { fetchInitialRating } from "@/lib/gbp-initial-rating";
 import { logGbpConnectAttempt } from "@/lib/owner-events";
+import { withOwnerMutationLog } from "@/lib/owner-edit-events";
 
 export const dynamic = "force-dynamic";
 
@@ -157,10 +158,13 @@ async function handlePost(request: NextRequest) {
 
 // P4 (owner-funnel-recovery): every connect attempt is recorded (status, outcome class, URL host class —
 // never the URL). Fail-open: logging can never change the response.
-export async function POST(request: NextRequest) {
+async function POST_owner(request: NextRequest) {
   let reqBody: { slug?: unknown; gbpUrl?: unknown } | null = null;
   try { reqBody = await request.clone().json(); } catch { reqBody = null; }
   const response = await handlePost(request);
   try { await logGbpConnectAttempt(response.status, await response.clone().json(), reqBody); } catch { /* fail-open */ }
   return response;
 }
+
+// owner-auth-hardening-and-edit-log-v1 B: one activation event per successful owner mutation (non-blocking).
+export const POST = withOwnerMutationLog(POST_owner, "gbp_connect");

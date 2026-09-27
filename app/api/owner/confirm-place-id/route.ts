@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
 import { getActiveOwnerAuth } from "@/lib/auth";
 import { normalizeGbpUrl } from "@/lib/gbp-url";
+import { withOwnerMutationLog } from "@/lib/owner-edit-events";
 
 /**
  * POST /api/owner/confirm-place-id — the owner acts on a pending place_id match
@@ -29,7 +30,7 @@ async function proDetails(placeId: string) {
   return { status: 200, rating: b.rating ?? null, count: b.userRatingCount ?? null, name: b.displayName?.text ?? null };
 }
 
-export async function POST(request: NextRequest) {
+async function POST_owner(request: NextRequest) {
   const auth = await getActiveOwnerAuth(await cookies());
   if (!auth) return NextResponse.json({ ok: false, error: "unauthenticated" }, { status: 401 });
 
@@ -118,3 +119,6 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ ok: false, error: "bad_action" }, { status: 400 });
 }
+
+// owner-auth-hardening-and-edit-log-v1 B: one activation event per successful owner mutation (non-blocking).
+export const POST = withOwnerMutationLog(POST_owner, "place_confirm", (b) => b?.action === "approve" ? { action: "place_confirm" as const, genuine: true } : b?.action === "reject" ? { action: "place_reject" as const, genuine: false } : { action: "gbp_connect" as const, genuine: true });

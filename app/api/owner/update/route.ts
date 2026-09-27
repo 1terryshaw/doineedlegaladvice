@@ -5,6 +5,7 @@ import { getActiveOwnerAuth } from "@/lib/auth";
 import { sanitizeExtras, EXTRA_UPDATE_FIELDS } from "@/lib/listing-extras";
 import { planOwnerLocationEdit } from "@/lib/owner-location-edit";
 import { BUCKET } from "@/lib/owner-form-bucket";
+import { snapshotOwnerEdit, recordOwnerEdit } from "@/lib/owner-edit-events";
 
 export const dynamic = "force-dynamic";
 
@@ -92,6 +93,8 @@ export async function POST(request: NextRequest) {
   safeUpdates.updated_at = new Date().toISOString();
   safeUpdates.owner_last_action_at = new Date().toISOString();
 
+  // owner-auth-hardening-and-edit-log-v1 B: activation event (values never logged; non-blocking).
+  const ownerEditSnapshot = await snapshotOwnerEdit(listing.id, safeUpdates);
   const { error: updateError } = await supabaseAdmin
     .from(LISTINGS_TABLE)
     .update(safeUpdates)
@@ -103,6 +106,7 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+  await recordOwnerEdit(ownerEditSnapshot, slug);
 
   locationPlan.afterWrite();
   return NextResponse.json({ success: true });

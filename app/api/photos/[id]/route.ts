@@ -7,11 +7,12 @@ import {
   VERTICAL_KEY,
   compactPhotoOrder,
 } from "@/lib/listing-photos";
+import { withOwnerMutationLog } from "@/lib/owner-edit-events";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function DELETE(
+async function DELETE_owner(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -71,3 +72,6 @@ export async function DELETE(
 
   return NextResponse.json({ ok: true });
 }
+
+// owner-auth-hardening-and-edit-log-v1 B: one activation event per successful owner mutation (non-blocking).
+export const DELETE = withOwnerMutationLog(DELETE_owner, "photo_delete");

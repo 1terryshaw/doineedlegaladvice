@@ -19,11 +19,12 @@ import {
   type PhotoKind,
 } from "@/lib/listing-photos";
 import { photoLimitForTier } from "@/lib/photo-limits";
+import { withOwnerMutationLog } from "@/lib/owner-edit-events";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST(request: NextRequest) {
+async function POST_owner(request: NextRequest) {
   const cookieStore = await cookies();
   const auth = await getActiveOwnerAuth(cookieStore);
   if (!auth) {
@@ -149,3 +150,6 @@ export async function POST(request: NextRequest) {
     base_url: process.env.NEXT_PUBLIC_BASE_URL || (canonical.domain ? `https://${canonical.domain}` : ""),
   });
 }
+
+// owner-auth-hardening-and-edit-log-v1 B: one activation event per successful owner mutation (non-blocking).
+export const POST = withOwnerMutationLog(POST_owner, "photo_upload");
