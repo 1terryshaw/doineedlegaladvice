@@ -4,6 +4,7 @@ import { sendMagicLink } from "@/lib/email";
 import { logOwnerAuthEvent } from "@/lib/owner-events";
 import { generateToken } from "@/lib/auth";
 import { ownerSessionState } from "@/lib/owner-session-guard";
+import { checkOwnerLoginRate } from "@/lib/owner-login-ratelimit";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +75,24 @@ export async function POST(request: NextRequest) {
   if (!email) {
     return NextResponse.json({ error: "Email required" }, { status: 400 });
   }
+
+  // owner-auth-ratelimit-and-hash-v1: throttle BEFORE any lookup, mint, or send. A throttled
+  // request returns the byte-identical generic success below — nothing tells the caller whether
+  // they were throttled or whether the email belongs to an owner. Limiter errors FAIL OPEN
+  // (login proceeds) but always raise a sentinel alert.
+  const rate = await checkOwnerLoginRate(email, request);
+  if (rate.error) {
+    console.error(JSON.stringify({ event: "owner_login_ratelimit_error", err: rate.error }));
+    await alertQueryFailure(`Owner login rate limiter error on ${LISTINGS_TABLE}`, {
+      table: LISTINGS_TABLE,
+      error: rate.error,
+      impact: "limiter failed OPEN — login proceeds unthrottled until fixed",
+    });
+  } else if (!rate.allowed) {
+    console.log(JSON.stringify({ event: "owner_login_throttled", table: LISTINGS_TABLE }));
+    return NextResponse.json({ success: true });
+  }
+
   await logOwnerAuthEvent("link_requested", { email });
 
   const emailRedacted = String(email).replace(/(.{2}).+(@.+)/, "$1***$2");
