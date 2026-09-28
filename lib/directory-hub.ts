@@ -228,6 +228,9 @@ export async function getListingsByProvincePaged(
 // /on /pe /qc /sk) that render 200 with "Browse 0 lawyers" — indexable,
 // sitemap-advertised soft-404s.
 //
+// (empire-empty-region-fix-wave-v1: the per-province probe now lives in hasServedListings() below
+// so this sitemap gate and the /[region] route's empty-region 404 share ONE predicate.)
+//
 // This gate counts rows under the SERVE predicate itself, per province. There
 // is NO hardcoded exclusion list: a province re-advertises the moment the serve
 // path can return a row for it (e.g. when CA is added to DIRECTORY_COUNTRIES),
@@ -235,23 +238,32 @@ export async function getListingsByProvincePaged(
 //
 // Fail-closed: a query error THROWS, so the sitemap routes' 503 boundary keeps
 // the previous sitemap rather than serving a silently-shrunken 200.
+/**
+ * ONE predicate for "does this province/state hub have any served listing?" — used by the
+ * /[region] route (empty-hub 404) and by getServedProvincesCA (sitemap). It is the SERVE predicate
+ * of getListingsByProvincePaged above: DIRECTORY_COUNTRIES, is_published IS NOT FALSE, and the
+ * region column for the code (license_state for US, province_state for CA codes). This hub renders
+ * no child hubs, so "no listings" is "no listings and no child hubs". FAIL-CLOSED: a DB fault
+ * THROWS (5xx / failed sitemap generation) and can never be read as "empty".
+ */
+export async function hasServedListings(code: string): Promise<boolean> {
+  const c = code.toUpperCase();
+  const { count, error } = await supabaseAdmin
+    .from(LISTINGS_TABLE)
+    .select("id", { count: "exact", head: true })
+    .in("country", DIRECTORY_COUNTRIES)
+    .neq("is_published", false)
+    .eq(regionColumn(c), c);
+  if (error) {
+    throw new Error(`hasServedListings(${c}) failed: ${JSON.stringify(error)}`);
+  }
+  return (count ?? 0) > 0;
+}
+
 export async function getServedProvincesCA(): Promise<string[]> {
   const codes = Array.from(CA_CODES);
   const served = await Promise.all(
-    codes.map(async (code) => {
-      const { count, error } = await supabaseAdmin
-        .from(LISTINGS_TABLE)
-        .select("id", { count: "exact", head: true })
-        .in("country", DIRECTORY_COUNTRIES)
-        .neq("is_published", false)
-        .eq(regionColumn(code), code);
-      if (error) {
-        throw new Error(
-          `getServedProvincesCA(${code}) failed: ${JSON.stringify(error)}`
-        );
-      }
-      return (count ?? 0) > 0 ? code : null;
-    })
+    codes.map(async (code) => ((await hasServedListings(code)) ? code : null))
   );
   return served.filter((c): c is string => c !== null).sort();
 }

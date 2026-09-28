@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import verticalConfig from "@/lib/vertical.config";
 import { getListings } from "@/lib/supabase";
 import { getProvinceNameByCode, getRegionBySlug } from "@/lib/constants";
-import { getListingsByProvincePaged, getRegionTotal, REGION_PAGE_SIZE } from "@/lib/directory-hub";
+import { getListingsByProvincePaged, getRegionTotal, hasServedListings, REGION_PAGE_SIZE } from "@/lib/directory-hub";
 import { regionBreadcrumbSchema, regionCollectionPageSchema, localizeFaqs } from "@/lib/seo";
 import FaqSection from "@/components/FaqSection";
 
@@ -67,6 +67,12 @@ export default async function RegionPage({ params, searchParams }: Props) {
     ]);
     const totalPages = Math.max(1, Math.ceil(total / REGION_PAGE_SIZE));
     if (page > 1 && listings.length === 0) notFound();
+
+    // Empty-region gate (empire-empty-region-fix-wave-v1): zero served listings (this hub has no
+    // child hubs) => 404 — incl. the CA provinces this US-scoped page cannot serve (they were 200
+    // "Browse 0 lawyers"). Same predicate as the sitemap's getServedProvincesCA
+    // (directory-hub.ts hasServedListings). Fail-closed: a fault throws (5xx), never a false 404.
+    if (page === 1 && listings.length === 0 && !(await hasServedListings(provCode))) notFound();
 
     return (
       <div className="max-w-7xl mx-auto px-4 py-12">
