@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { getListing } from "@/lib/supabase";
+import { getListingForClaim } from "@/lib/supabase";
 import ClaimForm from "@/components/ClaimForm";
 
 export const dynamic = "force-dynamic";
@@ -21,10 +21,10 @@ export default async function ClaimErrorPage({ searchParams }: Props) {
   // newer request rotated the token out from under the older email. Ending that at "back to
   // directory" strands a real owner mid-claim. When we know which listing they were claiming
   // and it is still claimable, hand them a fresh link instead of a dead end.
-  // getListing() is the same read the /claim/[slug] page uses, so an unpublished or missing
-  // row falls back to the terminal copy rather than offering a claim we would not otherwise
-  // serve. The ClaimForm props below mirror that page — this repo's own reference impl.
-  const listing = slug ? await getListing(slug) : null;
+  // getListingForClaim() is the same claim-context read /claim/[slug] uses, so a DARK (unpublished)
+  // unclaimed row — whose /directory page is a 410 — still gets the re-claim form instead of a
+  // dead end. A missing row falls back to the terminal copy; the claimed check is unchanged. The ClaimForm props below mirror that page — this repo's own reference impl.
+  const listing = slug ? await getListingForClaim(slug) : null;
   const resendable = !!listing && !listing.claimed;
 
   return (
