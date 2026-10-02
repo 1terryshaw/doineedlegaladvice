@@ -11,8 +11,9 @@ export interface CTA {
    * - 'trial' → Stripe Checkout with trial_period_days=30
    * - 'direct' → Stripe Checkout with no trial
    * - 'free' → no Stripe; activates free tier on claim
+   * - 'preview' → no Stripe; requests a free website preview (owner login required)
    */
-  mode: 'trial' | 'direct' | 'free';
+  mode: 'trial' | 'direct' | 'free' | 'preview';
 }
 
 export interface Tier {
@@ -34,6 +35,10 @@ export interface Tier {
   secondaryCta?: CTA;
   /** Visually anchored on the card grid */
   anchored: boolean;
+  /** Price is monthly only — no annual price; the annual toggle does not apply. */
+  monthlyOnly?: boolean;
+  /** Small print under the CTA. */
+  footnote?: string;
 }
 
 export const TIERS: Record<TierId, Tier> = {
@@ -85,30 +90,30 @@ export const TIERS: Record<TierId, Tier> = {
     secondaryCta: { label: 'Skip trial, pay now — $9/mo', mode: 'direct' },
     anchored: true,
   },
+  // swm-website-offer-99-v2 (CEO rulings R1–R8, 2026-10-02): the single Website offer is $99 USD/mo,
+  // free preview first. The $49 SiteForge tier / 30-day trial / skip-trial link are retired.
+  // Card copy is R8 verbatim. The CTA never checks out from the modal — it requests a preview.
   website: {
     id: 'website',
     name: 'Website',
-    subtitle: '',
-    priceMonthlyUSD: 49,
-    priceAnnualUSD: 490,
-    stripeProductId: 'prod_UVCwbO2cUAURCF',
-    stripePriceMonthlyId: 'price_1TjfMNB4nhVx1nmUtSlsXNFW',
-    stripePriceAnnualId: 'price_1TjfMNB4nhVx1nmUQlFCiwyl',
+    subtitle: 'Free preview first — no card until you approve it',
+    priceMonthlyUSD: 99,
+    priceAnnualUSD: 0,
+    monthlyOnly: true,
+    stripeProductId: 'prod_VMZoJGkrEewful',
+    stripePriceMonthlyId: 'price_1ULqfAB4nhVx1nmU1g2yvHjs',
+    stripePriceAnnualId: null,
     visibleFeatures: [
       'Everything in Reviews Plus, plus:',
-      'SiteForge-built website at your domain (concierge delivered)',
-      'Weekly digest of activity',
-      'Branded inquiry emails to prospects',
+      'Custom website built for your business, on your domain',
+      'AI chat receptionist that answers visitors and emails you leads',
+      'Mobile-friendly, fast, click-to-call',
+      'Set up for Google in your city + service',
+      'Small edits included every month',
     ],
-    expandedFeatures: [
-      'Mobile-optimized, fast-loading',
-      'Click-to-call header',
-      'Service pricing sections',
-      'Built for Google search (Schema.org, city/service pages)',
-      'Custom domain wiring (when delivered)',
-    ],
-    cta: { label: 'Start 30-Day Free Trial', mode: 'trial' },
-    secondaryCta: { label: 'Skip trial, pay now — $49/mo', mode: 'direct' },
+    expandedFeatures: [],
+    cta: { label: 'See Your Free Preview', mode: 'preview' },
+    footnote: 'No contract. Cancel anytime.',
     anchored: false,
   },
 };

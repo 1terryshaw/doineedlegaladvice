@@ -47,8 +47,10 @@ export default function PricingTable() {
           const tier = TIERS[id];
           const anchored = tier.anchored;
           const isFree = tier.priceMonthlyUSD === 0;
-          const price = annual ? tier.priceAnnualUSD : tier.priceMonthlyUSD;
-          const unit = annual ? "year" : "month";
+          // swm-website-offer-99-v2: Website is monthly only ($99/month) — the annual toggle never applies.
+          const yearly = annual && !tier.monthlyOnly;
+          const price = yearly ? tier.priceAnnualUSD : tier.priceMonthlyUSD;
+          const unit = yearly ? "year" : "month";
           const isCurrent = authenticated && currentTier === tier.id;
           const isExpanded = !!expanded[tier.id];
           const claimHref = tier.cta.mode === "free" ? "/claim" : upgradeHref;
@@ -154,6 +156,10 @@ export default function PricingTable() {
                     </Link>
                   )}
                 </div>
+              )}
+
+              {tier.footnote && (
+                <p className="mt-2 text-xs text-center text-gray-500">{tier.footnote}</p>
               )}
             </div>
           );

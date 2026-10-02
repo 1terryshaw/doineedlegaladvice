@@ -18,6 +18,8 @@ type Props = {
 };
 
 const NEUTRAL_BORDER = "#e5e7eb";
+const PREVIEW_OWNER_ONLY =
+  "Free website previews are for this listing's owner. Log in to your owner account first — or claim this listing if you haven't yet.";
 
 export default function UpgradeModal({ listingSlug, currentTier, currentCycle }: Props) {
   const searchParams = useSearchParams();
@@ -45,6 +47,9 @@ export default function UpgradeModal({ listingSlug, currentTier, currentCycle }:
   // mode 'free'   → no Stripe, route to the claim flow.
   // mode 'trial'  → Stripe Checkout with a 30-day trial.
   // mode 'direct' → Stripe Checkout, billed immediately.
+  // mode 'preview' → swm-website-offer-99-v2 (R2/R6): no checkout. Requests a free Website
+  //                 preview through the owner-gated billing-redirect; non-owners get
+  //                 PREVIEW_OWNER_ONLY (log in, or claim first).
   const startCheckout = async (tierId: TierId, mode: CTA["mode"]) => {
     if (mode === "free") {
       window.location.href = "/claim";
@@ -56,8 +61,13 @@ export default function UpgradeModal({ listingSlug, currentTier, currentCycle }:
       const res = await fetch("/api/billing-redirect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ listingSlug, tier: tierId, cycle, mode }),
+        body: JSON.stringify({ listingSlug, tier: tierId, cycle: mode === "preview" ? "monthly" : cycle, mode }),
       });
+      if (mode === "preview" && res.status === 401) {
+        setError(PREVIEW_OWNER_ONLY);
+        setLoading(null);
+        return;
+      }
       const data = await res.json();
       if (data.already_on_tier) {
         setError(data.message || `You're already on the ${TIERS[tierId].name} plan.`);
@@ -169,11 +179,12 @@ export default function UpgradeModal({ listingSlug, currentTier, currentCycle }:
             const tier = TIERS[id];
             const anchored = tier.anchored;
             const isFree = tier.priceMonthlyUSD === 0;
-            const price = cycle === "monthly" ? tier.priceMonthlyUSD : tier.priceAnnualUSD;
-            const unit = cycle === "monthly" ? "mo" : "yr";
+            const monthly = cycle === "monthly" || !!tier.monthlyOnly;
+            const price = monthly ? tier.priceMonthlyUSD : tier.priceAnnualUSD;
+            const unit = monthly ? "mo" : "yr";
             const isCurrent =
               currentTier === tier.id &&
-              (isFree || currentCycle == null || currentCycle === cycle);
+              (isFree || !!tier.monthlyOnly || currentCycle == null || currentCycle === cycle);
             const isExpanded = !!expanded[tier.id];
             const busy = (m: string) => loading === `${tier.id}:${m}`;
 
@@ -221,7 +232,7 @@ export default function UpgradeModal({ listingSlug, currentTier, currentCycle }:
                   ) : (
                     <>
                       <span style={{ fontSize: 32, fontWeight: 700 }}>${price}</span>
-                      <span style={{ color: "#666", fontSize: 14 }}>/{unit} USD</span>
+                      <span style={{ color: "#666", fontSize: 14 }}>{tier.monthlyOnly ? "/month" : `/${unit} USD`}</span>
                     </>
                   )}
                 </div>
@@ -297,7 +308,7 @@ export default function UpgradeModal({ listingSlug, currentTier, currentCycle }:
                       }}
                     >
                       {busy(tier.cta.mode)
-                        ? "Starting checkout..."
+                        ? tier.cta.mode === "preview" ? "One moment..." : "Starting checkout..."
                         : tier.cta.mode === "direct" && !isFree
                           ? `${tier.cta.label} — $${tier.priceMonthlyUSD}/mo`
                           : tier.cta.label}
@@ -328,6 +339,12 @@ export default function UpgradeModal({ listingSlug, currentTier, currentCycle }:
                     )}
                   </div>
                 )}
+
+                {tier.footnote && (
+                  <p style={{ margin: "8px 0 0", color: "#6b7280", fontSize: 13, textAlign: "center" }}>
+                    {tier.footnote}
+                  </p>
+                )}
               </div>
             );
           })}
@@ -346,6 +363,12 @@ export default function UpgradeModal({ listingSlug, currentTier, currentCycle }:
             }}
           >
             {error}
+            {error === PREVIEW_OWNER_ONLY && (
+              <div style={{ marginTop: 8, display: "flex", gap: 16 }}>
+                <a href="/owner/login" style={{ color: "#991b1b", fontWeight: 600 }}>Owner login</a>
+                <a href="/claim" style={{ color: "#991b1b", fontWeight: 600 }}>Claim this listing</a>
+              </div>
+            )}
           </div>
         )}
 

@@ -216,7 +216,7 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
         </div>
       )}
 
-      {/* Reviews Plus tier — Upgrade to Website teaser (includes SiteForge info panel) */}
+      {/* Reviews Plus tier — Upgrade to Website teaser (free-preview panel; swm-website-offer-99-v2) */}
       {tier === "reviews_plus" && (
         <div className="border-2 border-purple-300 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-6">
           <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Upgrade</p>
@@ -228,10 +228,9 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
               ))}
             </ul>
             <div className="bg-white/60 rounded-md p-4 text-xs text-gray-600 border border-purple-200">
-              <p className="font-semibold text-purple-900 mb-1">What&apos;s a SiteForge website?</p>
-              <p>A full professional site generated for your business — services, gallery,
-                contact form — delivered in 7 days. Your existing
-                website stays untouched.</p>
+              <p className="font-semibold text-purple-900 mb-1">Free preview first</p>
+              <p>We build a preview of your new website first — no card until you approve it.
+                No contract. Cancel anytime.</p>
             </div>
           </div>
           <Link
@@ -239,7 +238,7 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
             className="inline-block mt-4 px-5 py-2.5 rounded-lg text-white text-sm font-semibold"
             style={{ backgroundColor: CTA_COLOR }}
           >
-            Upgrade to Website →
+            See Your Free Preview →
           </Link>
         </div>
       )}
@@ -256,7 +255,7 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
       {/* SiteForge section — website + growth tiers */}
       {can(tier, "siteforge") && (
         <div className="border rounded-lg p-6">
-          <h3 className="font-semibold mb-3">Your SiteForge website</h3>
+          <h3 className="font-semibold mb-3">Your website</h3>
 
           {siteforgeStatus === "live" && listing.siteforge_url && (
             <div className="bg-green-50 border border-green-200 rounded-md p-3 mb-4 text-sm text-green-800">
@@ -280,7 +279,7 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
 
           {(siteforgeStatus === "pending" || !siteforgeStatus) && (
             <div className="bg-gray-50 border border-gray-200 rounded-md p-3 mb-4 text-sm text-gray-700">
-              🏗️ Your SiteForge site is being prepared. You&apos;ll receive an email when it&apos;s
+              🏗️ Your website is being prepared. You&apos;ll receive an email when it&apos;s
               ready (typically within 24 hours).
             </div>
           )}
@@ -292,13 +291,13 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
             </div>
           )}
 
-          <label className="block text-xs font-medium text-gray-600 mb-1">SiteForge URL</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Website URL</label>
           <div className="flex gap-2">
             <input
               type="url"
               value={siteforgeUrl}
               onChange={(e) => setSiteforgeUrl(e.target.value)}
-              placeholder="https://your-siteforge-url.com"
+              placeholder="https://your-website.com"
               className="flex-1 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
             />
             <button
