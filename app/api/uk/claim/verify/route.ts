@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { UK_TABLE } from "@/lib/uk-solicitors";
 import { revalidateUkSlugs } from "@/lib/uk-revalidate";
+import { verifyUkClaim } from "@/lib/uk-claim-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -20,20 +21,28 @@ export async function GET(request: NextRequest) {
 
   const { data: firm, error } = await supabaseAdmin
     .from(UK_TABLE)
-    .select("id, owner_auth_token")
+    .select("id")
     .eq("id", slug)
     .eq("is_published", true)
     .maybeSingle();
 
-  if (error || !firm || !firm.owner_auth_token || firm.owner_auth_token !== token) {
+  if (error || !firm) {
     return NextResponse.redirect(`${siteUrl}/claim/error`);
   }
 
-  const now = new Date().toISOString();
-  await supabaseAdmin
-    .from(UK_TABLE)
-    .update({ is_claimed: true, claimed_at: now, updated_at: now })
-    .eq("id", firm.id);
+  // D8 — one atomic DB transition (uk_claim_verify): the pending claim's token + claimant identity land
+  // on the row together with is_claimed, or nothing is written. FAIL CLOSED (TDL #1059): any error or
+  // unknown status goes to /claim/error, never to `?claimed=1`.
+  const status = await verifyUkClaim(UK_TABLE, String(firm.id), token);
+  if (status === "already_verified") {
+    // Idempotent repeat of the link that verified this row: same destination, no write, no event,
+    // no purge, claimed_at untouched.
+    return NextResponse.redirect(`${siteUrl}/uk/directory/${firm.id}?claimed=1`);
+  }
+  if (status !== "verified" && status !== "verified_legacy") {
+    if (status === "error") console.error(`[uk/claim/verify] claim write FAILED for ${firm.id}`);
+    return NextResponse.redirect(`${siteUrl}/claim/error`);
+  }
 
   // ISR purge (K32 on-demand purge, 2026-08-24). This route mutates the row and then
   // redirects the owner ONTO the cached leaf. Without the purge they land on a copy that
