@@ -16,7 +16,8 @@ export default function PricingTable() {
 
   // Public pricing page — visitors aren't authenticated owners, so every
   // paid CTA routes to the upgrade flow (claim first if not logged in).
-  const upgradeHref = authenticated && slug ? `/directory/${slug}?upgrade=true` : "/claim";
+  const cycleParam = annual ? "annual" : "monthly";   // annual-toggle-fix-v1: the CTAs carry the billing period
+  const upgradeHref = authenticated && slug ? `/directory/${slug}?upgrade=true&cycle=${cycleParam}` : `/claim?cycle=${cycleParam}`;
 
   return (
     <div>
@@ -47,8 +48,8 @@ export default function PricingTable() {
           const tier = TIERS[id];
           const anchored = tier.anchored;
           const isFree = tier.priceMonthlyUSD === 0;
-          // swm-website-offer-99-v2: Website is monthly only ($99/month) — the annual toggle never applies.
-          const yearly = annual && !tier.monthlyOnly;
+          // annual-toggle-fix-v1: every priced tier follows the toggle (Website $99/mo <-> $990/yr).
+          const yearly = annual && tier.priceAnnualUSD > 0;
           const price = yearly ? tier.priceAnnualUSD : tier.priceMonthlyUSD;
           const unit = yearly ? "year" : "month";
           const isCurrent = authenticated && currentTier === tier.id;
@@ -144,7 +145,7 @@ export default function PricingTable() {
                     style={{ backgroundColor: anchored ? primary : "#374151" }}
                   >
                     {tier.cta.mode === "direct"
-                      ? `${tier.cta.label} — $${tier.priceMonthlyUSD}/mo`
+                      ? `${tier.cta.label} — $${price}/${yearly ? "yr" : "mo"}`
                       : tier.cta.label}
                   </Link>
                   {tier.secondaryCta && (
@@ -152,7 +153,7 @@ export default function PricingTable() {
                       href={upgradeHref}
                       className="w-full text-center text-xs font-medium text-gray-500 underline hover:text-gray-700"
                     >
-                      {tier.secondaryCta.label}
+                      {yearly ? tier.secondaryCta.label.replace(/\$[0-9]+\/mo$/, () => `$${price}/yr`) : tier.secondaryCta.label}
                     </Link>
                   )}
                 </div>

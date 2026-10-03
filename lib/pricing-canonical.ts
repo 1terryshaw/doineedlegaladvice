@@ -98,11 +98,10 @@ export const TIERS: Record<TierId, Tier> = {
     name: 'Website',
     subtitle: 'Free preview first — no card until you approve it',
     priceMonthlyUSD: 99,
-    priceAnnualUSD: 0,
-    monthlyOnly: true,
+    priceAnnualUSD: 990,   // annual-v1: $990/yr = 10x monthly (Website is chosen at preview approval)
     stripeProductId: 'prod_VMZoJGkrEewful',
     stripePriceMonthlyId: 'price_1ULqfAB4nhVx1nmU1g2yvHjs',
-    stripePriceAnnualId: null,
+    stripePriceAnnualId: 'price_1UMVBvB4nhVx1nmUr3yDlPtU',
     visibleFeatures: [
       'Everything in Reviews Plus, plus:',
       'Custom website built for your business, on your domain',

@@ -33,6 +33,7 @@ export default function UpgradeModal({ listingSlug, currentTier, currentCycle }:
   // Open automatically if ?upgrade=true is in URL
   useEffect(() => {
     if (searchParams?.get("upgrade") === "true") setOpen(true);
+    if (searchParams?.get("cycle") === "annual") setCycle("annual");   // annual-toggle-fix-v1: open on the period the visitor chose on the pricing page
   }, [searchParams]);
 
   const close = () => {
@@ -61,7 +62,7 @@ export default function UpgradeModal({ listingSlug, currentTier, currentCycle }:
       const res = await fetch("/api/billing-redirect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ listingSlug, tier: tierId, cycle: mode === "preview" ? "monthly" : cycle, mode }),
+        body: JSON.stringify({ listingSlug, tier: tierId, cycle, mode }),
       });
       if (mode === "preview" && res.status === 401) {
         setError(PREVIEW_OWNER_ONLY);
@@ -179,12 +180,12 @@ export default function UpgradeModal({ listingSlug, currentTier, currentCycle }:
             const tier = TIERS[id];
             const anchored = tier.anchored;
             const isFree = tier.priceMonthlyUSD === 0;
-            const monthly = cycle === "monthly" || !!tier.monthlyOnly;
+            const monthly = cycle === "monthly";
             const price = monthly ? tier.priceMonthlyUSD : tier.priceAnnualUSD;
             const unit = monthly ? "mo" : "yr";
             const isCurrent =
               currentTier === tier.id &&
-              (isFree || !!tier.monthlyOnly || currentCycle == null || currentCycle === cycle);
+              (isFree || currentCycle == null || currentCycle === cycle);
             const isExpanded = !!expanded[tier.id];
             const busy = (m: string) => loading === `${tier.id}:${m}`;
 
@@ -232,7 +233,7 @@ export default function UpgradeModal({ listingSlug, currentTier, currentCycle }:
                   ) : (
                     <>
                       <span style={{ fontSize: 32, fontWeight: 700 }}>${price}</span>
-                      <span style={{ color: "#666", fontSize: 14 }}>{tier.monthlyOnly ? "/month" : `/${unit} USD`}</span>
+                      <span style={{ color: "#666", fontSize: 14 }}>{`/${unit} USD`}</span>
                     </>
                   )}
                 </div>
@@ -310,7 +311,7 @@ export default function UpgradeModal({ listingSlug, currentTier, currentCycle }:
                       {busy(tier.cta.mode)
                         ? tier.cta.mode === "preview" ? "One moment..." : "Starting checkout..."
                         : tier.cta.mode === "direct" && !isFree
-                          ? `${tier.cta.label} — $${tier.priceMonthlyUSD}/mo`
+                          ? `${tier.cta.label} — $${price}/${unit}`
                           : tier.cta.label}
                     </button>
 
@@ -334,7 +335,7 @@ export default function UpgradeModal({ listingSlug, currentTier, currentCycle }:
                       >
                         {busy(tier.secondaryCta.mode)
                           ? "Starting checkout..."
-                          : tier.secondaryCta.label}
+                          : tier.secondaryCta.label.replace(/\$[0-9]+\/mo$/, () => `$${price}/${unit}`)}
                       </button>
                     )}
                   </div>
