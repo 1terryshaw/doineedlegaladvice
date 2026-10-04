@@ -4,8 +4,27 @@ import { generateToken } from "@/lib/auth";
 import { isOwnerTokenExpired } from "@/lib/owner-authorization";
 import { sendClaimEmail } from "@/lib/email";
 import { normalizeClaimSrc } from "@/lib/claim-attribution";
+import { checkClaimStartRate } from "@/lib/claim-start-ratelimit";
+import { logOwnerAuthEvent } from "@/lib/owner-events";
 
 export const dynamic = "force-dynamic";
+
+/** Best-effort operator alert (same shape as owner-login). Never throws, never logs the raw email. */
+async function alertLimiterFailure(error: string) {
+  try {
+    const { error: insErr } = await supabaseAdmin.from("sentinel_alerts").insert({
+      severity: "high",
+      module: "claim-start",
+      repo: "doineedlegaladvice",
+      title: `Claim-start rate limiter error on ${LISTINGS_TABLE}`,
+      details: { table: LISTINGS_TABLE, error, impact: "limiter failed OPEN — claim starts proceed unthrottled until fixed" },
+      status: "open",
+    });
+    if (insErr) console.error(`[claim] sentinel_alerts insert failed: ${insErr.message}`);
+  } catch (e) {
+    console.error(`[claim] sentinel_alerts insert threw: ${e instanceof Error ? e.message : e}`);
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -64,6 +83,34 @@ export async function POST(request: NextRequest) {
       console.error("[abuse] claim verdict failed (fail-open):", e instanceof Error ? e.message : e);
     }
 
+    // empire-vitals-fix-v1 (Part A) — claim-START throttle (empire-vitals-recon-v1 §3: scripted
+    // enumeration put third-party addresses into this form; each new start re-pointed owner_email
+    // and the token at a new stranger). Three gates, all answered with the byte-identical generic
+    // success below — nothing tells the caller which gate fired, or whether one did:
+    //   1. PER LISTING: a verify token minted by this route is still pending (unexpired; claimed
+    //      rows never reach here) => send NOTHING and write NOTHING. The pending owner_email and
+    //      token survive. A NULL expiry is a legacy/login mint, never this route's (it always
+    //      writes +24h), so it does not lock the listing.
+    //   2. PER IP: 5 claim starts per hour (gate-1 starts count too).
+    //   3. PER RECIPIENT: 3 claim-verify sends per rolling 24h, estate-wide (email hash).
+    // Limiter errors FAIL OPEN (the send proceeds) but always raise a sentinel alert. Gate 1 is
+    // row data, not the limiter, so it holds even while the limiter is down.
+    const pendingToken =
+      !!listing.owner_auth_token &&
+      !!listing.owner_auth_token_expires_at &&
+      !isOwnerTokenExpired(listing.owner_auth_token_expires_at);
+    const rate = await checkClaimStartRate(email, request, !pendingToken);
+    if (rate.error) {
+      console.error(JSON.stringify({ event: "claim_start_ratelimit_error", err: rate.error }));
+      await alertLimiterFailure(rate.error);
+    }
+    const throttled = pendingToken ? "pending_token" : rate.verdict !== "ok" ? rate.verdict : null;
+    if (throttled) {
+      console.log(JSON.stringify({ event: "claim_start_throttled", slug, reason: throttled }));
+      await logOwnerAuthEvent("claim_start_throttled", { slug, email, detail: throttled });
+      return NextResponse.json({ success: true });
+    }
+
     // A retry must not kill the link we already emailed. The claim capability lives in ONE
     // column on the LISTING row (owner_auth_token) — there is no per-email token table — so
     // an existing token can only be re-sent to the address that minted it. Same listing +
@@ -71,6 +118,8 @@ export async function POST(request: NextRequest) {
     // earlier email stays valid. Anything else (first claim, a different email, an expired
     // token) mints fresh and necessarily supersedes the old link, which is correct: a
     // capability must not survive being re-pointed at a different claimant.
+    // (Since empire-vitals-fix-v1, gate 1 above already returns for a live +24h claim token;
+    // reuse here now only fires for a NULL-expiry legacy token.)
     const submittedEmail = String(email).trim().toLowerCase();
     const rowEmail = String(listing.owner_email || "").trim().toLowerCase();
     const reuseToken =

@@ -12,7 +12,8 @@ import { gbpConnectResult } from "@/lib/gbp-connect-result";
 
 export type OwnerAuthEvent =
   | "link_requested" | "link_sent" | "link_clicked" | "link_expired" | "link_reused" | "link_invalid"
-  | "session_created" | "session_refused" | "session_renewed";
+  | "session_created" | "session_refused" | "session_renewed"
+  | "claim_start_throttled"; // empire-vitals-fix-v1: /api/claim start refused (detail = reason)
 
 const REPO = process.env.VERCEL_GIT_REPO_SLUG || process.env.VERCEL_PROJECT_PRODUCTION_URL || null;
 const DAY = 24 * 60 * 60 * 1000;
