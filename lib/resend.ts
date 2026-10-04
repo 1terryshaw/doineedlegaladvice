@@ -172,7 +172,9 @@ export async function sendMagicLink(
     const { data, error } = await resend.emails.send({
       from: AUTH_FROM,
       to: email,
-      subject: `Your login link for ${verticalConfig.name}`,
+      // Test-marker rule (fleet-wide): mail to a zz- audit/smoke fixture, or to the funnel-smoke probe
+      // sink (any per-vertical plus-tag of it), is marked [TEST] (claimthrottle-bookkeeper-hmac-loginTEST-v1).
+      subject: `${/^zz-/.test(slug) || /^1terryshaw\+probesinkbiz(-[a-z0-9-]+)?@gmail\.com$/i.test(String(email).trim()) ? "[TEST] " : ""}Your login link for ${verticalConfig.name}`,
       html: `
       <h2>Welcome back to ${verticalConfig.name}</h2>
       <p>Click the link below to access your listing dashboard:</p>
