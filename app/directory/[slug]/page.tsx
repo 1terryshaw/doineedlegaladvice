@@ -28,6 +28,7 @@ import { detailBreadcrumbSchema, localizeFaqs, OG_DEFAULT_IMAGE } from "@/lib/se
 import { getRegionBySlug } from "@/lib/constants";
 import ListingClaimCTA from "@/components/ListingClaimCTA";
 import ClaimUnlockPreview from "@/components/ClaimUnlockPreview";
+import { normalizeWebsiteUrl } from "@/lib/url-normalize";
 import PublicGbpClaimSidecar from "@/components/PublicGbpClaimSidecar";
 import { normalizeTierForPricing } from "@/lib/pricing-canonical";
 import { HAS_LIST_YOUR_BUSINESS } from "@/lib/add-business";
@@ -126,6 +127,10 @@ export default async function ListingPage({ params }: Props) {
       ? listing.email
       : null;
 
+  // Stored websites can be bare domains ("collinslaw.com"); as an href that resolves relative to
+  // /directory/ and 404s. Normalize to an absolute https URL; an unparseable value gets no link.
+  const websiteHref = listing.website ? normalizeWebsiteUrl(listing.website).url : null;
+
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "LegalService",
@@ -137,7 +142,7 @@ export default async function ListingPage({ params }: Props) {
     // so an unconditional key emits `"url":null` for any row whose website is null — invalid
     // schema.org. The Arc-2 dead-website cleanup nulled 38,669 websites fleet-wide, so this is
     // now common rather than theoretical. The outbound <a> below is already guarded.
-    ...(listing.website && { url: listing.website }),
+    ...(websiteHref && { url: websiteHref }),
     address: {
       "@type": "PostalAddress",
       // streetAddress/postalCode are emitted ONLY behind the owner's opt-in. A hidden
@@ -417,10 +422,10 @@ export default async function ListingPage({ params }: Props) {
               <h3 className="font-semibold mb-3">Contact Information</h3>
               {listing.phone && <p className="text-sm"><span className="text-gray-500">Phone:</span> {listing.phone}</p>}
               {publicEmail && <p className="text-sm"><span className="text-gray-500">Email:</span> {publicEmail}</p>}
-              {listing.website && (
+              {websiteHref && (
                 <p className="text-sm">
                   <span className="text-gray-500">Website:</span>{" "}
-                  <a href={listing.website} target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: verticalConfig.primaryColor }}>
+                  <a href={websiteHref} target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: verticalConfig.primaryColor }}>
                     {listing.website}
                   </a>
                 </p>
