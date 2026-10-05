@@ -47,6 +47,7 @@ export default function ClaimForm({ listingSlug, listingName, src, lid }: { list
       <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
         <h3 className="text-green-800 font-semibold text-lg">Verification email sent!</h3>
         <p className="text-green-600 mt-2">Check your email and click the verification link to claim your listing.</p>
+        <p className="text-sm text-gray-500 mt-3">{"Don't see it? Check your Updates or Promotions tab, or your spam folder."}</p>
       </div>
     );
   }

@@ -49,7 +49,7 @@ export default function UkClaimForm({ slug, firmName }: Props) {
           — it&apos;s free.
         </p>
         <p className="text-xs text-gray-500 mt-3">
-          Didn&apos;t get it? Check spam, or use an email at the business&apos;s own domain.
+          {"Don't see it? Check your Updates or Promotions tab, or your spam folder."} Or use an email at the business&apos;s own domain.
         </p>
       </div>
     );

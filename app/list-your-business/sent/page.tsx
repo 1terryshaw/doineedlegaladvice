@@ -22,6 +22,9 @@ export default function SentPage() {
         your listing goes live. Nothing is published until you do.
       </p>
       <p style={{ marginTop: 12, lineHeight: 1.6, color: "#64748b", fontSize: 14 }}>
+        {"Don't see it? Check your Updates or Promotions tab, or your spam folder."}
+      </p>
+      <p style={{ marginTop: 12, lineHeight: 1.6, color: "#64748b", fontSize: 14 }}>
         The link is valid for 24 hours. If it doesn&apos;t arrive, check your spam folder — and
         if it still isn&apos;t there, just submit the listing again and we&apos;ll send a fresh
         link. We never store a copy of the link, so we can&apos;t re-send the original one.
