@@ -547,8 +547,8 @@ export default async function ListingPage({ params }: Props) {
 
           {/* Sidebar */}
           <div className="md:col-span-1 space-y-6">
-            // NO FREE LEADS (leads-plus-canary-v1 addendum A): the legacy free InquiryForm is gone. Only a Leads
-            // Plus listing (gate above) gets an inquiry form; everyone else gets the claim/edit CTA.
+            {/* NO FREE LEADS (leads-plus-canary-v1 addendum A): the legacy free InquiryForm is gone. Only a Leads
+               Plus listing (gate above) gets an inquiry form; everyone else gets the claim/edit CTA. */}
             {lpOn && (
               <div className="border rounded-lg p-6 sticky top-4">
                 <div className="space-y-4" id="get-a-quote" data-testid="leads-plus-sidebar">
