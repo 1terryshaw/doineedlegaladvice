@@ -6,7 +6,12 @@ import { getEnrichment } from "@/lib/knowledge";
 import { hasPublicStreet } from "@/lib/address-visibility";
 import EnrichmentBlock from "@/components/EnrichmentBlock";
 import verticalConfig from "@/lib/vertical.config";
-import InquiryForm from "@/components/InquiryForm";
+import LeadsPlusForm from "@/components/LeadsPlusForm";
+import LeadsPlusButtons from "@/components/LeadsPlusButtons";
+import LeadsPlusContent from "@/components/LeadsPlusContent";
+import { getLeadsPlusPublicCached } from "@/lib/leads-plus-server";
+import { TEST_FIXTURE_SLUG_PREFIX } from "@/lib/leads-plus";
+import { SITE_URL } from "@/lib/seo";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
 import UpgradeModal from "@/components/UpgradeModal";
 import { can } from "@/lib/tier-capabilities";
@@ -44,9 +49,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const listing = await getListing(slug);
   if (!listing) return { title: "Not Found" };
+  // leads-plus-canary-v1: owner-APPROVED kit description (R8) only while the Leads Plus gate is open;
+  // the reserved test fixture is never indexable.
+  const lpMeta = await getLeadsPlusPublicCached(slug).catch(() => null);
+  const kitDesc = lpMeta?.gate.ok ? lpMeta.kit?.description : undefined;
   return {
+    ...(slug.startsWith(TEST_FIXTURE_SLUG_PREFIX) ? { robots: { index: false, follow: false } } : {}),
     title: listing.name,
-    description: listing.short_description || listing.description,
+    description: kitDesc || listing.short_description || listing.description,
     alternates: { canonical: `/directory/${slug}` },
     openGraph: { images: [OG_DEFAULT_IMAGE] },
   };
@@ -131,11 +141,19 @@ export default async function ListingPage({ params }: Props) {
   // /directory/ and 404s. Normalize to an absolute https URL; an unparseable value gets no link.
   const websiteHref = listing.website ? normalizeWebsiteUrl(listing.website).url : null;
 
+  // leads-plus-canary-v1: ONE gate (claimed AND owner email confirmed AND leads_plus AND
+  // leads_plus_enabled). Fail-open to today's page: any read error ⇒ null ⇒ gate closed.
+  const lp = await getLeadsPlusPublicCached(listing.slug).catch(() => null);
+  const lpOn = lp?.gate.ok === true;
+  const lpKit = lpOn ? lp!.kit : null;
+  const lpWebsite = lpOn && lp!.websiteOk ? (listing.website as string) : null;
+
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "LegalService",
+    ...(lpOn ? { "@id": `${SITE_URL}/directory/${listing.slug}#business` } : {}),
     name: listing.name,
-    description: listing.short_description || listing.description,
+    description: lpKit?.description || listing.short_description || listing.description,
     telephone: listing.phone,
     email: publicEmail,
     // Conditional, NOT `url: listing.website`. JSON.stringify drops `undefined` but KEEPS `null`,
@@ -232,8 +250,36 @@ export default async function ListingPage({ params }: Props) {
   breadcrumbTrail.push({ name: listing.name, path: `/directory/${listing.slug}` });
   const breadcrumbLd = detailBreadcrumbSchema(breadcrumbTrail);
 
+  // leads-plus-canary-v1: Service nodes (provider → this business) + FAQPage ONLY for the
+  // owner-approved FAQs. On a Leads Plus page the generic vertical FAQPage below is not emitted.
+  const lpServiceNames: string[] = lpOn ? (lpKit?.services ?? services) : [];
+  const lpAreas: string[] = lpKit?.service_areas ?? serviceArea;
+  const lpServiceLd = lpServiceNames.length
+    ? lpServiceNames.slice(0, 20).map((name) => ({
+        "@context": "https://schema.org",
+        "@type": "Service",
+        serviceType: name,
+        name,
+        provider: { "@id": `${SITE_URL}/directory/${listing.slug}#business` },
+        ...(lpAreas.length > 0 && { areaServed: lpAreas.map((c) => ({ "@type": "City", name: c })) }),
+      }))
+    : null;
+  const lpFaqLd = lpKit?.faqs?.length
+    ? {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: lpKit.faqs.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+      }
+    : null;
+
   return (
     <>
+      {lpServiceLd && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(lpServiceLd) }} />
+      )}
+      {lpFaqLd && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(lpFaqLd) }} />
+      )}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -250,6 +296,15 @@ export default async function ListingPage({ params }: Props) {
           &larr; Back to directory
         </Link>
 
+
+        {/* leads-plus-canary-v1: mobile CTA above the fold (desktop gets the sidebar block). */}
+        {lpOn && (
+          <div className="md:hidden mb-5" data-testid="leads-plus-mobile-cta">
+            <p className="font-semibold text-lg mb-2">{listing.name}</p>
+            <LeadsPlusButtons slug={listing.slug} mode={lp!.mode} phone={listing.phone ?? null}
+              email={lp!.publicEmail} website={lpWebsite} whatsapp={lp!.whatsapp} variant="hero" />
+          </div>
+        )}
 
         {heroImageUrl && (
           <div className="mb-6 rounded-xl overflow-hidden bg-gray-100 max-h-[420px] sm:max-h-none [container-type:inline-size]">
@@ -345,7 +400,7 @@ export default async function ListingPage({ params }: Props) {
                   route shapes), and HTML's whitespace rules were collapsing them into one paragraph
                   on the way out. CSS ONLY: no dangerouslySetInnerHTML, no markdown, no HTML from
                   user input. */}
-              <p className="whitespace-pre-line">{listing.description}</p>
+              <p className="whitespace-pre-line">{lpKit?.description || listing.description}</p>
             </div>
 
             {/* Customer reviews — full carousel for tiers with reviews_display */}
@@ -396,6 +451,8 @@ export default async function ListingPage({ params }: Props) {
                 </dl>
               </div>
             )}
+
+            {lpKit && <LeadsPlusContent kit={lpKit} />}
 
             {/* Additional Information — supplementary AI enrichment (distinct, attributed block) */}
             {enrichment && (
@@ -490,9 +547,19 @@ export default async function ListingPage({ params }: Props) {
 
           {/* Sidebar */}
           <div className="md:col-span-1 space-y-6">
-            <div className="border rounded-lg p-6 sticky top-4">
-              <InquiryForm listingSlug={listing.slug} />
-            </div>
+            // NO FREE LEADS (leads-plus-canary-v1 addendum A): the legacy free InquiryForm is gone. Only a Leads
+            // Plus listing (gate above) gets an inquiry form; everyone else gets the claim/edit CTA.
+            {lpOn && (
+              <div className="border rounded-lg p-6 sticky top-4">
+                <div className="space-y-4" id="get-a-quote" data-testid="leads-plus-sidebar">
+                  <div className="hidden md:block">
+                    <LeadsPlusButtons slug={listing.slug} mode={lp!.mode} phone={listing.phone ?? null}
+                      email={lp!.publicEmail} website={lpWebsite} whatsapp={lp!.whatsapp} variant="sidebar" />
+                  </div>
+                  <LeadsPlusForm listingSlug={listing.slug} businessName={listing.name} services={lp!.services} />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

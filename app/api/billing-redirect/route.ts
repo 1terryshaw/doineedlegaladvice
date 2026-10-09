@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyOwnerAccess } from '@/lib/auth';
 import { signBillingHandoff } from '@/lib/billing-handoff';
+import { verticalAllowsLeadForms } from '@/lib/leads-plus';
 
 export const dynamic = 'force-dynamic';
 
 type Body = {
   listingSlug?: string;
-  tier?: 'reviews_plus' | 'website' | 'growth';
+  tier?: 'reviews_plus' | 'website' | 'growth' | 'leads_plus';
   cycle?: 'monthly' | 'annual';
   mode?: 'trial' | 'direct';
 };
@@ -16,20 +17,24 @@ export async function POST(request: NextRequest) {
   try { body = await request.json(); }
   catch { return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 }); }
 
-  const { listingSlug, tier, cycle, mode } = body;
+  const { listingSlug, mode } = body;
+  let { tier, cycle } = body;
   if (!listingSlug || !tier || !cycle) {
     return NextResponse.json({ error: 'Missing listingSlug, tier, or cycle' }, { status: 400 });
   }
-  if (!['reviews_plus', 'website', 'growth'].includes(tier)) {
+  if (!['reviews_plus', 'website', 'growth', 'leads_plus'].includes(tier)) {
     return NextResponse.json({ error: 'Invalid tier' }, { status: 400 });
   }
   if (!['monthly', 'annual'].includes(cycle)) {
     return NextResponse.json({ error: 'Invalid cycle' }, { status: 400 });
   }
-  // 'trial' is offered on reviews_plus and website only. Growth is
-  // direct-purchase only; anything else (or absent) bills immediately.
+  // R11 GO (leads-plus-canary-v1): a NEW Reviews Plus checkout is sold as Leads Plus $19 (monthly only).
+  // Owners with an existing $9 sub land on billing's no-op path ("already on this plan") — their sub is untouched.
+  if (tier === 'reviews_plus') { tier = 'leads_plus'; cycle = 'monthly'; }
+  // 'trial' mirrors Reviews Plus exactly (30 days, card at signup) for reviews_plus / leads_plus / website.
+  // Growth is direct-purchase only; anything else (or absent) bills immediately.
   const checkoutMode: 'trial' | 'direct' =
-    mode === 'trial' && (tier === 'reviews_plus' || tier === 'website')
+    mode === 'trial' && (tier === 'leads_plus' || tier === 'website')
       ? 'trial'
       : 'direct';
 
@@ -39,6 +44,17 @@ export async function POST(request: NextRequest) {
   }
 
   const listing = access.listing;
+
+  // Leads Plus ($19 USD/mo) — R11 GO: sold to every claimed owner on this site (R4 verticals never).
+  // Monthly only (R5). The purchase itself turns the listing's leads_plus_enabled on (empire-billing webhook).
+  if (tier === 'leads_plus') {
+    if (!verticalAllowsLeadForms()) {
+      return NextResponse.json({ error: 'Leads Plus is not available for this listing yet.' }, { status: 403 });
+    }
+    if (cycle !== 'monthly') {
+      return NextResponse.json({ error: 'Leads Plus is monthly only' }, { status: 400 });
+    }
+  }
   const ownerEmail: string | undefined = listing.owner_email || listing.email;
   if (!ownerEmail || ownerEmail.trim() === '') {
     return NextResponse.json(

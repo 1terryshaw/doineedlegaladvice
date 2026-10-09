@@ -2,6 +2,10 @@ import { redirect } from "next/navigation";
 import { Metadata } from "next";
 import { verifyOwnerAccess } from "@/lib/auth";
 import OwnerDashboard from "@/components/OwnerDashboard";
+import LeadsPlusPanel from "@/components/owner/LeadsPlusPanel";
+import { verticalAllowsLeadForms, hasLeadsPlus } from "@/lib/leads-plus";
+import { getPlanInfo } from "@/lib/plan-info";
+import { SITE_URL } from "@/lib/seo";
 import ReviewShowcase from "@/components/ReviewShowcase";
 import HealthScore from "@/components/HealthScore";
 import { listPhotosForListing } from "@/lib/listing-photos";
@@ -26,6 +30,7 @@ export const metadata: Metadata = {
 
 export default async function OwnerDashboardPage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const sp = ((await searchParams) ?? {}) as Record<string, string | string[] | undefined>; // leads-plus-canary-v1: ?kit=1 opens the content kit after checkout
   const saved = (await searchParams).saved === "1"; // owner-journey-friction-fix-v1
   const result = await verifyOwnerAccess(slug);
 
@@ -85,10 +90,19 @@ export default async function OwnerDashboardPage({ params, searchParams }: Props
     },
   );
 
+  // leads-plus-canary-v1: Leads Plus dashboard mode — listings with leads_plus_enabled + the entitlement only.
+  const lpDash = row.leads_plus_enabled === true && verticalAllowsLeadForms() && hasLeadsPlus(listing)
+    ? {
+        plan: await getPlanInfo(row.stripe_subscription_id as string | null),
+        mode: (row.lead_page_mode === "A" || row.lead_page_mode === "B" ? row.lead_page_mode : null) as "A" | "B" | null,
+      }
+    : undefined;
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
       <OwnerDashboard
         listing={listing}
+        leadsPlus={lpDash}
         reviewSlot={reviewSlot}
         healthSlot={healthSlot}
         nextStepSlot={
@@ -96,6 +110,16 @@ export default async function OwnerDashboardPage({ params, searchParams }: Props
             {saved && <SavedNotice />}
             <NextStepCard step={nextStep} />
             {reviewKit && <ReviewKit kit={reviewKit} slug={listing.slug} />}
+            {/* leads-plus-canary-v1: listings with leads_plus_enabled only. */}
+            {row.leads_plus_enabled === true && verticalAllowsLeadForms() && (
+              <LeadsPlusPanel
+                slug={listing.slug}
+                businessName={String(row.name || listing.slug)}
+                listingUrl={`${SITE_URL}/directory/${listing.slug}`}
+                phone={(row.phone as string | null) ?? null}
+                openKit={sp.kit === "1"}
+              />
+            )}
           </>
         }
       />

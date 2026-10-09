@@ -62,7 +62,7 @@ export default function UpgradeModal({ listingSlug, currentTier, currentCycle }:
       const res = await fetch("/api/billing-redirect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ listingSlug, tier: tierId, cycle, mode }),
+        body: JSON.stringify({ listingSlug, tier: TIERS[tierId].billingTier ?? tierId, cycle: TIERS[tierId].monthlyOnly ? "monthly" : cycle, mode }),
       });
       if (mode === "preview" && res.status === 401) {
         setError(PREVIEW_OWNER_ONLY);
@@ -180,7 +180,7 @@ export default function UpgradeModal({ listingSlug, currentTier, currentCycle }:
             const tier = TIERS[id];
             const anchored = tier.anchored;
             const isFree = tier.priceMonthlyUSD === 0;
-            const monthly = cycle === "monthly";
+            const monthly = cycle === "monthly" || !!tier.monthlyOnly || tier.priceAnnualUSD === 0; // monthly-only tiers ignore the toggle
             const price = monthly ? tier.priceMonthlyUSD : tier.priceAnnualUSD;
             const unit = monthly ? "mo" : "yr";
             const isCurrent =

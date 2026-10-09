@@ -28,7 +28,11 @@ export type Capability =
   | "analytics"
   | "priority_search"
   | "siteforge"
-  | "custom_domain";
+  | "custom_domain"
+  // leads-plus-canary-v1: the Leads Plus entitlement (lead form + content kit). Granted by
+  // Reviews Plus and every tier above it (R1/R2; migration: active Reviews Plus subs grant it).
+  // Read it ONLY through hasLeadsPlus() in lib/leads-plus.ts.
+  | "leads_plus";
 
 type CapabilityMap = Record<Capability, boolean>;
 
@@ -41,6 +45,7 @@ export const TIER_CAPABILITIES: Record<TierSlug, CapabilityMap> = {
     priority_search: false,
     siteforge: false,
     custom_domain: false,
+    leads_plus: false,
   },
   free: {
     lead_forwarding: false,
@@ -50,6 +55,7 @@ export const TIER_CAPABILITIES: Record<TierSlug, CapabilityMap> = {
     priority_search: false,
     siteforge: false,
     custom_domain: false,
+    leads_plus: false,
   },
   reviews_plus: {
     lead_forwarding: true,
@@ -59,6 +65,7 @@ export const TIER_CAPABILITIES: Record<TierSlug, CapabilityMap> = {
     priority_search: true,
     siteforge: false,
     custom_domain: false,
+    leads_plus: true,
   },
   website: {
     lead_forwarding: true,
@@ -68,6 +75,7 @@ export const TIER_CAPABILITIES: Record<TierSlug, CapabilityMap> = {
     priority_search: true,
     siteforge: true,
     custom_domain: false,
+    leads_plus: true,
   },
   growth: {
     lead_forwarding: true,
@@ -77,6 +85,7 @@ export const TIER_CAPABILITIES: Record<TierSlug, CapabilityMap> = {
     priority_search: true,
     siteforge: true,
     custom_domain: true,
+    leads_plus: true,
   },
   payment_error_review: {
     lead_forwarding: false,
@@ -86,6 +95,7 @@ export const TIER_CAPABILITIES: Record<TierSlug, CapabilityMap> = {
     priority_search: false,
     siteforge: false,
     custom_domain: false,
+    leads_plus: false,
   },
 };
 
@@ -97,6 +107,8 @@ export const TIER_CAPABILITIES: Record<TierSlug, CapabilityMap> = {
 const TIER_ALIASES: Record<string, TierSlug> = {
   reviews: "reviews_plus",
   claimed: "free",
+  // leads-plus-canary-v1: a Leads Plus purchase is stored as reviews_plus (same ordering — R3).
+  leads_plus: "reviews_plus",
 };
 
 export function can(

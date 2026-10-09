@@ -4,7 +4,7 @@ export type HandoffPayload = {
   vertical: string;
   listing_slug: string;
   owner_email: string;
-  tier: 'reviews_plus' | 'website' | 'growth';
+  tier: 'reviews_plus' | 'website' | 'growth' | 'leads_plus';
   cycle: 'monthly' | 'annual';
   /** Checkout intent. 'trial' → 30-day Stripe trial; 'direct' → bill now.
    *  Optional for backward compatibility; empire-billing defaults to 'direct'. */

@@ -9,6 +9,7 @@ import verticalConfig from "@/lib/vertical.config";
 import { Listing } from "@/lib/supabase";
 import { can, getTierDisplayName, getNextTier, TierSlug } from "@/lib/tier-capabilities";
 import { TIERS } from "@/lib/pricing-canonical";
+import { formatCharge, formatTrialEnd, type PlanInfo } from "@/lib/plan-format";
 import UpgradeReturnRefresher from "./UpgradeReturnRefresher";
 import { gbpConnectResult } from "@/lib/gbp-connect-result";
 import { REPASTE_PROMPT } from "@/lib/gbp-repaste-hold";
@@ -41,15 +42,20 @@ function tierPillStyle(tier: string): TierPillColors {
 }
 
 function formatPrice(tier: TierSlug | null): string {
-  const t = tier === "reviews_plus" || tier === "website"
-    ? TIERS[tier]
-    : null;
-  return t ? `$${t.priceMonthlyUSD} USD/mo` : "";
+  // reviews_plus without a Stripe-read plan = a legacy $9 Reviews Plus sub (R11 repriced only NEW checkouts).
+  if (tier === "reviews_plus") return "$9 USD/mo";
+  return tier === "website" ? `${TIERS.website.priceMonthlyUSD} USD/mo` : "";
 }
 
-export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextStepSlot }: { listing: Listing; reviewSlot?: ReactNode; healthSlot?: ReactNode; nextStepSlot?: ReactNode }) {
+// leads-plus-canary-v1 dashboard fix: present ONLY for a leads_plus_enabled listing that holds the
+// Leads Plus entitlement. Real plan name + charge come from the Stripe subscription, not the tier slug.
+export type LeadsPlusDash = { plan: PlanInfo | null; mode: "A" | "B" | null };
+
+export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextStepSlot, leadsPlus }: { listing: Listing; reviewSlot?: ReactNode; healthSlot?: ReactNode; nextStepSlot?: ReactNode; leadsPlus?: LeadsPlusDash }) {
   const tier = (listing.tier || listing.subscription_tier || "free") as TierSlug;
-  const tierLabel = getTierDisplayName(tier);
+  const lpPlan = leadsPlus?.plan ?? null;
+  const tierLabel = lpPlan ? lpPlan.name : leadsPlus ? "Leads Plus" : getTierDisplayName(tier);
+  const priceLabel = lpPlan ? formatCharge(lpPlan) : formatPrice(tier);
   const nextTier = getNextTier(tier);
   const pill = tierPillStyle(tier);
 
@@ -170,10 +176,10 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
               className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full border"
               style={{ backgroundColor: pill.bg, color: pill.text, borderColor: pill.border }}
             >
-              ✓ {tierLabel} tier
+              ✓ {tierLabel}{leadsPlus ? "" : " tier"}
             </span>
             {tier !== "free" && tier !== "seed" && tier !== "payment_error_review" && (
-              <span className="text-xs text-gray-500">{formatPrice(tier)}</span>
+              <span className="text-xs text-gray-500">{priceLabel}</span>
             )}
           </div>
         </div>
@@ -200,7 +206,7 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
       {(tier === "free" || tier === "seed") && (
         <div className="border-2 border-blue-300 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6">
           <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Upgrade</p>
-          <h2 className="text-xl font-bold mt-1">Unlock Reviews Plus — ${TIERS.reviews_plus.priceMonthlyUSD} USD/mo</h2>
+          <h2 className="text-xl font-bold mt-1">Unlock {TIERS.reviews_plus.name} — ${TIERS.reviews_plus.priceMonthlyUSD} USD/mo</h2>
           <ul className="mt-3 space-y-1.5 text-sm text-gray-700">
             {TIERS.reviews_plus.visibleFeatures.map((f, i) => (
               <li key={i}>✓ {f}</li>
@@ -211,13 +217,21 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
             className="inline-block mt-4 px-5 py-2.5 rounded-lg text-white text-sm font-semibold"
             style={{ backgroundColor: CTA_COLOR }}
           >
-            Upgrade to Reviews Plus →
+            Start your free trial →
           </Link>
         </div>
       )}
 
-      {/* Reviews Plus tier — Upgrade to Website teaser (free-preview panel; swm-website-offer-99-v2) */}
-      {tier === "reviews_plus" && (
+      {/* leads-plus-canary-v1: ONE upsell line for Leads Plus owners — Mode A (no website) only; Mode B gets none. */}
+      {leadsPlus && leadsPlus.mode !== "B" && (
+        <div className="border rounded-lg p-4 flex flex-wrap items-center justify-between gap-3" data-testid="lp-upsell">
+          <p className="text-sm font-medium">Make this your own website — $49 USD/mo</p>
+          <WebsitePreviewButton slug={listing.slug} />
+        </div>
+      )}
+
+      {/* Reviews Plus tier — Upgrade to Website teaser (free-preview panel; swm-website-offer-99-v2). Not for Leads Plus owners. */}
+      {tier === "reviews_plus" && !leadsPlus && (
         <div className="border-2 border-purple-300 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-6">
           <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Upgrade</p>
           <h2 className="text-xl font-bold mt-1">Unlock Website tier — ${TIERS.website.priceMonthlyUSD} USD/mo</h2>
@@ -247,7 +261,8 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
       {reviewSlot}
 
       {/* Recent Leads — reviews_plus+ tiers */}
-      {can(tier, "lead_forwarding") && <RecentLeads />}
+      {/* leads-plus-canary-v1: the Leads Plus inbox is the ONLY leads surface for Leads Plus owners. */}
+      {can(tier, "lead_forwarding") && !leadsPlus && <RecentLeads />}
 
       {/* Listing health score — paid tiers (Reviews Plus feature) */}
       {can(tier, "analytics") && healthSlot}
@@ -437,7 +452,7 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
         <div className="border rounded-lg p-6">
           <h3 className="font-semibold mb-4">Billing</h3>
           <p className="text-sm text-gray-600">
-            Current: <span className="font-medium">{tierLabel}{tier !== "free" && tier !== "seed" ? ` — ${formatPrice(tier)}` : ""}</span>
+            Current: <span className="font-medium" data-testid="billing-current">{tierLabel}{tier !== "free" && tier !== "seed" && priceLabel ? ` — ${priceLabel}` : ""}</span>{lpPlan?.trialEnd && <span data-testid="billing-trial"> · free trial until {formatTrialEnd(lpPlan.trialEnd)}</span>}
           </p>
           {listing.stripe_subscription_id ? (
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
@@ -661,5 +676,28 @@ function RecentLeads() {
         </div>
       )}
     </div>
+  );
+}
+
+// leads-plus-canary-v1: the Mode A upsell → the existing Website free-preview request (no card until approved).
+function WebsitePreviewButton({ slug }: { slug: string }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  async function go() {
+    setBusy(true); setMsg("");
+    const r = await fetch("/api/billing-redirect", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ listingSlug: slug, tier: "website", cycle: "monthly", mode: "trial" }) });
+    const d = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (d.url) { window.location.href = d.url; return; }
+    setMsg(d.error || "Unavailable right now.");
+  }
+  return (
+    <span className="flex items-center gap-2">
+      <button type="button" onClick={go} disabled={busy} className="text-sm px-3 py-1.5 rounded-lg text-white disabled:opacity-50" style={{ backgroundColor: CTA_COLOR }}>
+        See a free preview →
+      </button>
+      {msg && <span className="text-xs text-red-600">{msg}</span>}
+    </span>
   );
 }

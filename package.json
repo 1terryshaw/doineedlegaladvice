@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "prebuild": "node scripts/verify-data-sources.mjs",
+    "prebuild": "node scripts/check-client-imports.mjs && node scripts/verify-data-sources.mjs",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
