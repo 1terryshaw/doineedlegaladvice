@@ -49,3 +49,22 @@ export async function nameHasPersonalEmail(
   }
   return false;
 }
+
+// The rendered-name columns trg_zz_name_email_guard watches across the fleet (pg_trigger args,
+// 2026-10-11): name, business_name, firm_name. Column NAMES only — the rule itself is the RPC.
+const GUARDED_NAME_COLUMNS = ["name", "business_name", "firm_name"] as const;
+
+/**
+ * republish_guard v1.2.0 input (K395 R4): 'personal' when any guarded name column present on the
+ * row carries a personal-domain email, else undefined. undefined is the safe default — the guard's
+ * decision is then unchanged and the DB guard remains the authority (it still refuses the write).
+ */
+export async function nameEmailClassForRow(
+  client: RpcCapable,
+  row: object | null | undefined,
+): Promise<"personal" | undefined> {
+  if (!row) return undefined;
+  const r = row as Record<string, unknown>;
+  const names = GUARDED_NAME_COLUMNS.map((k) => r[k]).filter((v): v is string => typeof v === "string");
+  return (await nameHasPersonalEmail(client, ...names)) ? "personal" : undefined;
+}

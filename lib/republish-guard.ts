@@ -43,7 +43,7 @@
 // callers, revert predicates and reporting all key off the specific authority.
 // ============================================================================
 
-export const REPUBLISH_GUARD_VERSION = "1.1.0";
+export const REPUBLISH_GUARD_VERSION = "1.2.0";
 
 export const REASON_PERSON_SEEDED_LICENSING_ROSTER = "person_seeded_licensing_roster";
 export const REASON_NPPES_TYPE2_ORG_CTP = "nppes_type2_org_claim_then_publish";
@@ -92,6 +92,14 @@ export type RepublishInput = {
   // carry the org reason are behaviourally unchanged whether or not they select them.
   npi?: string | null;
   submitted_via?: string | null;
+  // --- name-email rule (v1.2.0, name-guard-followthrough-v1 / K395 R4). -------------------
+  // public.name_email_class over the row's rendered name column(s), computed by the CALLER via
+  // RPC (this function stays pure and synchronous). 'personal' = some rendered name carries a
+  // personal-domain email; the DB guard trg_zz_name_email_guard would refuse the publish flip
+  // (23514), so the guard denies it here first and the decision is LOGGED AS A DENY rather than
+  // surfacing as a failed write. `undefined` (caller did not / could not classify) changes
+  // nothing: the DB guard remains the authority and still refuses.
+  name_email_class?: "personal" | "other" | null;
 };
 
 export type RepublishReasonCode =
@@ -99,6 +107,7 @@ export type RepublishReasonCode =
   | "ALLOW_nppes_type2_org_claim_then_publish"
   | "DENY_not_down"                 // already published — nothing to republish
   | "DENY_nameless"                 // guard d: a nameless row must never render
+  | "DENY_personal_email_name"      // a rendered name carries a personal-domain email (K395)
   | "DENY_missing_reason"           // null / undefined (missing column)
   | "DENY_restricted_or_unmapped"   // any other value — RESTRICTED_*, unrecognised, etc.
   | "DENY_org_lane_missing_npi"     // org lane: no organization identity on the row
@@ -129,6 +138,9 @@ export function evaluateRepublish(l: RepublishInput): RepublishDecision {
   if (l.is_published !== false) return { allow: false, reason_code: "DENY_not_down" };
   // guard d — never publish a nameless row
   if (!/[A-Za-z]/.test(l.name ?? "")) return { allow: false, reason_code: "DENY_nameless" };
+  // guard e (v1.2.0) — never publish a personal email inside a rendered name (K395; the DB guard
+  // would refuse the write anyway — denying here records it as a decision, not a failure)
+  if (l.name_email_class === "personal") return { allow: false, reason_code: "DENY_personal_email_name" };
   // fail-closed on missing / NULL reason (undefined = column absent)
   if (l.deserve_reason === null || l.deserve_reason === undefined)
     return { allow: false, reason_code: "DENY_missing_reason" };
