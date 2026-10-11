@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { getListingForClaim } from "@/lib/supabase";
 import ClaimForm from "@/components/ClaimForm";
+import { NAME_EMAIL_REASON, NAME_EMAIL_MESSAGE } from "@/lib/name-email-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -12,11 +13,13 @@ export const metadata: Metadata = {
 
 interface Props {
   // /api/claim/verify carries ?slug= on every failure path it knows the listing for.
-  searchParams: Promise<{ slug?: string }>;
+  searchParams: Promise<{ reason?: string; slug?: string }>;
 }
 
 export default async function ClaimErrorPage({ searchParams }: Props) {
-  const { slug } = await searchParams;
+  const { slug, reason } = await searchParams;
+  // name-guard-followthrough-v1 (K395 R1): the claim write was refused by the name-email guard.
+  const nameEmail = reason === NAME_EMAIL_REASON;
   // A verify link dies for one ordinary reason: the owner submitted the claim again and the
   // newer request rotated the token out from under the older email. Ending that at "back to
   // directory" strands a real owner mid-claim. When we know which listing they were claiming
@@ -32,13 +35,15 @@ export default async function ClaimErrorPage({ searchParams }: Props) {
       <div className="text-center">
         <h1 className="text-2xl font-bold mb-4">Verification Failed</h1>
         <p className="text-gray-600 mb-6">
-          {resendable
+          {nameEmail
+            ? NAME_EMAIL_MESSAGE
+            : resendable
             ? "That verification link is no longer valid — starting the claim again replaces the previous link. Request a fresh one below and it will be emailed to you."
             : "The verification link is invalid or has expired. Please try claiming your listing again."}
         </p>
       </div>
 
-      {resendable && (
+      {!nameEmail && resendable && (
         <div className="border-t pt-8">
           <ClaimForm
             listingSlug={listing!.slug}

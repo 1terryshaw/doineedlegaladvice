@@ -13,8 +13,9 @@ import { laneBotCheck, honeypotTripped, dwellTooFast } from "@/lib/lane-botid";
 import { verificationMail, sendLaneMail } from "@/lib/lane-email";
 import {
   cityObserved, findLaneCandidates, insertSubmission, laneEmailAudit, laneHistory,
-  recentSubmissionsFromIp, laneSite,
+  recentSubmissionsFromIp, laneSite, laneDb,
 } from "@/lib/lane-store";
+import { nameHasPersonalEmail, NAME_EMAIL_MESSAGE } from "@/lib/name-email-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +73,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: validated.message, code: validated.code }, { status: 400 });
   }
   const v = validated.value;
+  // name-guard-followthrough-v1 (K395 R1): say it at submit, not at verify. The DB guard refuses to
+  // publish a personal email inside the business name; public.name_email_class is the one rule.
+  // Placed after the honeypot (step 3) on purpose — a bot still gets the look-alike success.
+  if (await nameHasPersonalEmail(laneDb(), v.business_name)) {
+    return NextResponse.json({ error: NAME_EMAIL_MESSAGE, code: "name_email" }, { status: 400 });
+  }
 
   // ── 5. RATE LIMIT (L3). FAIL CLOSED: no client address ⇒ limited, never exempt. ──
   const ip = clientIp(req.headers);
