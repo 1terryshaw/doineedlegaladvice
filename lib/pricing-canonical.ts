@@ -11,9 +11,10 @@ export interface CTA {
    * - 'trial' → Stripe Checkout with trial_period_days=30
    * - 'direct' → Stripe Checkout with no trial
    * - 'free' → no Stripe; activates free tier on claim
-   * - 'preview' → no Stripe; requests a free website preview (owner login required)
+   * - 'preview' → no Stripe; requests a free website preview (owner login required) — Path A: Preview → Approve → Pay → Publish
+   * - 'buy' → Stripe Checkout now, no trial — Path B: Buy → Build → Approve → Publish (the owner approves before it goes live)
    */
-  mode: 'trial' | 'direct' | 'free' | 'preview';
+  mode: 'trial' | 'direct' | 'free' | 'preview' | 'buy';
 }
 
 export interface Tier {
@@ -39,8 +40,11 @@ export interface Tier {
   monthlyOnly?: boolean;
   /** Small print under the CTA. */
   footnote?: string;
-  /** Tier slug sent to /api/billing-redirect when it differs from `id` (the $49 card requests the same Website preview). */
-  billingTier?: 'website';
+  /** The empire-billing hand-off tier when it differs from the card id: 'website' = the $49 plan, 'website_receptionist' = $99
+   *  (website-tiers-dualpath-stage-v1 — requires empire-billing dualpath-stage-v1 FIRST: today's empire-billing knows only 'website'). */
+  billingTier?: 'website' | 'website_receptionist';
+  /** false ⇒ an annual price is SHOWN but cannot be bought yet (no authorized Stripe price): annual CTAs are disabled. */
+  annualPurchasable?: boolean;
 }
 
 export const TIERS: Record<TierId, Tier> = {
@@ -98,41 +102,44 @@ export const TIERS: Record<TierId, Tier> = {
     secondaryCta: { label: 'Skip trial, pay now — $19/mo', mode: 'direct' },
     anchored: true,
   },
-  // leads-plus-fleet-fan-v1 (card spec): the $49 Website card. Same free-preview-first flow as the $99 card
-  // (billing-redirect tier 'website' → preview request; the plan is chosen when the owner approves the preview).
+  // website-tiers-dualpath-stage-v1 — COO R1 (2026-10-11): Website $49 is the ENTRY website offer, Website + AI Receptionist $99
+  // the UPGRADE. Each offers "preview first" (Path A: Preview → Approve → Pay → Publish) and "buy now" (Path B: Buy → Build →
+  // Approve → Publish), monthly or annual. The owner approves the site before it goes live on both paths.
+  // $490/yr = the archived price_1TjfMNB4nhVx1nmUQlFCiwyl, REACTIVATED at go-live step 1 (CEO ruling) — this card branch ships only after it.
   website_basic: {
     id: 'website_basic',
     name: 'Website',
-    subtitle: 'Free preview first — no card until you approve it',
+    subtitle: 'Your own website — start here',
     priceMonthlyUSD: 49,
-    priceAnnualUSD: 0,
-    monthlyOnly: true,
+    priceAnnualUSD: 490,
+    annualPurchasable: true,
     stripeProductId: 'prod_UVCwbO2cUAURCF',
     stripePriceMonthlyId: 'price_1TjfMNB4nhVx1nmUtSlsXNFW',
-    stripePriceAnnualId: null,
+    stripePriceAnnualId: 'price_1TjfMNB4nhVx1nmUQlFCiwyl',
     visibleFeatures: [
       'Everything in Leads Plus, plus:',
       'Your own website, built for your business',
       'Mobile-friendly, fast, click-to-call',
-      'See a free preview before you pay anything',
+      'See a free preview first — or buy now and we build it',
     ],
     expandedFeatures: [],
     cta: { label: 'See Your Free Preview', mode: 'preview' },
+    secondaryCta: { label: 'Or buy now — $49/mo', mode: 'buy' },
     billingTier: 'website',
-    footnote: 'No contract. Cancel anytime.',
+    footnote: 'Nothing goes live until you approve it. Buy now: not approved within 30 days of payment = cancelled + full refund. No contract. Cancel anytime.',
     anchored: false,
   },
   website: {
     id: 'website',
     name: 'Website + AI Receptionist',
-    subtitle: 'Free preview first — no card until you approve it',
+    subtitle: 'The upgrade — your website plus an AI receptionist',
     priceMonthlyUSD: 99,
-    priceAnnualUSD: 990,   // annual-v1: $990/yr = 10x monthly (Website is chosen at preview approval)
+    priceAnnualUSD: 990,   // annual-v1: $990/yr = 10x monthly
     stripeProductId: 'prod_VMZoJGkrEewful',
     stripePriceMonthlyId: 'price_1ULqfAB4nhVx1nmU1g2yvHjs',
     stripePriceAnnualId: 'price_1UMVBvB4nhVx1nmUr3yDlPtU',
     visibleFeatures: [
-      'Everything in Reviews Plus, plus:',
+      'Everything in Website, plus:',
       'Custom website built for your business, on your domain',
       'AI chat receptionist that answers visitors and emails you leads',
       'Mobile-friendly, fast, click-to-call',
@@ -141,7 +148,9 @@ export const TIERS: Record<TierId, Tier> = {
     ],
     expandedFeatures: [],
     cta: { label: 'See Your Free Preview', mode: 'preview' },
-    footnote: 'No contract. Cancel anytime.',
+    secondaryCta: { label: 'Or buy now — $99/mo', mode: 'buy' },
+    billingTier: 'website_receptionist',
+    footnote: 'Nothing goes live until you approve it. Buy now: not approved within 30 days of payment = cancelled + full refund. No contract. Cancel anytime.',
     anchored: false,
   },
 };

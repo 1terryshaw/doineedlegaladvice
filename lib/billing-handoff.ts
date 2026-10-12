@@ -4,8 +4,10 @@ export type HandoffPayload = {
   vertical: string;
   listing_slug: string;
   owner_email: string;
-  tier: 'reviews_plus' | 'website' | 'growth' | 'leads_plus';
+  tier: 'reviews_plus' | 'website' | 'growth' | 'leads_plus' | 'website_receptionist';
   cycle: 'monthly' | 'annual';
+  /** website-tiers-dualpath-stage-v1: 'direct' = buy now (Path B); absent/'preview' = free preview first (Path A). */
+  path?: 'preview' | 'direct';
   /** Checkout intent. 'trial' → 30-day Stripe trial; 'direct' → bill now.
    *  Optional for backward compatibility; empire-billing defaults to 'direct'. */
   mode?: 'trial' | 'direct';

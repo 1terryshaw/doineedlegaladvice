@@ -75,6 +75,12 @@ export default function UpgradeModal({ listingSlug, currentTier, currentCycle }:
         setLoading(null);
         return;
       }
+      // website-tiers-dualpath-stage-v1: buy-now answers (already on this website plan / a purchase in progress / annual not yet on sale).
+      if (data.already_on_website || data.purchase_in_progress || data.error === "plan_unavailable") {
+        setError(data.message || "This plan can't be bought right now.");
+        setLoading(null);
+        return;
+      }
       if (data.url) {
         window.location.href = data.url;
       } else {
@@ -181,6 +187,7 @@ export default function UpgradeModal({ listingSlug, currentTier, currentCycle }:
             const anchored = tier.anchored;
             const isFree = tier.priceMonthlyUSD === 0;
             const monthly = cycle === "monthly" || !!tier.monthlyOnly || tier.priceAnnualUSD === 0; // monthly-only tiers ignore the toggle
+            const annualSoon = !monthly && tier.annualPurchasable === false;   // annual price shown, not on sale yet
             const price = monthly ? tier.priceMonthlyUSD : tier.priceAnnualUSD;
             const unit = monthly ? "mo" : "yr";
             const isCurrent =
@@ -292,9 +299,12 @@ export default function UpgradeModal({ listingSlug, currentTier, currentCycle }:
                   </div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {annualSoon && (
+                      <p style={{ margin: 0, color: "#6b7280", fontSize: 13, textAlign: "center" }}>Annual billing coming soon — choose Monthly to start now.</p>
+                    )}
                     <button
                       onClick={() => startCheckout(tier.id, tier.cta.mode)}
-                      disabled={busy(tier.cta.mode)}
+                      disabled={busy(tier.cta.mode) || annualSoon}
                       style={{
                         width: "100%",
                         padding: "11px 16px",
@@ -318,7 +328,7 @@ export default function UpgradeModal({ listingSlug, currentTier, currentCycle }:
                     {tier.secondaryCta && (
                       <button
                         onClick={() => startCheckout(tier.id, tier.secondaryCta!.mode)}
-                        disabled={busy(tier.secondaryCta.mode)}
+                        disabled={busy(tier.secondaryCta.mode) || annualSoon}
                         style={{
                           width: "100%",
                           padding: "6px 16px",

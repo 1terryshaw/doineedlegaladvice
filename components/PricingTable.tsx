@@ -91,6 +91,9 @@ export default function PricingTable() {
                   <>
                     <span className="text-4xl font-bold">${price}</span>
                     <span className="text-gray-500">/{unit}</span>
+                    {yearly && tier.annualPurchasable === false && (
+                      <p className="text-xs text-gray-500 mt-1">Annual billing coming soon — monthly available now.</p>
+                    )}
                   </>
                 )}
               </div>
