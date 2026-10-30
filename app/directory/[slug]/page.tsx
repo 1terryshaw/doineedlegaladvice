@@ -36,7 +36,6 @@ import ClaimUnlockPreview from "@/components/ClaimUnlockPreview";
 import { normalizeWebsiteUrl } from "@/lib/url-normalize";
 import PublicGbpClaimSidecar from "@/components/PublicGbpClaimSidecar";
 import { normalizeTierForPricing } from "@/lib/pricing-canonical";
-import { HAS_LIST_YOUR_BUSINESS } from "@/lib/add-business";
 
 const LEGAL_DISCLAIMER =
   "The information here is for informational purposes only and is not legal advice. Consult a licensed attorney in your jurisdiction about your specific situation.";
@@ -536,7 +535,7 @@ export default async function ListingPage({ params }: Props) {
                 hasReviews={Number(listing.google_review_count) > 0}
               />
             )}
-            {HAS_LIST_YOUR_BUSINESS && <p className="mt-4 text-sm text-gray-500">Run a different lawyer{listing.city ? ` in ${listing.city}` : ""}? <Link href="/list-your-business" className="underline" style={{ color: verticalConfig.primaryColor }}>Add your business &rarr;</Link></p>}</>
+            </>
             <PublicGbpClaimSidecar
               listingSlug={listing.slug}
               listingName={listing.name}
