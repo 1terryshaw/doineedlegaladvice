@@ -6,6 +6,7 @@ import { sendClaimEmail } from "@/lib/email";
 import { normalizeClaimSrc } from "@/lib/claim-attribution";
 import { checkClaimStartRate } from "@/lib/claim-start-ratelimit";
 import { logOwnerAuthEvent } from "@/lib/owner-events";
+import { intentFromRequest, intentLinkSuffix } from "@/lib/upgrade-intent";
 
 export const dynamic = "force-dynamic";
 
@@ -142,7 +143,7 @@ export async function POST(request: NextRequest) {
       { status: 503 }
     );
     try {
-      const result = await sendClaimEmail(email, slug, token);
+      const result = await sendClaimEmail(email, slug, token, intentLinkSuffix(intentFromRequest(request)));
       if (!result.ok) {
         console.error(
           JSON.stringify({ event: "claim_send_error", email_redacted: emailRedacted, slug, err: result.error })

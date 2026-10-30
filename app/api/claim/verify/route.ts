@@ -4,6 +4,7 @@ import { setAuthCookie } from "@/lib/auth";
 import { signPlaceResolve } from "@/lib/billing-handoff";
 import { isNameEmailRefusal, withNameEmailReason } from "@/lib/name-email-guard";
 import { republishOnClaim } from "@/lib/republish-on-claim";
+import { parseUpgradeIntent, intentQuery } from "@/lib/upgrade-intent";
 
 export const dynamic = "force-dynamic";
 
@@ -52,10 +53,12 @@ export async function POST(request: NextRequest) {
   // carrying its parameters either way behaves identically.
   let token = searchParams.get("token");
   let slug = searchParams.get("slug");
+  let lpIntent = parseUpgradeIntent((k) => searchParams.get(k)); // TDL #1369: the mailed choice → dashboard
   try {
     const form = await request.formData();
     token = (form.get("token") as string | null) ?? token;
     slug = (form.get("slug") as string | null) ?? slug;
+    lpIntent = parseUpgradeIntent((k) => form.get(k) as string | null) ?? lpIntent;
   } catch {
     // No body / not form-encoded — the query-string values above stand.
   }
@@ -137,7 +140,7 @@ export async function POST(request: NextRequest) {
     /* swallow — the claim is already done; resolution is best-effort */
   }
 
-  const response = NextResponse.redirect(`${siteUrl}/owner/${slug}`, 303);
+  const response = NextResponse.redirect(`${siteUrl}/owner/${slug}${lpIntent ? `?${intentQuery(lpIntent)}` : ""}`, 303);
   setAuthCookie(response, token, slug);
   return response;
 }

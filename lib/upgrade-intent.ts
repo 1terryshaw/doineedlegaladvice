@@ -24,3 +24,22 @@ export function intentFromCookie(value: string | null | undefined): UpgradeInten
 }
 
 export const intentQuery = (i: UpgradeIntent) => `plan=${i.plan}&cycle=${i.cycle}&mode=${i.mode}`;
+
+/** TDL #1369: the choice as a suffix for a mailed link ("" when none) — `&plan=leads-plus&cycle=monthly&mode=…`. */
+export const intentLinkSuffix = (i: UpgradeIntent | null) => (i ? `&${intentQuery(i)}` : "");
+
+/** TDL #1369: the choice behind a claim / login request — the page URL it was sent from (Referer) first, then the
+ *  lp_intent cookie. Takes the NextRequest shape structurally so this file stays free of server imports. */
+export function intentFromRequest(req: {
+  headers: { get(name: string): string | null };
+  cookies: { get(name: string): { value: string } | undefined };
+}): UpgradeIntent | null {
+  let fromUrl: UpgradeIntent | null = null;
+  try {
+    const ref = req.headers.get("referer");
+    if (ref) fromUrl = parseUpgradeIntent((k) => new URL(ref).searchParams.get(k));
+  } catch {
+    // unparseable Referer — the cookie decides
+  }
+  return fromUrl ?? intentFromCookie(req.cookies.get(UPGRADE_INTENT_COOKIE)?.value);
+}

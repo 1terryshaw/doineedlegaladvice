@@ -162,10 +162,11 @@ export async function sendInquiryConfirmation(
 export async function sendMagicLink(
   email: string,
   slug: string,
-  token: string
+  token: string,
+  linkSuffix = ""
 ): Promise<AuthSendResult> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  const magicLink = `${baseUrl}/api/owner/auth?token=${token}&slug=${slug}`;
+  const magicLink = `${baseUrl}/api/owner/auth?token=${token}&slug=${slug}${linkSuffix}`;
 
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
@@ -174,7 +175,7 @@ export async function sendMagicLink(
       to: email,
       // Test-marker rule (fleet-wide): mail to a zz- audit/smoke fixture, or to the funnel-smoke probe
       // sink (any per-vertical plus-tag of it), is marked [TEST] (claimthrottle-bookkeeper-hmac-loginTEST-v1).
-      subject: `${/^zz-/.test(slug) || /^1terryshaw\+probesinkbiz(-[a-z0-9-]+)?@gmail\.com$/i.test(String(email).trim()) ? "[TEST] " : ""}Your login link for ${verticalConfig.name}`,
+      subject: `${/^(zz-|test-leadsplus-demo-)/.test(slug) || /^1terryshaw\+probesinkbiz(-[a-z0-9-]+)?@gmail\.com$/i.test(String(email).trim()) ? "[TEST] " : ""}Your login link for ${verticalConfig.name}`,
       html: `
       <h2>Welcome back to ${verticalConfig.name}</h2>
       <p>Click the link below to access your listing dashboard:</p>
@@ -199,13 +200,14 @@ export async function sendMagicLink(
 export async function sendClaimEmail(
   email: string,
   slug: string,
-  claimToken: string
+  claimToken: string,
+  linkSuffix = ""
 ): Promise<AuthSendResult> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
   // Mail the INTERSTITIAL, not the writer. /api/claim/verify is POST-only for the write
   // (ruling R2, fan 2026-09-11) — a mail scanner prefetching this link now lands on a
   // confirmation page and changes nothing. See app/api/claim/verify/route.ts for why.
-  const verifyLink = `${baseUrl}/claim/verify?token=${claimToken}&slug=${slug}`;
+  const verifyLink = `${baseUrl}/claim/verify?token=${claimToken}&slug=${slug}${linkSuffix}`;
 
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
@@ -214,7 +216,7 @@ export async function sendClaimEmail(
       to: email,
       // Test-marker rule (fleet-wide): mail to a zz- audit/smoke fixture, or to the funnel-smoke probe
       // sink (any per-vertical plus-tag of it), is marked [TEST] (empire-vitals-fix-v1, claim-throttle-fleet-fan-v1).
-      subject: `${/^zz-/.test(slug) || /^1terryshaw\+probesinkbiz(-[a-z0-9-]+)?@gmail\.com$/i.test(String(email).trim()) ? "[TEST] " : ""}Confirm your listing claim on ${verticalConfig.name}`,
+      subject: `${/^(zz-|test-leadsplus-demo-)/.test(slug) || /^1terryshaw\+probesinkbiz(-[a-z0-9-]+)?@gmail\.com$/i.test(String(email).trim()) ? "[TEST] " : ""}Confirm your listing claim on ${verticalConfig.name}`,
       text: `Claim your listing on ${verticalConfig.name}\n\nVerify your ownership claim by opening this link:\n${verifyLink}\n\nYou received this because this email address was entered on ${String(baseUrl).replace(/^https?:\/\//, "").replace(/\/.*$/, "")}. If that wasn't you, ignore this email — nothing changes unless the link is used.\n\n${verticalConfig.name} · owner mail from Do I Need A Network · https://doineedanetwork.com`,
       html: `
       <h2>Confirm your listing claim on ${verticalConfig.name}</h2>

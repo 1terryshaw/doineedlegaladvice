@@ -5,6 +5,7 @@ import { logOwnerAuthEvent } from "@/lib/owner-events";
 import { generateToken } from "@/lib/auth";
 import { ownerSessionState } from "@/lib/owner-session-guard";
 import { checkOwnerLoginRate } from "@/lib/owner-login-ratelimit";
+import { intentFromRequest, intentLinkSuffix } from "@/lib/upgrade-intent";
 
 export const dynamic = "force-dynamic";
 
@@ -195,7 +196,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await sendMagicLink(email, listing.slug, token);
+    const result = await sendMagicLink(email, listing.slug, token, intentLinkSuffix(intentFromRequest(request)));
     if (result.ok) {
       await logOwnerAuthEvent("link_sent", { slug: listing.slug, email });
       console.log(

@@ -33,6 +33,7 @@
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
+import { parseUpgradeIntent } from "@/lib/upgrade-intent";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "default-no-store";
@@ -48,6 +49,9 @@ interface Props {
 
 export default async function ClaimVerifyPage({ searchParams }: Props) {
   const { token, slug } = await searchParams;
+  // TDL #1369: the Leads Plus choice mailed in the link rides the confirm POST (the lp_intent cookie is the fallback).
+  const lpSearch = (await searchParams) as Record<string, string | undefined>;
+  const lpIntent = parseUpgradeIntent((k) => lpSearch[k]);
 
   const errorUrl = (s?: string | null) =>
     `/claim/error${s ? `?slug=${encodeURIComponent(s)}` : ""}`;
@@ -89,6 +93,13 @@ export default async function ClaimVerifyPage({ searchParams }: Props) {
       <form method="post" action="/api/claim/verify">
         <input type="hidden" name="token" value={token} />
         <input type="hidden" name="slug" value={slug} />
+        {lpIntent && (
+          <>
+            <input type="hidden" name="plan" value={lpIntent.plan} />
+            <input type="hidden" name="mode" value={lpIntent.mode} />
+            <input type="hidden" name="cycle" value={lpIntent.cycle} />
+          </>
+        )}
         <button
           type="submit"
           className="w-full rounded-lg bg-slate-800 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-900 transition-colors"

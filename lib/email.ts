@@ -11,17 +11,19 @@ import {
 export async function sendMagicLink(
   email: string,
   slug: string,
-  token: string
+  token: string,
+  linkSuffix = ""
 ): Promise<AuthSendResult> {
-  return sendMagicLinkResend(email, slug, token);
+  return sendMagicLinkResend(email, slug, token, linkSuffix);
 }
 
 export async function sendClaimEmail(
   email: string,
   slug: string,
-  token: string
+  token: string,
+  linkSuffix = ""
 ): Promise<AuthSendResult> {
-  return sendClaimEmailResend(email, slug, token);
+  return sendClaimEmailResend(email, slug, token, linkSuffix);
 }
 
 export async function sendInquiryNotification(
