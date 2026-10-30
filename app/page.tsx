@@ -33,6 +33,7 @@ export default async function HomePage() {
       />
       {/* SECTION 1: AI Triage Chat */}
       <section
+        id="triage"
         className="py-16 px-4 relative overflow-hidden"
         style={{
           background: `linear-gradient(135deg, ${verticalConfig.heroGradientFrom}, ${verticalConfig.heroGradientVia}, ${verticalConfig.heroGradientTo})`,
