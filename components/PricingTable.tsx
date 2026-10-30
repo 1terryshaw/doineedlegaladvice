@@ -18,6 +18,8 @@ export default function PricingTable() {
   // paid CTA routes to the upgrade flow (claim first if not logged in).
   const cycleParam = annual ? "annual" : "monthly";   // annual-toggle-fix-v1: the CTAs carry the billing period
   const upgradeHref = authenticated && slug ? `/directory/${slug}?upgrade=true&cycle=${cycleParam}` : `/claim?cycle=${cycleParam}`;
+  // leads-plus-claim-continuity-v1 (TDL #1360): the Leads Plus buttons carry the owner's choice through claim / login to its checkout.
+  const leadsPlusHref = (mode: string) => `${authenticated && slug ? `/owner/${slug}` : "/claim"}?plan=leads-plus&cycle=monthly&mode=${mode}`;
 
   return (
     <div>
@@ -143,7 +145,7 @@ export default function PricingTable() {
               ) : (
                 <div className="mt-8 flex flex-col gap-2">
                   <Link
-                    href={upgradeHref}
+                    href={tier.id === "reviews_plus" ? leadsPlusHref(tier.cta.mode) : upgradeHref}
                     className="w-full py-3 rounded-lg text-white font-medium hover:opacity-90 transition-opacity text-center"
                     style={{ backgroundColor: anchored ? primary : "#374151" }}
                   >
@@ -153,7 +155,7 @@ export default function PricingTable() {
                   </Link>
                   {tier.secondaryCta && (
                     <Link
-                      href={upgradeHref}
+                      href={tier.id === "reviews_plus" ? leadsPlusHref(tier.secondaryCta.mode) : upgradeHref}
                       className="w-full text-center text-xs font-medium text-gray-500 underline hover:text-gray-700"
                     >
                       {yearly ? tier.secondaryCta.label.replace(/\$[0-9]+\/mo$/, () => `$${price}/yr`) : tier.secondaryCta.label}

@@ -5,6 +5,10 @@ import OwnerDashboard from "@/components/OwnerDashboard";
 import LeadsPlusPanel from "@/components/owner/LeadsPlusPanel";
 import { verticalAllowsLeadForms, hasLeadsPlus } from "@/lib/leads-plus";
 import { getPlanInfo } from "@/lib/plan-info";
+import { cookies } from "next/headers";
+import UpgradeIntentLauncher from "@/components/UpgradeIntentLauncher";
+import UpgradeSuccessNotice from "@/components/UpgradeSuccessNotice";
+import { parseUpgradeIntent, intentFromCookie, intentQuery, UPGRADE_INTENT_COOKIE } from "@/lib/upgrade-intent";
 import { SITE_URL } from "@/lib/seo";
 import ReviewShowcase from "@/components/ReviewShowcase";
 import HealthScore from "@/components/HealthScore";
@@ -34,8 +38,12 @@ export default async function OwnerDashboardPage({ params, searchParams }: Props
   const saved = (await searchParams).saved === "1"; // owner-journey-friction-fix-v1
   const result = await verifyOwnerAccess(slug);
 
+  // leads-plus-claim-continuity-v1 (TDL #1360): the Leads Plus choice survives the login hop (URL first, then the cookie
+  // components/UpgradeIntentCapture set when the owner arrived on /claim or /owner/login).
+  const spGet = (k: string) => { const v = sp[k]; return Array.isArray(v) ? v[0] : v; };
+  const intent = parseUpgradeIntent(spGet) ?? intentFromCookie((await cookies()).get(UPGRADE_INTENT_COOKIE)?.value);
   if (!result) {
-    redirect("/owner/login");
+    redirect(intent ? `/owner/login?${intentQuery(intent)}` : "/owner/login");
   }
 
   const { listing } = result;
@@ -97,9 +105,16 @@ export default async function OwnerDashboardPage({ params, searchParams }: Props
         mode: (row.lead_page_mode === "A" || row.lead_page_mode === "B" ? row.lead_page_mode : null) as "A" | "B" | null,
       }
     : undefined;
+  // leads-plus-claim-continuity-v1: open the chosen checkout — never on the Stripe return, and only a cookie clear when the
+  // listing already has Leads Plus (or above). GOAL 4: the confirmation after a Leads Plus checkout (?upgrade=success&kit=1).
+  const launch = intent && verticalAllowsLeadForms() && sp.upgrade !== "success" && sp.upgrade !== "cancel" ? intent : null;
+  const lpSuccess = sp.upgrade === "success" && sp.kit === "1";
+  const successPlan = lpSuccess ? (lpDash?.plan ?? (await getPlanInfo(row.stripe_subscription_id as string | null))) : null;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
+      {launch && <UpgradeIntentLauncher listingSlug={listing.slug} mode={launch.mode} skip={hasLeadsPlus(listing)} />}
+      {lpSuccess && <UpgradeSuccessNotice plan={successPlan} />}
       <OwnerDashboard
         listing={listing}
         leadsPlus={lpDash}

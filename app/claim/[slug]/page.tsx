@@ -29,6 +29,8 @@ export default async function ClaimPage({ params, searchParams }: Props) {
       <div className="max-w-md mx-auto px-4 py-16 text-center">
         <h1 className="text-2xl font-bold mb-4">Listing Already Claimed</h1>
         <p className="text-gray-600">This listing has already been claimed by its owner.</p>
+        {/* leads-plus-claim-continuity-v1: the owner signs in instead (their Leads Plus choice is remembered). */}
+        <p className="mt-4 text-sm"><a href="/owner/login" className="font-semibold underline">Are you the owner? Log in to manage it</a></p>
       </div>
     );
   }

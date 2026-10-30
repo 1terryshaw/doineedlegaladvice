@@ -8,6 +8,7 @@ import Disclaimer from "@/components/Disclaimer";
 import OrgJsonLd from "@/components/OrgJsonLd";
 import { BotIdClient } from "botid/client";
 import { LANE_PROTECTED_ROUTES } from "@/lib/lane-botid";
+import UpgradeIntentCapture from "@/components/UpgradeIntentCapture"; // leads-plus-claim-continuity-v1 (TDL #1360)
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -46,6 +47,7 @@ export default function RootLayout({
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
+        <UpgradeIntentCapture />
       </body>
     </html>
   );
