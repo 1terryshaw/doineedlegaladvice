@@ -37,6 +37,7 @@ import { normalizeWebsiteUrl } from "@/lib/url-normalize";
 import PublicGbpClaimSidecar from "@/components/PublicGbpClaimSidecar";
 import { normalizeTierForPricing } from "@/lib/pricing-canonical";
 import { HAS_LIST_YOUR_BUSINESS } from "@/lib/add-business";
+import { serviceLabel } from "@/lib/listing-display";
 
 const LEGAL_DISCLAIMER =
   "The information here is for informational purposes only and is not legal advice. Consult a licensed attorney in your jurisdiction about your specific situation.";
@@ -423,7 +424,7 @@ export default async function ListingPage({ params }: Props) {
                 <h3 className="font-semibold mb-3">Services</h3>
                 <div className="flex flex-wrap gap-2">
                   {services.map((s) => (
-                    <span key={s} className="bg-blue-100 text-blue-800 text-sm rounded-full px-3 py-1">{s}</span>
+                    <span key={s} className="bg-blue-100 text-blue-800 text-sm rounded-full px-3 py-1">{serviceLabel(s)}</span>
                   ))}
                 </div>
               </div>

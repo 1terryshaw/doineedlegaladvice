@@ -10,6 +10,7 @@
 // Merge priority (claimed > original > enrichment): gap-fill only. The component is told which
 // authoritative fields the listing already shows and never duplicates them.
 import type { KnowledgeData } from "@/lib/knowledge";
+import { serviceLabel } from "@/lib/listing-display";
 
 function dedupeCap(items: string[], cap: number): { shown: string[]; extra: number } {
   const seen = new Set<string>();
@@ -166,7 +167,7 @@ export default function EnrichmentBlock({
           <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Services</h4>
           <div className="flex flex-wrap items-center gap-2">
             {services.shown.map((s) => (
-              <span key={s} className="bg-gray-100 text-gray-700 text-sm rounded-full px-3 py-1">{s}</span>
+              <span key={s} className="bg-gray-100 text-gray-700 text-sm rounded-full px-3 py-1">{serviceLabel(s)}</span>
             ))}
             {services.extra > 0 && <span className="text-gray-400 text-sm">+{services.extra} more</span>}
           </div>

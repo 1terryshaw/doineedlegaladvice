@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import verticalConfig from "@/lib/vertical.config";
 import { getListings } from "@/lib/supabase";
 import { getProvinceNameByCode, getRegionBySlug } from "@/lib/constants";
-import { getListingsByProvincePaged, getRegionTotal, hasServedListings, REGION_PAGE_SIZE } from "@/lib/directory-hub";
+import { getListingsByProvincePaged, getProvinceListingCount, hasServedListings, REGION_PAGE_SIZE } from "@/lib/directory-hub";
 import { regionBreadcrumbSchema, regionCollectionPageSchema, localizeFaqs } from "@/lib/seo";
 import FaqSection from "@/components/FaqSection";
 
@@ -11,6 +11,8 @@ const LEGAL_DISCLAIMER =
   "The information here is for informational purposes only and is not legal advice. Consult a licensed attorney in your jurisdiction about your specific situation.";
 import ListingCard from "@/components/ListingCard";
 import Pagination from "@/components/Pagination";
+import Link from "next/link";
+import { groupListingsByName } from "@/lib/listing-display";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -61,9 +63,12 @@ export default async function RegionPage({ params, searchParams }: Props) {
   // ── Province page (US state or CA province): paginated. ───────────────────
   if (provName) {
     const provCode = region.toUpperCase();
-    const [total, listings] = await Promise.all([
-      getRegionTotal(provCode),
-      getListingsByProvincePaged(provCode, page),
+    const legalAidPageSize = 24;
+    const [total, listings, legalAidTotal, legalAidListings] = await Promise.all([
+      getProvinceListingCount(provCode, "attorney"),
+      getListingsByProvincePaged(provCode, page, REGION_PAGE_SIZE, "attorney"),
+      getProvinceListingCount(provCode, "immigration"),
+      getListingsByProvincePaged(provCode, 1, legalAidPageSize, "immigration"),
     ]);
     const totalPages = Math.max(1, Math.ceil(total / REGION_PAGE_SIZE));
     if (page > 1 && listings.length === 0) notFound();
@@ -72,7 +77,9 @@ export default async function RegionPage({ params, searchParams }: Props) {
     // child hubs) => 404 — incl. the CA provinces this US-scoped page cannot serve (they were 200
     // "Browse 0 lawyers"). Same predicate as the sitemap's getServedProvincesCA
     // (directory-hub.ts hasServedListings). Fail-closed: a fault throws (5xx), never a false 404.
-    if (page === 1 && listings.length === 0 && !(await hasServedListings(provCode))) notFound();
+    if (page === 1 && listings.length === 0 && legalAidListings.length === 0 && !(await hasServedListings(provCode))) notFound();
+    const lawyerGroups = groupListingsByName(listings);
+    const legalAidGroups = groupListingsByName(legalAidListings);
 
     return (
       <div className="max-w-7xl mx-auto px-4 py-12">
@@ -85,19 +92,37 @@ export default async function RegionPage({ params, searchParams }: Props) {
           Browse {total.toLocaleString("en-US")} {total !== 1 ? "lawyers" : "lawyer"} in {provName}
           {totalPages > 1 ? ` — page ${page} of ${totalPages.toLocaleString("en-US")}` : ""}.
         </p>
-        {listings.length === 0 ? (
+        {lawyerGroups.length === 0 ? (
           <p className="text-gray-500 text-center py-12">
             No lawyers in {provName} yet. Check back soon!
           </p>
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {listings.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
+              {lawyerGroups.map((group) => (
+                <div key={group.key}>
+                  <ListingCard listing={group.listings[0]} />
+                  {group.listings.length > 1 && <p className="mt-2 text-sm text-gray-600">{group.listings.length} locations{group.cities.length ? ` · ${group.cities.join(", ")}` : ""}</p>}
+                </div>
               ))}
             </div>
             <Pagination currentPage={page} basePath={`/${region}`} totalPages={totalPages} />
           </>
+        )}
+        {legalAidTotal > 0 && (
+          <section className="mt-14" aria-labelledby="legal-aid-heading">
+            <h2 id="legal-aid-heading" className="text-2xl font-bold mb-2" style={{ color: verticalConfig.primaryColor }}>Free &amp; low-cost legal aid organizations (immigration)</h2>
+            <p className="text-gray-600 mb-6">{legalAidTotal.toLocaleString("en-US")} organizations in {provName}.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {legalAidGroups.map((group) => (
+                <div key={group.key}>
+                  <ListingCard listing={group.listings[0]} />
+                  {group.listings.length > 1 && <p className="mt-2 text-sm text-gray-600">{group.listings.length} locations{group.cities.length ? ` · ${group.cities.join(", ")}` : ""}</p>}
+                </div>
+              ))}
+            </div>
+            {legalAidTotal > legalAidPageSize && <p className="mt-6"><Link className="underline" href={`/directory?listing_type=immigration&region=${encodeURIComponent(provCode)}`}>Show all {legalAidTotal.toLocaleString("en-US")} immigration legal aid organizations</Link></p>}
+          </section>
         )}
         <FaqSection faqs={localizeFaqs(verticalConfig.faqs, provName)} disclaimer={LEGAL_DISCLAIMER} />
       </div>

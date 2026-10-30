@@ -153,6 +153,24 @@ export async function getRegionTotal(provinceCode: string): Promise<number> {
   return counts.find((c) => c.province_state === code)?.n ?? 0;
 }
 
+// Exact published count for a state-page listing type. Kept separate from the
+// all-listings region materialized view so each section count matches its query.
+export async function getProvinceListingCount(provinceCode: string, listingType: string): Promise<number> {
+  const { count, error } = await supabaseAdmin
+    .from(LISTINGS_TABLE)
+    .select("*", { count: "exact", head: true })
+    .eq("country", "US")
+    .neq("is_published", false)
+    .eq(regionColumn(provinceCode), provinceCode.toUpperCase())
+    .eq("listing_type", listingType);
+  if (error) {
+    rethrowPrerenderBailout(error);
+    console.error(`getProvinceListingCount(${provinceCode}, ${listingType}) error:`, error);
+    throw new Error(`getProvinceListingCount failed: ${(error as { message?: string })?.message ?? "unknown"}`);
+  }
+  return count || 0;
+}
+
 // Total published listings for the hub headline (this repo's supabase.ts has no
 // getListingsCount export, and it is DO-NOT-TOUCH). HEAD count, no row data.
 export async function getDirectoryTotal(): Promise<number> {
@@ -182,16 +200,19 @@ export async function getListingsByProvincePaged(
   provinceCode: string,
   page: number,
   perPage: number = REGION_PAGE_SIZE,
+  listingType?: string,
 ): Promise<Listing[]> {
   const p = Math.max(1, page);
   const from = (p - 1) * perPage;
   const to = from + perPage - 1;
-  const { data, error } = await supabaseAdmin
+  let query = supabaseAdmin
     .from(LISTINGS_TABLE)
     .select("*")
     .eq("country", "US")
     .neq("is_published", false)
-    .eq(regionColumn(provinceCode), provinceCode.toUpperCase())
+    .eq(regionColumn(provinceCode), provinceCode.toUpperCase());
+  if (listingType) query = query.eq("listing_type", listingType);
+  const { data, error } = await query
     .order("tier_priority", { ascending: false, nullsFirst: false })
     .order("featured", { ascending: false })
     .order("claimed", { ascending: false, nullsFirst: false })
