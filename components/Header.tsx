@@ -146,8 +146,7 @@ export default function Header() {
                 style={{ backgroundColor: (verticalConfig as { accentColor?: string }).accentColor || verticalConfig.primaryColor }}
                 aria-current={primaryItem.active ? "page" : undefined}
               >
-                <span className="lg:hidden">Claim</span>
-                <span className="hidden lg:inline">{primaryItem.label}</span>
+                {primaryItem.label}
               </Link>
             )}
             <div className="relative">

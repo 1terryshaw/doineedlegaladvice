@@ -87,7 +87,7 @@ export function headerNavigation(
       items: withActiveState([
         ...coreItems,
         { href: "/owner/login", label: "Owner Login" },
-        { href: "/claim?src=header_cta", label: "Claim or Add Your Business", primary: true },
+        { href: "/claim?src=header_cta", label: "Claim Your Listing", primary: true },
         findProfessional,
       ], pathname),
       showLogout: false,
@@ -96,7 +96,7 @@ export function headerNavigation(
 
   if (ownerDisplay.listingCount === 0) {
     return {
-      items: withActiveState([...coreItems, { href: "/claim?src=header_cta", label: "Claim or Add Your Business", primary: true }, findProfessional], pathname),
+      items: withActiveState([...coreItems, { href: "/claim?src=header_cta", label: "Claim Your Listing", primary: true }, findProfessional], pathname),
       showLogout: true,
     };
   }
@@ -105,7 +105,7 @@ export function headerNavigation(
     ? { href: `/owner/${ownerDisplay.primaryListingSlug}`, label: "My Listing" }
     : { href: "/owner", label: "My Listings" };
   return {
-    items: withActiveState([...coreItems, ownerItem, { href: "/claim?src=dashboard_claim_another", label: "Claim Another or Add a Business" }, findProfessional], pathname),
+    items: withActiveState([...coreItems, ownerItem, { href: "/claim?src=dashboard_claim_another", label: "Claim Another Listing" }, findProfessional], pathname),
     showLogout: true,
   };
 }

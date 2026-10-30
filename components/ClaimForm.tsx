@@ -56,6 +56,9 @@ export default function ClaimForm({ listingSlug, listingName, src, lid }: { list
     <form onSubmit={handleSubmit} className="space-y-4">
       <h2 className="text-xl font-bold">Claim &ldquo;{listingName}&rdquo;</h2>
       <p className="text-gray-600 text-sm">
+        We&apos;ll email you a verification link; open it and confirm to finish the claim. Free includes a Claimed badge (it becomes Reviews verified once your Google rating loads), your contact info, hours and services, up to 3 photos, your star rating and Google review count, customers calling, emailing or visiting you directly, and a custom description and service area.
+      </p>
+      <p className="text-gray-600 text-sm">
         Verify your ownership to manage this listing on {verticalConfig.name}.
       </p>
       <div>
