@@ -18,6 +18,7 @@ import SearchBar from "@/components/SearchBar";
 import Pagination from "@/components/Pagination";
 import RegionHub, { type HubSection, type HubRegion } from "@/components/RegionHub";
 import { getUkAllTownHubs, getUkCounties } from "@/lib/uk-solicitors";
+import { listingTypeLabel } from "@/lib/listing-display";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -141,7 +142,7 @@ export default async function DirectoryPage({
   const hasNext = fetched.length > REGION_PAGE_SIZE;
   const listings = hasNext ? fetched.slice(0, REGION_PAGE_SIZE) : fetched;
 
-  const typeName = listingType ? LISTING_TYPES.find((t) => t.slug === listingType)?.name : null;
+  const typeName = listingType ? LISTING_TYPES.find((t) => t.slug === listingType)?.name || listingTypeLabel(listingType) : null;
   // HARDENED (Batch 4): use getRegionBySlug (constants.REGIONS) — shape-agnostic
   // across config-map AND explicit-array repos, and works when vertical.config
   // has no `regions` field. REGIONS.name is pre-normalized (name||label).
