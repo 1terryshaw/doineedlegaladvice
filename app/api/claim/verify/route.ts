@@ -3,6 +3,7 @@ import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
 import { setAuthCookie } from "@/lib/auth";
 import { signPlaceResolve } from "@/lib/billing-handoff";
 import { isNameEmailRefusal, withNameEmailReason } from "@/lib/name-email-guard";
+import { republishOnClaim } from "@/lib/republish-on-claim";
 
 export const dynamic = "force-dynamic";
 
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
 
   const { data: listing, error } = await supabaseAdmin
     .from(LISTINGS_TABLE)
-    .select("id, owner_auth_token, owner_auth_token_expires_at")
+    .select("id, owner_auth_token, owner_auth_token_expires_at, is_published, deserve_reason, name, business_name, submitted_via")
     .eq("slug", slug)
     .single();
 
@@ -105,6 +106,12 @@ export async function POST(request: NextRequest) {
     console.error(`[claim/verify] claim write matched 0 rows for ${slug} (id=${listing.id})`);
     return NextResponse.redirect(claimError(slug), 303);
   }
+
+  // TDL #1068 republish-on-claim (#1366, tdl-1366-fleet-claim-republish-port-v1): the claim write
+  // above never touches is_published, so a K38-held row stayed 410 after its subject's verified
+  // claim. Guarded + audited + fail-closed in lib/republish-on-claim.ts; a no-op for published rows.
+  // Self-serve rows carry no deserve_reason and are skipped.
+  if (listing.submitted_via !== "self_serve") await republishOnClaim(listing, slug);
 
   // ADDITIVE (two-tier display, spec v2) — fire-and-forget place-id resolve. Waits ONLY for
   // the endpoint's 202 ACK, hard-capped at 400ms, and swallows EVERYTHING. A resolution
