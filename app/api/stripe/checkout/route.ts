@@ -1,27 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
+import { NextResponse } from "next/server";
 
-export async function POST(request: NextRequest) {
-  const { priceId, listingSlug } = await request.json();
-  const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-
-  if (!priceId) {
-    return NextResponse.json({ error: "Price ID required" }, { status: 400 });
-  }
-
-  try {
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      payment_method_types: ["card"],
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${siteUrl}/owner/${listingSlug || ""}?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${siteUrl}/pricing`,
-      metadata: { listingSlug: listingSlug || "" },
-    });
-
-    return NextResponse.json({ url: session.url });
-  } catch (err) {
-    console.error("Stripe checkout error:", err);
-    return NextResponse.json({ error: "Failed to create checkout" }, { status: 500 });
-  }
+/**
+ * TDL #1388 — DISABLED. This route created a live Stripe Checkout session for any
+ * client-supplied priceId with no authentication (a second seller outside empire-billing).
+ * Paid plans are sold only through empire-billing (/api/billing-redirect → signed hand-off).
+ */
+function gone() {
+  return NextResponse.json(
+    { error: "gone", detail: "Checkout moved to empire-billing." },
+    { status: 410 }
+  );
 }
+
+export const POST = gone;
+export const GET = gone;
