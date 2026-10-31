@@ -64,16 +64,21 @@ export async function POST(request: NextRequest) {
     const suppressed = process.env.SMOKE_TEST === "1" || /ukclaimcanary|tdl455canary/i.test(String(email));
 
     // D8 claim limiter (3/email/h, 10/email/day, 20/IP/h). A throttled request gets the byte-identical
-    // success body, so the response never says whether the caller was throttled. Errors FAIL OPEN and
-    // raise a sentinel alert.
+    // success body, so the response never says whether the caller was throttled. Errors FAIL CLOSED
+    // (503, TDL #1372 stream10) and raise a sentinel alert.
     const rate = await checkUkClaimRate(email, request);
     if (rate.error) {
       console.error(JSON.stringify({ event: "uk_claim_ratelimit_error", err: rate.error }));
       await alertUkClaimFailure(`UK claim rate limiter error on ${UK_TABLE}`, {
         table: UK_TABLE,
         error: rate.error,
-        impact: "limiter failed OPEN — UK claim proceeds unthrottled until fixed",
+        impact: "limiter failed CLOSED — UK claim refused (503) until fixed",
       });
+      // TDL #1372 (stream10-held-identity-safety-v1): the UK claim limiter FAILS CLOSED — no send, no pending write.
+      return NextResponse.json(
+        { success: false, error: "temporarily_unavailable", userMessage: "Claiming is temporarily unavailable. Please try again in a few minutes." },
+        { status: 503 }
+      );
     } else if (!rate.allowed) {
       console.log(JSON.stringify({ event: "uk_claim_throttled", table: UK_TABLE }));
       return NextResponse.json({ success: true, suppressed });
