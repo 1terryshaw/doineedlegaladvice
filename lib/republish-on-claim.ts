@@ -19,15 +19,18 @@
 //   4. The UPDATE re-asserts the held state in its WHERE (is_published=false AND an ALLOW reason),
 //      so a row whose state moved between the read and the write is never published.
 //      TDL #1047: a zero-row UPDATE returns no error — the count decides.
-import { revalidateTag } from "next/cache";
+//
+// TDL #1372 (tdl-1372-held-claim-containment-v1): an email-verified claim is no longer identity proof, so an
+// ALLOW verdict now queues pending_identity instead of flipping — this module NEVER publishes. DENY verdicts are
+// audited as before. See lib/held-claim-identity.ts.
 import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
 import {
-  REPUBLISH_ALLOW_REASONS,
   REPUBLISH_GUARD_VERSION,
   evaluateRepublish,
   type RepublishInput,
 } from "@/lib/republish-guard";
 import { nameEmailClassForRow } from "@/lib/name-email-guard";
+import { recordPendingIdentity } from "@/lib/held-claim-identity";
 
 const VERTICAL_SLUG = "lawyer"; // empire_verticals.vertical_slug for legal_listings
 
@@ -38,9 +41,10 @@ export type HeldClaimRow = {
   name?: string | null;
   business_name?: string | null;
   submitted_via?: string | null;
+  owner_email?: string | null;
 };
 
-export type RepublishOutcome = "not_held" | "republished" | "held";
+export type RepublishOutcome = "not_held" | "held" | "pending_identity";
 
 export async function republishOnClaim(listing: HeldClaimRow, slug: string): Promise<RepublishOutcome> {
   if (listing.is_published !== false) return "not_held";
@@ -53,6 +57,20 @@ export async function republishOnClaim(listing: HeldClaimRow, slug: string): Pro
     name_email_class: await nameEmailClassForRow(supabaseAdmin, listing),
   };
   const decision = evaluateRepublish(input);
+
+  // TDL #1372 containment: an ALLOW-class held row is NOT published on an email-verified claim. The claim stands,
+  // the row stays held, and the claim is queued pending_identity (lib/held-claim-identity.ts). Never flips.
+  if (decision.allow) {
+    await recordPendingIdentity({
+      verticalSlug: VERTICAL_SLUG,
+      id: listing.id,
+      slug,
+      deserveReason: input.deserve_reason,
+      name: input.name,
+      ownerEmail: listing.owner_email,
+    });
+    return "pending_identity";
+  }
 
   const { error: auditErr } = await supabaseAdmin.from("empire_republish_decisions").insert({
     vertical_slug: VERTICAL_SLUG,
@@ -67,22 +85,6 @@ export async function republishOnClaim(listing: HeldClaimRow, slug: string): Pro
     guard_version: REPUBLISH_GUARD_VERSION,
     actor: "claim_verify",
   });
-  if (auditErr) {
-    console.error(`[republish-on-claim] audit insert FAILED for ${slug}: ${auditErr.message} — row stays held`);
-    return "held";
-  }
-  if (!decision.allow) return "held";
-
-  const { error, count } = await supabaseAdmin
-    .from(LISTINGS_TABLE)
-    .update({ is_published: true, deserve_reason: null, deserved_at: null }, { count: "exact" })
-    .eq("id", listing.id)
-    .eq("is_published", false)
-    .in("deserve_reason", Array.from(REPUBLISH_ALLOW_REASONS));
-  if (error || (count ?? 0) === 0) {
-    console.error(`[republish-on-claim] flip failed for ${slug} (err=${error?.message ?? "0 rows"}) — row stays held`);
-    return "held";
-  }
-  try { revalidateTag(`listing:${slug}`); } catch { /* best-effort; the leaf read is uncached */ }
-  return "republished";
+  if (auditErr) console.error(`[republish-on-claim] audit insert FAILED for ${slug}: ${auditErr.message} — row stays held`);
+  return "held";
 }
