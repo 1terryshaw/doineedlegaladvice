@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
+import { isK38Held, heldClaimStart } from "@/lib/held-claim-identity";
 import { generateToken } from "@/lib/auth";
 import { isOwnerTokenExpired } from "@/lib/owner-authorization";
 import { sendClaimEmail } from "@/lib/email";
@@ -18,7 +19,7 @@ async function alertLimiterFailure(error: string) {
       module: "claim-start",
       repo: "doineedlegaladvice",
       title: `Claim-start rate limiter error on ${LISTINGS_TABLE}`,
-      details: { table: LISTINGS_TABLE, error, impact: "limiter failed OPEN — claim starts proceed unthrottled until fixed" },
+      details: { table: LISTINGS_TABLE, error, impact: "limiter failed CLOSED — claim starts refused (503) until fixed" },
       status: "open",
     });
     if (insErr) console.error(`[claim] sentinel_alerts insert failed: ${insErr.message}`);
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     const { data: listing, error } = await supabaseAdmin
       .from(LISTINGS_TABLE)
-      .select("id, claimed, name, owner_email, owner_auth_token, owner_auth_token_expires_at")
+      .select("id, claimed, name, owner_email, owner_auth_token, owner_auth_token_expires_at, is_published, deserve_reason")
       .eq("slug", slug)
       .single();
 
@@ -49,6 +50,46 @@ export async function POST(request: NextRequest) {
         { success: false, error: "not_found", userMessage: "We couldn't find that listing." },
         { status: 404 }
       );
+    }
+
+    // TDL #1372 (stream10-held-identity-safety-v1): a K38-held row is NEVER claimed on the listing row. The claimant
+    // becomes a candidate in empire_claim_identity_queue (many per row: a pending claim never locks out the real
+    // licensee); no owner token, no owner session. Abuse gate + DB limiter FAIL CLOSED. A reviewer decides identity.
+    if (isK38Held(listing)) {
+      const held = await heldClaimStart({
+        listingId: listing.id,
+        listingName: listing.name,
+        email: String(email),
+        name: String(name),
+        request,
+        verticalSlug: "legal",
+      });
+      if (held.action === "deny") {
+        return NextResponse.json(
+          { success: false, error: held.error, reason: held.reason, userMessage: held.userMessage },
+          { status: held.status }
+        );
+      }
+      if (held.action === "send") {
+        let sent: unknown;
+        try {
+          sent = await sendClaimEmail(String(email), String(slug), held.token);
+        } catch (e) {
+          sent = { ok: false, error: String(e) };
+        }
+        if ((sent as { ok?: boolean } | undefined)?.ok === false) {
+          console.error(JSON.stringify({ event: "held_claim_send_error", slug, err: (sent as { error?: unknown } | undefined)?.error }));
+          return NextResponse.json(
+            {
+              success: false,
+              error: "email_send_failed",
+              userMessage: "We're having trouble sending the verification email right now. Please try again in a few minutes.",
+            },
+            { status: 503 }
+          );
+        }
+      }
+      return NextResponse.json({ success: true });
     }
 
     if (listing.claimed) {
@@ -104,6 +145,11 @@ export async function POST(request: NextRequest) {
     if (rate.error) {
       console.error(JSON.stringify({ event: "claim_start_ratelimit_error", err: rate.error }));
       await alertLimiterFailure(rate.error);
+      // TDL #1372 (stream10): the claim-start limiter FAILS CLOSED — no send, no write while it cannot be read.
+      return NextResponse.json(
+        { success: false, error: "temporarily_unavailable", userMessage: "Claiming is temporarily unavailable. Please try again in a few minutes." },
+        { status: 503 }
+      );
     }
     const throttled = pendingToken ? "pending_token" : rate.verdict !== "ok" ? rate.verdict : null;
     if (throttled) {

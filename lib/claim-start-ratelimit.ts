@@ -7,8 +7,8 @@
 //   3 claim-verify SENDS per recipient email per rolling 24h, ESTATE-WIDE (keyed on the email hash
 //   alone, so a recipient is capped across every vertical that adopts this limiter).
 // Keys are plain sha256 of the normalized email / IP — raw values are never stored.
-// FAIL-OPEN: any error (or a >1.5 s stall) returns { verdict: "ok", error } so a real claimant is
-// never stranded; the route raises the sentinel alert.
+// FAIL-CLOSED (TDL #1372, stream10-held-identity-safety-v1, COO ruling 2026-10-31): any error (or a >1.5 s stall)
+// returns { verdict: "error", error }; the route refuses the start (503, no send, no write) and raises the sentinel alert.
 import { createHash } from "crypto";
 import type { NextRequest } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
@@ -17,7 +17,7 @@ import { clientIp } from "@/lib/owner-login-ratelimit";
 const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
 const TIMEOUT_MS = 1500;
 
-export type ClaimStartVerdict = "ok" | "ip_cap" | "email_cap";
+export type ClaimStartVerdict = "ok" | "ip_cap" | "email_cap" | "error";
 export type ClaimStartRateResult = { verdict: ClaimStartVerdict; error?: string };
 
 /**
@@ -41,12 +41,12 @@ export async function checkClaimStartRate(
       call,
       new Promise<never>((_, rej) => setTimeout(() => rej(new Error("claim-start rate limiter timeout")), TIMEOUT_MS)),
     ]);
-    if (res.error) return { verdict: "ok", error: res.error.message };
+    if (res.error) return { verdict: "error", error: res.error.message };
     if (res.data !== "ok" && res.data !== "ip_cap" && res.data !== "email_cap") {
-      return { verdict: "ok", error: "claim-start rate limiter returned an unknown verdict" };
+      return { verdict: "error", error: "claim-start rate limiter returned an unknown verdict" };
     }
     return { verdict: res.data };
   } catch (e) {
-    return { verdict: "ok", error: e instanceof Error ? e.message : String(e) };
+    return { verdict: "error", error: e instanceof Error ? e.message : String(e) };
   }
 }

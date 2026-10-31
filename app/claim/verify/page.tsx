@@ -33,6 +33,7 @@
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { supabaseAdmin, LISTINGS_TABLE } from "@/lib/supabase";
+import { isK38Held, heldClaimPeek } from "@/lib/held-claim-identity";
 import { parseUpgradeIntent } from "@/lib/upgrade-intent";
 
 export const dynamic = "force-dynamic";
@@ -63,12 +64,15 @@ export default async function ClaimVerifyPage({ searchParams }: Props) {
     // Claim-context read: deliberately NOT is_published-filtered, because the whole point is
     // that a de-served / seeded row can be claimed back (recon-v1 §A3). Only these columns —
     // never a select("*") that would drag owner_auth_token siblings into a rendered page's props.
-    .select("owner_auth_token, owner_auth_token_expires_at")
+    .select("owner_auth_token, owner_auth_token_expires_at, id, is_published, deserve_reason")
     .eq("slug", slug)
     .single();
 
   // Same refusals as the writer, in the same order, so the page and the POST agree.
-  if (error || !listing || listing.owner_auth_token !== token) redirect(errorUrl(slug));
+  // TDL #1372 (stream10): a K38-held row has no token on the row; its claim token is a queue candidate (read-only peek).
+  const heldRow = !error && !!listing && isK38Held(listing);
+  if (heldRow && !(await heldClaimPeek(listing!.id, token))) redirect(errorUrl(slug));
+  if (!heldRow && (error || !listing || listing.owner_auth_token !== token)) redirect(errorUrl(slug));
   if (
     listing.owner_auth_token_expires_at &&
     new Date(listing.owner_auth_token_expires_at).getTime() < Date.now()

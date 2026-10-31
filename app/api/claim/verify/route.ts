@@ -4,7 +4,7 @@ import { setAuthCookie } from "@/lib/auth";
 import { signPlaceResolve } from "@/lib/billing-handoff";
 import { isNameEmailRefusal, withNameEmailReason } from "@/lib/name-email-guard";
 import { republishOnClaim } from "@/lib/republish-on-claim";
-import { claimReceivedUrl } from "@/lib/held-claim-identity";
+import { claimReceivedUrl, isK38Held, heldClaimVerify } from "@/lib/held-claim-identity";
 import { parseUpgradeIntent, intentQuery } from "@/lib/upgrade-intent";
 
 export const dynamic = "force-dynamic";
@@ -78,6 +78,13 @@ export async function POST(request: NextRequest) {
     .select("id, owner_auth_token, owner_auth_token_expires_at, is_published, deserve_reason, name, business_name, submitted_via, owner_email")
     .eq("slug", slug)
     .single();
+
+  // TDL #1372 (stream10-held-identity-safety-v1): a K38-held row carries no token; its claim token is a queue
+  // candidate. Verify -> pending_identity (replay-safe), then the received page. No row write, no owner session.
+  if (!error && listing && isK38Held(listing)) {
+    const held = await heldClaimVerify(listing.id, token);
+    return NextResponse.redirect(held === "received" ? claimReceivedUrl(siteUrl, slug) : claimError(slug), 303);
+  }
 
   if (error || !listing || listing.owner_auth_token !== token) {
     return NextResponse.redirect(claimError(slug), 303);

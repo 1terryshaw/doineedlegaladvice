@@ -79,16 +79,18 @@ export async function POST(request: NextRequest) {
 
   // owner-auth-ratelimit-and-hash-v1: throttle BEFORE any lookup, mint, or send. A throttled
   // request returns the byte-identical generic success below — nothing tells the caller whether
-  // they were throttled or whether the email belongs to an owner. Limiter errors FAIL OPEN
-  // (login proceeds) but always raise a sentinel alert.
+  // they were throttled or whether the email belongs to an owner. Limiter errors FAIL CLOSED
+  // (503, TDL #1372 stream10) and always raise a sentinel alert.
   const rate = await checkOwnerLoginRate(email, request);
   if (rate.error) {
     console.error(JSON.stringify({ event: "owner_login_ratelimit_error", err: rate.error }));
     await alertQueryFailure(`Owner login rate limiter error on ${LISTINGS_TABLE}`, {
       table: LISTINGS_TABLE,
       error: rate.error,
-      impact: "limiter failed OPEN — login proceeds unthrottled until fixed",
+      impact: "limiter failed CLOSED — login refused (503) until fixed",
     });
+    // TDL #1372 (stream10): the owner-login limiter FAILS CLOSED — no lookup, mint or send while it cannot be read.
+    return NextResponse.json({ error: "temporarily_unavailable" }, { status: 503 });
   } else if (!rate.allowed) {
     console.log(JSON.stringify({ event: "owner_login_throttled", table: LISTINGS_TABLE }));
     return NextResponse.json({ success: true });
