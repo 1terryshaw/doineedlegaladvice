@@ -218,6 +218,12 @@ export async function getFilteredListings(filters: ListingFilters): Promise<List
 }
 
 
+/** TDL #1407: URL city slug → filter-safe token ([a-z0-9-] only; anything else matches nothing). */
+function citySlugSafe(citySlug: string): string {
+  const s = String(citySlug || "").toLowerCase();
+  return /^[a-z0-9-]{1,80}$/.test(s) ? s : "__invalid__";
+}
+
 export async function getListingsByCity(provinceCode: string, citySlug: string): Promise<Listing[]> {
   return paginateAll<Listing>(() => {
     const query = supabaseAdmin
@@ -228,7 +234,9 @@ export async function getListingsByCity(provinceCode: string, citySlug: string):
       .in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL)
       .neq("is_published", false)
       .eq("province_state", provinceCode.toUpperCase())
-      .eq("region_slug", citySlug)
+      // TDL #1405/#1407: a row belongs to its city hub by region_slug OR city_slug (183 FLA city hubs had
+      // rows reachable only via city_slug). Slug is sanitized before it enters the PostgREST .or() filter.
+      .or(`region_slug.eq.${citySlugSafe(citySlug)},city_slug.eq.${citySlugSafe(citySlug)}`)
       // TDL #1407 R1 (CEO 2026-11-01): no paid boost in legal ordering — neutral = claimed, rating, name.
       .order("claimed", { ascending: false, nullsFirst: false })
       .order("google_rating", { ascending: false, nullsFirst: false })
@@ -254,7 +262,9 @@ export async function cityHubTrueCount(provinceCode: string, citySlug: string): 
       .in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL)
       .neq("is_published", false)
       .eq("province_state", provinceCode.toUpperCase())
-      .eq("region_slug", citySlug);
+      // TDL #1405/#1407: a row belongs to its city hub by region_slug OR city_slug (183 FLA city hubs had
+      // rows reachable only via city_slug). Slug is sanitized before it enters the PostgREST .or() filter.
+      .or(`region_slug.eq.${citySlugSafe(citySlug)},city_slug.eq.${citySlugSafe(citySlug)}`);
   if (error) {
     const msg = String((error as { message?: unknown })?.message ?? "");
     if (/Dynamic server usage|DYNAMIC_SERVER_USAGE/.test(msg)) {
