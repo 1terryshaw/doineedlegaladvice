@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import verticalConfig from "@/lib/vertical.config";
-import { resolveRegionScope, DIRECTORY_COUNTRIES } from "@/lib/region-scope";
+import { resolveRegionScope, DIRECTORY_COUNTRIES, regionScoped, SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL } from "@/lib/region-scope"; // TDL #1402 serve scope
 import { applyAddressVisibility } from "@/lib/address-visibility";
 
 // K216 — Next's prerender bail-out is NOT a DB fault and must not be laundered into one.
@@ -164,15 +164,12 @@ export async function getListings(regionSlug?: string): Promise<Listing[]> {
     // CA -> province_state (CA rows carry no license_state). No region ->
     // browse both countries (D1). Longer slugs keep the legacy `region` column.
     if (regionSlug && regionSlug.length === 2) {
-      const scope = resolveRegionScope(regionSlug);
-      const code = regionSlug.toUpperCase();
-      query = scope
-        ? query.eq("country", scope.country).eq(scope.column, code)
-        : query.in("country", DIRECTORY_COUNTRIES).eq("license_state", code);
+      // TDL #1402: an unswitched CA province code matches nothing on DINLA.
+      query = regionScoped(query, regionSlug);
     } else if (regionSlug) {
-      query = query.in("country", DIRECTORY_COUNTRIES).eq("region", regionSlug);
+      query = query.in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL).eq("region", regionSlug);
     } else {
-      query = query.in("country", DIRECTORY_COUNTRIES);
+      query = query.in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL);
     }
 
     return query as unknown as PromiseLike<{ data: Listing[] | null; error: unknown }>;
@@ -201,15 +198,12 @@ export async function getFilteredListings(filters: ListingFilters): Promise<List
     // US+CA: country + region column derived from the disjoint region code
     // (US -> license_state, CA -> province_state). No region -> both countries.
     if (filters.region && filters.region.length === 2) {
-      const scope = resolveRegionScope(filters.region);
-      const code = filters.region.toUpperCase();
-      query = scope
-        ? query.eq("country", scope.country).eq(scope.column, code)
-        : query.in("country", DIRECTORY_COUNTRIES).eq("license_state", code);
+      // TDL #1402: an unswitched CA province code matches nothing on DINLA.
+      query = regionScoped(query, filters.region);
     } else if (filters.region) {
-      query = query.in("country", DIRECTORY_COUNTRIES).eq("region", filters.region);
+      query = query.in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL).eq("region", filters.region);
     } else {
-      query = query.in("country", DIRECTORY_COUNTRIES);
+      query = query.in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL);
     }
     if (filters.listing_type) {
       query = query.eq("listing_type", filters.listing_type);
@@ -233,7 +227,7 @@ export async function getListingsByCity(provinceCode: string, citySlug: string):
       .select("*")
       // US-only (country split 2026-07-26): city pages serve US rows only; a CA
       // province code therefore returns nothing here (CA rows live on FLA).
-      .eq("country", "US")
+      .in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL)
       .neq("is_published", false)
       .eq("province_state", provinceCode.toUpperCase())
       .eq("region_slug", citySlug)
@@ -260,7 +254,7 @@ export async function cityHubTrueCount(provinceCode: string, citySlug: string): 
   const { count, error } = await supabaseAdmin
       .from(LISTINGS_TABLE)
       .select("*", { count: "exact", head: true })
-      .eq("country", "US")
+      .in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL)
       .neq("is_published", false)
       .eq("province_state", provinceCode.toUpperCase())
       .eq("region_slug", citySlug);
@@ -283,7 +277,7 @@ export async function getListing(slug: string): Promise<Listing | null> {
     .select("*")
     // US-only (country split 2026-07-26): the detail page must not resolve a CA
     // row even by direct URL — CA listings render on FLA, not here.
-    .eq("country", "US")
+    .in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL)
     .neq("is_published", false)
     .eq("slug", slug)
     .single();
@@ -338,7 +332,7 @@ export async function getAllListingsForSitemap(regionSlug?: string): Promise<Lis
     let query = supabaseAdmin
       .from(LISTINGS_TABLE)
       .select("*")
-      .in("country", DIRECTORY_COUNTRIES).neq("is_published", false)
+      .in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL).neq("is_published", false)
       .order("id", { ascending: true });
     if (regionSlug) {
       query = query.eq("region_slug", regionSlug);
@@ -354,7 +348,7 @@ export async function getListingsCount(): Promise<number> {
   const { count, error } = await supabaseRead
     .from(LISTINGS_TABLE)
     .select("id", { count: "exact", head: true })
-    .in("country", DIRECTORY_COUNTRIES).neq("is_published", false);
+    .in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL).neq("is_published", false);
   if (error) {
     // FAIL-CLOSED (C2, getlistings-failclosed-fan-v1 2026-09-09). This returned the
     // empty/zero value, which made a DB fault indistinguishable from a genuinely
@@ -387,7 +381,7 @@ export async function getListingsRange(
     const { data, error } = await supabaseRead
       .from(LISTINGS_TABLE)
       .select("slug, updated_at, created_at")
-      .in("country", DIRECTORY_COUNTRIES)
+      .in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL)
       .neq("is_published", false)
       .order("slug", { ascending: true })
       .order("id", { ascending: true })
@@ -493,7 +487,7 @@ export async function getCityPageSlugs(): Promise<
     return supabaseAdmin
       .from(LISTINGS_TABLE)
       .select("province_state, region_slug, updated_at, created_at")
-      .in("country", DIRECTORY_COUNTRIES)
+      .in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL)
       .neq("is_published", false)
       .not("province_state", "is", null)
       .not("region_slug", "is", null) as unknown as PromiseLike<{
@@ -532,15 +526,12 @@ export async function getFilteredListingsCount(filters: ListingFilters): Promise
   // US+CA: mirrors getFilteredListings' country/region resolution exactly so the
   // displayed total matches the rendered set.
   if (filters.region && filters.region.length === 2) {
-    const scope = resolveRegionScope(filters.region);
-    const code = filters.region.toUpperCase();
-    query = scope
-      ? query.eq("country", scope.country).eq(scope.column, code)
-      : query.in("country", DIRECTORY_COUNTRIES).eq("license_state", code);
+    // TDL #1402: an unswitched CA province code matches nothing on DINLA.
+    query = regionScoped(query, filters.region);
   } else if (filters.region) {
-    query = query.in("country", DIRECTORY_COUNTRIES).eq("region", filters.region);
+    query = query.in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL).eq("region", filters.region);
   } else {
-    query = query.in("country", DIRECTORY_COUNTRIES);
+    query = query.in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL);
   }
   if (filters.listing_type) {
     query = query.eq("listing_type", filters.listing_type);
@@ -611,7 +602,7 @@ export async function getDirectoryRegions(): Promise<DirectoryRegion[]> {
     return supabaseAdmin
       .from(`mv_${LISTINGS_TABLE}_cities`)
       .select("province_state, city")
-      .eq("country", "US")
+      .in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL)
       .in("province_state", CANONICAL_PROVINCE_CODES)
       .not("city", "is", null)
       .neq("city", "") as unknown as PromiseLike<{

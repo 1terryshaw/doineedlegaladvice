@@ -142,7 +142,11 @@ export default async function ListingPage({ params }: Props) {
 
   // leads-plus-canary-v1: ONE gate (claimed AND owner email confirmed AND leads_plus AND
   // leads_plus_enabled). Fail-open to today's page: any read error ⇒ null ⇒ gate closed.
-  const lp = await getLeadsPlusPublicCached(listing.slug).catch(() => null);
+  // TDL #1402: a CA row served on DINLA (consolidation canary) keeps ALL owner / claim /
+  // billing surfaces on FLA, where its claim, #1372 identity queue and any Stripe entitlement
+  // live — no second host may open a duplicate funnel or entitlement for the same row.
+  const caOnDinla = listing.country === "CA";
+  const lp = caOnDinla ? null : await getLeadsPlusPublicCached(listing.slug).catch(() => null);
   const lpOn = lp?.gate.ok === true;
   const lpKit = lpOn ? lp!.kit : null;
   const lpWebsite = lpOn && lp!.websiteOk ? (listing.website as string) : null;
@@ -524,7 +528,15 @@ export default async function ListingPage({ params }: Props) {
             {/* Claim CTA — UNCLAIMED: server-rendered unlock-preview (visible JS-off,
                 no client auth hook). CLAIMED: keep ListingClaimCTA for the owner's
                 "Edit My Listing" affordance (anon sees nothing on claimed pages). */}
-            <>{listing.claimed ? (
+            <>{caOnDinla ? (
+              <div className="border rounded-lg p-4 text-sm text-gray-700" data-testid="ca-claim-on-fla">
+                Are you this lawyer?{" "}
+                <a href={`https://freelawyeradvice.ca/claim/${encodeURIComponent(listing.slug)}`} className="underline font-medium">
+                  {listing.claimed ? "Manage this listing" : "Claim this listing"} on FreeLawyerAdvice.ca
+                </a>
+                .
+              </div>
+            ) : listing.claimed ? (
               <ListingClaimCTA
                 listingSlug={listing.slug}
                 listingClaimed={listing.claimed}
@@ -536,12 +548,12 @@ export default async function ListingPage({ params }: Props) {
               />
             )}
             </>
-            <PublicGbpClaimSidecar
+            {!caOnDinla && <PublicGbpClaimSidecar
               listingSlug={listing.slug}
               listingName={listing.name}
               address={[streetPublic ? (lst as { address?: string | null }).address : null, listing.city, listing.province_state, streetPublic ? (lst as { postal_code?: string | null }).postal_code : null, listing.country].filter(Boolean).join(", ")}
               listingClaimed={listing.claimed}
-            />
+            />}
           </div>
 
           {/* Sidebar */}
@@ -568,7 +580,7 @@ export default async function ListingPage({ params }: Props) {
         faqs={localizeFaqs(verticalConfig.faqs, listing.city)}
         disclaimer={LEGAL_DISCLAIMER}
       />
-      <UpgradeModal
+      {!caOnDinla && <UpgradeModal
         listingSlug={listing.slug}
         priceIds={{
           reviews_plus_monthly: process.env.STRIPE_PRICE_REVIEWS_MONTHLY || "",
@@ -580,7 +592,7 @@ export default async function ListingPage({ params }: Props) {
         }}
         currentTier={normalizeTierForPricing(listing.tier as string | null, listing.claimed)}
         currentCycle={null}
-      />
+      />}
     </>
   );
 }

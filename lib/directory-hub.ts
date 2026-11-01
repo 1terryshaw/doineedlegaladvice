@@ -2,7 +2,7 @@
 // Lives in its own module because lib/supabase.ts is on this repo's DO-NOT-TOUCH
 // list (per CLAUDE.md). Reuses supabaseAdmin + LISTINGS_TABLE from supabase.ts.
 import { sanitizeOrTerm, supabaseAdmin, LISTINGS_TABLE, type Listing } from "@/lib/supabase";
-import { DIRECTORY_COUNTRIES } from "@/lib/region-scope";
+import { DIRECTORY_COUNTRIES, SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL } from "@/lib/region-scope"; // TDL #1402 serve scope
 
 // K216 — Next's prerender bail-out is NOT a DB fault and must not be laundered into one.
 // A statically prerendered route raises DynamicServerError through the no-store client;
@@ -49,7 +49,7 @@ export async function getFilteredListingsPaged(filters: ListingFiltersPaged): Pr
   let query = supabaseAdmin
     .from(LISTINGS_TABLE)
     .select("*")
-    .eq("country", "US")
+    .in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL)
     .neq("is_published", false)
     .order("tier_priority", { ascending: false, nullsFirst: false })
     .order("featured", { ascending: false, nullsFirst: false })
@@ -125,7 +125,7 @@ export async function getRegionCounts(): Promise<RegionCount[]> {
     // provinces. (mv_regions is currently CA-only, so the US hub stays empty
     // until US region counts are populated — tracked as a follow-up.)
     .select("country, province_state, n")
-    .eq("country", "US");
+    .in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL);
   if (error) {
     // FAIL-CLOSED (C2, getlistings-failclosed-fan-v1 2026-09-09). This returned the
     // empty/zero value, which made a DB fault indistinguishable from a genuinely
@@ -159,7 +159,7 @@ export async function getDirectoryTotal(): Promise<number> {
   const { count, error } = await supabaseAdmin
     .from(LISTINGS_TABLE)
     .select("*", { count: "exact", head: true })
-    .eq("country", "US")
+    .in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL)
     .neq("is_published", false);
   if (error) {
     // FAIL-CLOSED (C2, getlistings-failclosed-fan-v1 2026-09-09). This returned the
@@ -189,7 +189,7 @@ export async function getListingsByProvincePaged(
   const { data, error } = await supabaseAdmin
     .from(LISTINGS_TABLE)
     .select("*")
-    .eq("country", "US")
+    .in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL)
     .neq("is_published", false)
     .eq(regionColumn(provinceCode), provinceCode.toUpperCase())
     .order("tier_priority", { ascending: false, nullsFirst: false })
@@ -251,7 +251,7 @@ export async function hasServedListings(code: string): Promise<boolean> {
   const { count, error } = await supabaseAdmin
     .from(LISTINGS_TABLE)
     .select("id", { count: "exact", head: true })
-    .in("country", DIRECTORY_COUNTRIES)
+    .in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL)
     .neq("is_published", false)
     .eq(regionColumn(c), c);
   if (error) {

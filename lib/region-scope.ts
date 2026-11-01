@@ -1,3 +1,4 @@
+import { CA_SERVED_ON_DINLA } from "@/lib/legal-consolidation";
 // lib/region-scope.ts — US+CA directory region resolution.
 //
 // REUSABLE PATTERN (logged in doineedadentist/PROGRESS.md item (j)): any vertical
@@ -37,10 +38,45 @@ export function resolveRegionScope(code: string): RegionScope | null {
   return null;
 }
 
-// Countries the directory serves. US-only (country split 2026-07-26): FLA keeps
-// CA-only, DINLA is US-only, disjoint slices. Mutable string[] (not `as const`) so it
-// drops straight into PostgREST `.in("country", …)`.
-export const DIRECTORY_COUNTRIES: string[] = ["US"];
+// ── TDL #1402 consolidation: DINLA is canonical; CA provinces are switched on as ROUTING over
+// the same legal_listings rows (lib/legal-consolidation.ts). With CA_SERVED_ON_DINLA empty,
+// every helper below reduces EXACTLY to the 2026-07-26 US-only split.
+
+/** CA provinces whose published rows DINLA serves. Validated against the CA code set. */
+export const SERVED_CA_PROVINCES: string[] = CA_SERVED_ON_DINLA.filter((c) => CA_PROVINCE_CODES.has(c));
+
+// Countries the directory serves. Mutable string[] so it drops into PostgREST `.in("country", …)`.
+export const DIRECTORY_COUNTRIES: string[] = SERVED_CA_PROVINCES.length ? ["US", "CA"] : ["US"];
+
+// The CA exclusion, as a CHAINABLE `.not(col, op, val)` triple so every read keeps its shape:
+//   .in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL)
+// - nothing switched on ⇒ NOT country = '__NONE__' (a no-op) ⇒ exactly the US-only split.
+// - otherwise ⇒ NOT province_state IN (every unswitched CA code + sentinel). NOT IN also drops
+//   NULL province_state, so the 46 province-less CA rows stay FLA-only. US/CA codes are
+//   disjoint, so this can never exclude a US state.
+const UNSERVED_CA_IN = `(${["__NONE__", ...Array.from(CA_PROVINCE_CODES).filter((c) => !SERVED_CA_PROVINCES.includes(c))].join(",")})`;
+export const SCOPE_NOT_COL: string = SERVED_CA_PROVINCES.length ? "province_state" : "country";
+export const SCOPE_NOT_OP: string = SERVED_CA_PROVINCES.length ? "in" : "eq";
+export const SCOPE_NOT_VAL: string = SERVED_CA_PROVINCES.length ? UNSERVED_CA_IN : "__NONE__";
+
+/** True when DINLA serves this 2-letter region code (any US state; a CA province only if switched on). */
+export function isServedRegionCode(code: string): boolean {
+  const c = code.toUpperCase();
+  if (CA_PROVINCE_CODES.has(c)) return SERVED_CA_PROVINCES.includes(c);
+  return US_STATE_CODES.has(c);
+}
+
+/** Region-scoped predicate: country+column from the disjoint code; an unswitched CA code matches nothing. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function regionScoped<Q>(q: Q, code: string): Q {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const b = q as any;
+  const c = code.toUpperCase();
+  const scope = resolveRegionScope(c);
+  if (!scope) return b.in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL).eq("license_state", c);
+  if (scope.country === "CA" && !SERVED_CA_PROVINCES.includes(c)) return b.eq("country", "__UNSERVED__");
+  return b.eq("country", scope.country).eq(scope.column, c);
+}
 
 // CA province display names (for breadcrumb / country crumb derivation).
 export const CANADA_LABEL = "Canada";
