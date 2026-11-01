@@ -14,6 +14,11 @@ Real owners stay OFF (`leads_plus_enabled=false`) unless Terry says go; $49+ own
 
 After ANY deploy: (1) `curl -X POST /api/chat` (and `/api/triage` on DINLA) must return **410 chat_disabled**;
 (2) the homepage must contain `id="legal-nav-region"`; (3) FLA only: re-render the fleet-edge tree
-(`node ~/empire/fleet-edge/site.mjs freelawyeradvice all`) and run `verify_map.py` — every
+(`site.mjs freelawyeradvice build`, `render`, `deploy --no-workers-dev` — NOT `all`) and run `verify_map.py` — every
 `lib/dinla-redirects.json` entry must 301 to its exact DINLA target, and FLA sitemap ∩ map = 0.
 See OPERATIONS.md and K443.
+
+## FLA retired (TDL #1407)
+After ANY deploy of either repo: FLA `/` → 301 `doineedlegaladvice.com/canada`; FLA `/sitemap.xml` = empty urlset;
+an unknown FLA path → 410 + noindex; FLA `/owner/login` → 301 DINLA; DINLA `/canada` 200 with `id="legal-nav-region"`;
+both maps re-verify 100% (`verify_map.py … --target200`). See RETIREMENT.md (FLA) and OPERATIONS.md.

@@ -55,7 +55,23 @@ name only. Never add a URL you have not checked.
 - **Adding a province:** add it to the list in BOTH repos (DINLA first, deploy READY) →
   `build_redirect_map.py` → FLA commit → **re-render the fleet-edge tree** (Design A shadows
   the 301s until re-rendered; standalone `deploy` needs `--no-workers-dev`) → `verify_map.py`.
-- **NOT moved (ruling owed):** QC, AB, BC, ON (14 claimed rows + the one paid Reviews Plus
-  subscriber) and the 46 province-less CA rows.
+- **SUPERSEDED by TDL #1407 (below):** every CA province is on DINLA and FLA is retired.
 - **Rollback:** `dinla-redirects.json` → `{}` + list → `[]` in both repos, or the
   `working-legal-v1..v4` tags.
+
+## FLA retired — DINLA is the one legal host (TDL #1407, legal-fla-retirement-v1, 2026-11-01)
+
+CEO rulings (K443): **R1** no paid boost in legal ordering (neutral = claimed DESC, google_rating DESC,
+name; paid perks unchanged) · **R2** all CA rows incl. claimed + paid on DINLA · **R4** FLA retired
+(domain kept, redirect-only); free-form legal chat OFF permanently.
+- `CA_SERVED_ON_DINLA` = all 13 CA codes (NU/YT have 0 rows; listed so no navigator link points at FLA).
+- DINLA owns CA claim (`getListingForClaim` = `.in(country,[US,CA])`, K148 held → identity queue),
+  owner login / magic links / dashboard, Leads Plus, GBP sidecar, upgrade modal and the Reviews Plus
+  entitlement. The #1402 `caOnDinla` hand-off is gone. `/canada` = CA landing; `/privacy` 8a = CA section.
+- DINLA city hubs match `region_slug OR city_slug` (TDL #1405 fixed).
+- `empire_verticals.lawyer.market_domains` CA → doineedlegaladvice.com (checkout/portal return URLs).
+- FLA: see `freelawyeradvice/RETIREMENT.md` — 10,751 listing 301s + 487 hub/static 301s, held 410 first,
+  owner/claim 301 + API 308 (query preserved), everything else 410 + noindex, empty sitemap, robots crawlable.
+- **Never** add a page, a sitemap entry or an owner surface back to FLA; a new CA feature ships on DINLA.
+- Monitors: K23 one-shots 2026-11-02 / 11-15 / 12-01 (`~/empire/legal-fla-retirement-v1/monitor/`).
+- Rollback tags (both repos): `working-legal-v6` (pre-#1407), `v7` (pre-phase-2), `v8` (pre-retirement).
