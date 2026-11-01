@@ -46,6 +46,7 @@ const STATIC_ENTRIES: { path: string; changefreq: string; priority: string }[] =
   { path: "/directory", changefreq: "daily", priority: "0.9" },
   { path: "/pricing", changefreq: "weekly", priority: "0.7" },
   { path: "/about", changefreq: "monthly", priority: "0.4" },
+  { path: "/canada", changefreq: "weekly", priority: "0.8" }, // TDL #1407 Canada landing (FLA retired)
   { path: "/contact", changefreq: "monthly", priority: "0.4" },
   { path: "/terms", changefreq: "monthly", priority: "0.3" },
   { path: "/privacy", changefreq: "monthly", priority: "0.3" },

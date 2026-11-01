@@ -4,7 +4,7 @@ import verticalConfig from "@/lib/vertical.config";
 
 export const metadata: Metadata = {
   title: "About",
-  description: `About ${verticalConfig.name} — AI-driven legal triage.`,
+  description: `About ${verticalConfig.name} — a legal-help navigator and directory for the US and Canada.`,
 };
 
 export default function AboutPage() {
@@ -13,38 +13,30 @@ export default function AboutPage() {
       <header>
         <h1 className="text-3xl font-bold mb-3">About {verticalConfig.name}</h1>
         <p className="text-lg text-gray-700">
-          Triage first. Then a directory match.
+          Find the right type of legal help, then a lawyer to contact. General information only — not legal advice.
         </p>
       </header>
 
       <section className="space-y-4 text-gray-700">
         <h2 className="text-xl font-semibold text-gray-900">How it works</h2>
+        {/* TDL #1407: the generative chat was discontinued 2026-11-01 (K443) — this page described it. */}
         <ol className="list-decimal pl-6 space-y-2">
-          <li>You describe your situation in plain language.</li>
+          <li>You pick your state, province or territory, the kind of problem, and whether it is urgent.</li>
           <li>
-            Our AI helper asks two or three clarifying questions to identify the issue category,
-            your state, and whether there&apos;s any time pressure.
+            Our legal-help navigator shows the <em>type</em> of licensed professional who usually handles it,
+            and official resources such as bar or law society referral services and legal aid. It runs in your
+            browser: there is no free-text box and nothing you select is sent to us or to any AI service.
           </li>
-          <li>
-            It tells you what <em>kind</em> of attorney you should look for &mdash; immigration,
-            family, criminal, employment, etc. &mdash; and what to expect from the first
-            conversation with one.
-          </li>
-          <li>
-            We then surface attorneys in our directory matching that practice area and your
-            state.
-          </li>
+          <li>We then link you to lawyers in our directory for your jurisdiction.</li>
         </ol>
       </section>
 
       <section className="space-y-4 text-gray-700">
-        <h2 className="text-xl font-semibold text-gray-900">What the AI is not</h2>
+        <h2 className="text-xl font-semibold text-gray-900">What this site is not</h2>
         <p>
-          Our AI does <strong>not</strong> give you advice about what to do, predict outcomes,
-          interpret your specific contracts or court documents, or replace an attorney licensed
-          in your jurisdiction. Communications with our AI are <strong>not</strong>{" "}
-          attorney-client privileged. We tell you the <em>type</em> of attorney to find; only
-          they can tell you what to do.
+          We do <strong>not</strong> give legal advice, predict outcomes, or interpret your documents, and nothing on
+          this site replaces a lawyer licensed where you live. Nothing you send us is privileged. We help you find the{" "}
+          <em>type</em> of professional; only they can tell you what to do.
         </p>
       </section>
 

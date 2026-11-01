@@ -15,7 +15,7 @@ export default function PrivacyPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-12">
       <h1 className="text-3xl font-bold mb-6">Privacy Policy</h1>
-      <p className="text-sm text-gray-500 mb-8">Last updated: May 13, 2026</p>
+      <p className="text-sm text-gray-500 mb-8">Last updated: November 1, 2026</p>
 
       <div className="prose max-w-none space-y-6 text-gray-700">
         <section>
@@ -55,7 +55,7 @@ export default function PrivacyPage() {
           <h2 className="text-xl font-semibold text-gray-900">4. Legal-Help Navigator (no chat) &mdash; Important</h2>
           <p>
             The legal-help navigator on our home page runs entirely in your browser. We do not collect
-            or store the state, category or urgency you select, and nothing you select is sent to us or
+            or store the state, province, category or urgency you select, and nothing you select is sent to us or
             to any AI service. There is no free-text box. <strong>Nothing on this Site is
             attorney-client privileged</strong> &mdash; do not send us details of your legal situation.
             See our <a href="/terms" className="underline">Terms</a> for details.
@@ -109,6 +109,41 @@ export default function PrivacyPage() {
               {verticalConfig.supportEmail}
             </a>.
           </p>
+        </section>
+
+        {/* TDL #1407: FreeLawyerAdvice.ca merged into this site — CA visitors and listed professionals. */}
+        <section>
+          <h2 className="text-xl font-semibold text-gray-900">8a. Visitors and Listed Professionals in Canada</h2>
+          <p>
+            On November 1, 2026, FreeLawyerAdvice.ca was merged into this Site. Canadian listings, claimed
+            profiles and owner accounts that were on FreeLawyerAdvice.ca now live here, under this Privacy
+            Policy. Owner logins and any subscription carried over unchanged.
+          </p>
+          <ul className="list-disc pl-6 space-y-1">
+            <li>
+              <strong>Listings of Canadian lawyers</strong> are compiled from publicly available business
+              information. A listed professional can claim, correct or ask us to remove their listing at any time.
+            </li>
+            <li>
+              <strong>Where information is processed.</strong> Our service providers (for example Supabase for
+              storage, Vercel and Cloudflare for hosting, Stripe for billing and our email provider) may store or
+              process information outside Canada, including in the United States, where it may be accessible
+              under the laws of that country.
+            </li>
+            <li>
+              <strong>Your rights.</strong> Under Canada&apos;s <em>Personal Information Protection and Electronic
+              Documents Act</em> (PIPEDA), Quebec&apos;s <em>Act respecting the protection of personal information in
+              the private sector</em> (as amended by Law 25) and similar provincial laws, you may ask to access or
+              correct your personal information, or withdraw consent, by emailing us at the address in section 11.
+              You may also complain to the Office of the Privacy Commissioner of Canada or, in Quebec, the
+              Commission d&apos;accès à l&apos;information.
+            </li>
+            <li>
+              <strong>Former FreeLawyerAdvice.ca chat.</strong> FreeLawyerAdvice.ca&apos;s AI chat assistant was
+              discontinued on November 1, 2026. While it operated, the messages you typed were sent to our AI
+              provider (Anthropic) to generate a reply; they were not saved to our database.
+            </li>
+          </ul>
         </section>
 
         <section>
