@@ -306,9 +306,11 @@ export async function getListingForClaim(slug: string): Promise<Listing | null> 
   const { data, error } = await supabaseAdmin
     .from(LISTINGS_TABLE)
     .select("*")
-    // US-only (country split 2026-07-26): the detail page must not resolve a CA
-    // row even by direct URL — CA listings render on FLA, not here.
-    .eq("country", "US")
+    // TDL #1407 (legal-fla-retirement-v1): DINLA is the claim host for US AND CA rows (FLA retired).
+    // Explicit two-country scope (not unfiltered): legal_listings has no other countries today, and a
+    // new one must be a deliberate decision here. Held (K38/K148) rows still go to the identity queue
+    // via isK38Held() in /api/claim — this read never unholds or republishes anything.
+    .in("country", ["US", "CA"])
     .eq("slug", slug)
     .single();
 
