@@ -1,0 +1,10 @@
+// legal-consolidation.ts — TDL #1402. STAMPED, byte-identical in freelawyeradvice + doineedlegaladvice.
+//
+// Consolidation is ROUTING over canonical legal_listings rows, not copying (K-doc
+// legal-help-navigator). DINLA (doineedlegaladvice.com) is canonical; CA provinces are
+// switched onto DINLA one batch at a time. A province listed here is:
+//   - served on DINLA (country='CA' AND province_state IN this list, published rows only), and
+//   - eligible for per-URL 301s from FLA (only URLs in FLA's verified redirect map).
+// Order of operations per batch: DINLA deploy READY → verify DINLA targets 200 → FLA map.
+// Empty list ⇒ the pre-mission US/CA split, exactly.
+export const CA_SERVED_ON_DINLA: string[] = [];

@@ -32,7 +32,7 @@ export default function PrivacyPage() {
           <p>We may collect:</p>
           <ul className="list-disc pl-6 space-y-1">
             <li>Contact information (name, email, phone) submitted via forms</li>
-            <li>Messages submitted to our AI assistant or contact pages</li>
+            <li>Messages submitted through contact or inquiry forms</li>
             <li>Listing information provided by attorneys or organizations claiming profiles</li>
             <li>Payment information processed securely through Stripe</li>
             <li>Usage data such as pages visited and interactions with the Site</li>
@@ -43,7 +43,7 @@ export default function PrivacyPage() {
         <section>
           <h2 className="text-xl font-semibold text-gray-900">3. How We Use Information</h2>
           <ul className="list-disc pl-6 space-y-1">
-            <li>To operate and improve the directory and AI features</li>
+            <li>To operate and improve the directory</li>
             <li>To route inquiries to relevant attorneys or organizations</li>
             <li>To process payments and manage subscriptions</li>
             <li>To send transactional emails (claim verification, inquiry forwards, billing)</li>
@@ -52,13 +52,18 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-gray-900">4. AI Chat &mdash; Important</h2>
+          <h2 className="text-xl font-semibold text-gray-900">4. Legal-Help Navigator (no chat) &mdash; Important</h2>
           <p>
-            Conversations with our AI assistant are processed by Anthropic&apos;s Claude API and
-            may be stored to improve our service. <strong>Do not share Social Security Numbers,
-            financial account credentials, or any information you consider privileged.</strong>
-            Communications with our AI are <strong>not</strong> attorney-client privileged. See
-            our <a href="/terms" className="underline">Terms</a> for details.
+            The legal-help navigator on our home page runs entirely in your browser. We do not collect
+            or store the state, category or urgency you select, and nothing you select is sent to us or
+            to any AI service. There is no free-text box. <strong>Nothing on this Site is
+            attorney-client privileged</strong> &mdash; do not send us details of your legal situation.
+            See our <a href="/terms" className="underline">Terms</a> for details.
+          </p>
+          <p>
+            Our former AI chat assistant was discontinued on November 1, 2026. While it operated, the
+            messages you typed were sent to our AI provider (Anthropic) to generate a reply; they were
+            not saved to our database.
           </p>
         </section>
 
@@ -67,7 +72,7 @@ export default function PrivacyPage() {
           <p>
             We do not sell your personal information. We share data only with service providers
             necessary to operate the Site (Supabase for storage, Stripe for billing, email
-            providers, Anthropic for AI). Inquiry messages you submit are forwarded to the
+            providers). Inquiry messages you submit are forwarded to the
             relevant listing.
           </p>
         </section>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { freeformLegalChatEnabled, CHAT_DISABLED_BODY } from "@/lib/legal-chat-gate"; // TDL #1402
 import verticalConfig from "@/lib/vertical.config";
 // advisor-no-competitor v1 — K35: the prompt clause is a request, the guard is the control.
 import { withNoCompetitorRule, noCompetitor } from "@/lib/advisor-no-competitor";
@@ -30,6 +31,11 @@ function isRateLimited(ip: string): boolean {
 }
 
 export async function POST(request: NextRequest) {
+  // TDL #1402: generative legal chat is OFF unless LEGAL_FREEFORM_CHAT_ENABLED === "true".
+  // Returns before rate-limit, body parse or any Anthropic call — no LLM output, nothing stored.
+  if (!freeformLegalChatEnabled()) {
+    return NextResponse.json(CHAT_DISABLED_BODY, { status: 410, headers: { "Cache-Control": "no-store" } });
+  }
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
 
   if (isRateLimited(ip)) {

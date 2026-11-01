@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import verticalConfig from "@/lib/vertical.config";
 import TriageChat from "@/components/TriageChat";
+import LegalNavigator from "@/components/LegalNavigator"; // TDL #1402
+import { freeformLegalChatEnabled } from "@/lib/legal-chat-gate";
+import { CA_SERVED_ON_DINLA } from "@/lib/legal-consolidation";
 import SearchBar from "@/components/SearchBar";
 import FadeIn from "@/components/pizzazz/FadeIn";
 import ShareButtons from "@/components/pizzazz/ShareButtons";
@@ -31,7 +34,7 @@ export default async function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSearchSchema()) }}
       />
-      {/* SECTION 1: AI Triage Chat */}
+      {/* SECTION 1: Legal-help navigator (TDL #1402 — replaces the generative triage chat) */}
       <section
         className="py-16 px-4 relative overflow-hidden"
         style={{
@@ -52,17 +55,17 @@ export default async function HomePage() {
         </div>
         <div className="max-w-3xl mx-auto text-center text-white mb-8 relative">
           <h1 className="text-4xl md:text-5xl font-bold mb-4 animate-fade-up">
-            Tell us your situation. We&apos;ll find the right lawyer.
+            Find the right type of lawyer or legal help.
           </h1>
           <p className="text-lg opacity-90 animate-fade-up" style={{ animationDelay: "0.1s" }}>
-            Our AI triage helper asks a few quick questions, then matches you to the right type
-            of attorney in your state. Information only &mdash; this is not legal advice and no
-            attorney-client relationship is formed.
+            Pick your state and the kind of problem. We&apos;ll show the type of licensed professional
+            who usually handles it, official resources, and attorneys to contact. General information
+            only &mdash; this is not legal advice and no attorney-client relationship is formed.
           </p>
         </div>
 
         <div className="max-w-3xl mx-auto">
-          <TriageChat />
+          {freeformLegalChatEnabled() ? <TriageChat /> : <LegalNavigator site="dinla" caServedOnDinla={CA_SERVED_ON_DINLA} />}
         </div>
           {/* Trust badges */}
           <div className="flex flex-wrap justify-center gap-6 mt-10 text-sm text-white/80">

@@ -3,9 +3,9 @@ const verticalConfig = {
   name: "DoINeedLegalAdvice.com",
   domain: "doineedlegaladvice.com",
   displayDomain: "doineedlegaladvice.com",
-  tagline: "Tell us your situation. We'll find the right lawyer.",
+  tagline: "Find the right type of lawyer or legal help.",
   description:
-    "AI-driven legal triage. Describe your situation, get matched to the right type of lawyer.",
+    "Find the right type of lawyer or legal help: a step-by-step navigator to the kind of licensed professional and official resources for your state, plus a directory of attorneys compiled from public records. General information only — not legal advice.",
 
   entityName: "Lawyer",
   entityNamePlural: "Lawyers",
@@ -118,14 +118,15 @@ BAD turn 1 examples (avoid):
 
   // FAQs
   crossReferrals: [
-    { name: 'Not Sure Which Pro?', url: 'https://doineedapro.com', description: 'Free AI triage — tell us your problem, we\'ll tell you which type of pro to call' },
-  ],
+    // TDL #1402: removed the doineedapro.com "Free AI triage" cross-referral — it routed legal
+    // visitors to a generative triage that stores free-text messages.
+  ] as { name: string; url: string; description: string }[],
 
   faqs: [
     {
       question: "Is this service really free?",
       answer:
-        "Yes! Our AI legal guidance tool is completely free to use. We help you understand your legal situation and find the right type of lawyer at no cost.",
+        "Yes — the legal-help navigator and searching the directory are free. The navigator points you to the type of licensed professional and official resources for your state. Attorneys listed set their own fees.",
     },
     {
       question: "Is this legal advice?",
@@ -135,12 +136,12 @@ BAD turn 1 examples (avoid):
     {
       question: "What lawyers can I find here?",
       answer:
-        "Our directory lists hundreds of thousands of verified attorneys drawn from official state bar and Canadian law-society records across the United States and Canada. Browse by state or province, search by name or city, or describe your situation to our AI triage helper — it will suggest the type of lawyer to look for, such as family, criminal, immigration, real estate, or business law.",
+        "Our directory lists attorneys compiled from public state bar records. Inclusion is not an endorsement or a verification of standing — confirm a lawyer's licence with the relevant state bar or law society. Browse by state, search by name or city, or use the legal-help navigator to see which type of lawyer usually handles your kind of matter.",
     },
     {
-      question: "How does the AI triage work?",
+      question: "How does the legal-help navigator work?",
       answer:
-        "Describe your legal situation to our AI assistant. It will ask clarifying questions, help you understand your options, and recommend the right type of lawyer for your needs. It then connects you to relevant lawyers in our directory.",
+        "Choose your state (or Canadian province), the kind of problem, and whether it's urgent. The navigator then shows the type of licensed professional who usually handles that kind of matter, official resources, and a link to search lawyers there. It does not give legal advice, there is no text box, and your answers are not collected or stored.",
     },
     {
       question: "How do I claim my listing as a lawyer?",
