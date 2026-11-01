@@ -28,3 +28,34 @@ Ported from the canary as built (doineedabookkeeper @ ef58aa0 ← doineedanelect
 - **Build guard:** `prebuild` runs `scripts/check-client-imports.mjs` (no `'use client'` file may reach the Stripe client).
 - **Health:** `/api/health` green after deploy.
 - **Prod branch:** `main`. Rollback (only if prod got WORSE): `git reset --hard working-v-leadsplus-fan-pre && npx vercel --prod`.
+
+## Legal-help navigator + consolidation (TDL #1402, K443, 2026-11-01)
+
+**Chat is OFF.** `/api/chat` (and `/api/triage` on DINLA) return **410 `chat_disabled`** before any
+body parse or Anthropic call. The switch is `LEGAL_FREEFORM_CHAT_ENABLED` and only the exact
+string `true` re-enables it. **Do not set it.** Re-enabling is a counsel + CEO gate (K443).
+The homepage renders `components/LegalNavigator.tsx`: deterministic, no free text, no network
+call, nothing stored.
+
+**Stamped files** (byte-identical in freelawyeradvice + doineedlegaladvice; source
+`~/empire/legal-liability-containment-v1/stamp/`): `lib/legal-navigator-data.ts`,
+`components/LegalNavigator.tsx`, `lib/legal-chat-gate.ts`, `lib/legal-consolidation.ts`.
+Every resource URL was link-checked. A body whose site could not be reached is listed by
+name only. Never add a URL you have not checked.
+
+**Consolidation = routing over canonical `legal_listings` rows (DINLA canonical).**
+`lib/legal-consolidation.ts :: CA_SERVED_ON_DINLA` = NT PE NL MB NS SK NB (2,576 rows).
+- DINLA: `lib/region-scope.ts` turns the list into a chainable `.not(SCOPE_NOT_*)` triple on
+  every serve read. An empty list is exactly the old US-only split. `getListingForClaim` stays
+  US-pinned. A CA row on DINLA links its claim/manage to FLA, with no upgrade modal, Leads Plus
+  or GBP sidecar.
+- FLA: `middleware.ts` runs `deserveGate()` (410) FIRST, then an exact-path 301 from
+  `lib/dinla-redirects.json`. Each entry was verified FLA 200 + DINLA 200. The sitemap drops
+  mapped URLs.
+- **Adding a province:** add it to the list in BOTH repos (DINLA first, deploy READY) →
+  `build_redirect_map.py` → FLA commit → **re-render the fleet-edge tree** (Design A shadows
+  the 301s until re-rendered; standalone `deploy` needs `--no-workers-dev`) → `verify_map.py`.
+- **NOT moved (ruling owed):** QC, AB, BC, ON (14 claimed rows + the one paid Reviews Plus
+  subscriber) and the 46 province-less CA rows.
+- **Rollback:** `dinla-redirects.json` → `{}` + list → `[]` in both repos, or the
+  `working-legal-v1..v4` tags.
