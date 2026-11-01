@@ -51,8 +51,7 @@ export async function getFilteredListingsPaged(filters: ListingFiltersPaged): Pr
     .select("*")
     .in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL)
     .neq("is_published", false)
-    .order("tier_priority", { ascending: false, nullsFirst: false })
-    .order("featured", { ascending: false, nullsFirst: false })
+    // TDL #1407 R1 (CEO 2026-11-01): no paid boost in legal ordering — neutral = claimed, rating, name.
     .order("claimed", { ascending: false, nullsFirst: false })
     .order("google_rating", { ascending: false, nullsFirst: false })
     .order("name_sortkey", { ascending: true })
@@ -192,8 +191,7 @@ export async function getListingsByProvincePaged(
     .in("country", DIRECTORY_COUNTRIES).not(SCOPE_NOT_COL, SCOPE_NOT_OP, SCOPE_NOT_VAL)
     .neq("is_published", false)
     .eq(regionColumn(provinceCode), provinceCode.toUpperCase())
-    .order("tier_priority", { ascending: false, nullsFirst: false })
-    .order("featured", { ascending: false })
+    // TDL #1407 R1 (CEO 2026-11-01): no paid boost in legal ordering — neutral = claimed, rating, name.
     .order("claimed", { ascending: false, nullsFirst: false })
     .order("google_rating", { ascending: false, nullsFirst: false })
     .order("name", { ascending: true })

@@ -7,4 +7,4 @@
 //   - eligible for per-URL 301s from FLA (only URLs in FLA's verified redirect map).
 // Order of operations per batch: DINLA deploy READY → verify DINLA targets 200 → FLA map.
 // Empty list ⇒ the pre-mission US/CA split, exactly.
-export const CA_SERVED_ON_DINLA: string[] = ["NT", "PE", "NL", "MB", "NS", "SK", "NB"]; // b1 NT; b2 PE NL MB NS; b3 SK NB (2026-11-01)
+export const CA_SERVED_ON_DINLA: string[] = ["NT", "PE", "NL", "MB", "NS", "SK", "NB", "QC", "AB", "BC", "ON"]; // b1 NT; b2 PE NL MB NS; b3 SK NB (2026-11-01, #1402); b4 QC AB BC ON (2026-11-01, #1407 CEO R2)

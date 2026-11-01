@@ -153,8 +153,7 @@ export async function getListings(regionSlug?: string): Promise<Listing[]> {
       .from(LISTINGS_TABLE)
       .select("*")
       .neq("is_published", false)
-      .order("tier_priority", { ascending: false, nullsFirst: false })
-      .order("featured", { ascending: false, nullsFirst: false })
+      // TDL #1407 R1 (CEO 2026-11-01): no paid boost in legal ordering — neutral = claimed, rating, name.
       .order("claimed", { ascending: false, nullsFirst: false })
       .order("google_rating", { ascending: false, nullsFirst: false })
       .order("name_sortkey", { ascending: true }).order("id", { ascending: true }).limit(200);
@@ -189,8 +188,7 @@ export async function getFilteredListings(filters: ListingFilters): Promise<List
       .from(LISTINGS_TABLE)
       .select("*")
       .neq("is_published", false)
-      .order("tier_priority", { ascending: false, nullsFirst: false })
-      .order("featured", { ascending: false, nullsFirst: false })
+      // TDL #1407 R1 (CEO 2026-11-01): no paid boost in legal ordering — neutral = claimed, rating, name.
       .order("claimed", { ascending: false, nullsFirst: false })
       .order("google_rating", { ascending: false, nullsFirst: false })
       .order("name_sortkey", { ascending: true }).order("id", { ascending: true }).limit(200);
@@ -231,8 +229,7 @@ export async function getListingsByCity(provinceCode: string, citySlug: string):
       .neq("is_published", false)
       .eq("province_state", provinceCode.toUpperCase())
       .eq("region_slug", citySlug)
-      .order("tier_priority", { ascending: false, nullsFirst: false })
-      .order("featured", { ascending: false, nullsFirst: false })
+      // TDL #1407 R1 (CEO 2026-11-01): no paid boost in legal ordering — neutral = claimed, rating, name.
       .order("claimed", { ascending: false, nullsFirst: false })
       .order("google_rating", { ascending: false, nullsFirst: false })
       .order("name_sortkey", { ascending: true }).order("id", { ascending: true }).limit(200);
