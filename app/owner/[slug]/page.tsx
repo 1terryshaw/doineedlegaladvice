@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Metadata } from "next";
 import { verifyOwnerAccess } from "@/lib/auth";
 import OwnerDashboard from "@/components/OwnerDashboard";
+import { TIER_ORDER } from "@/lib/pricing-canonical";
 import LeadsPlusPanel from "@/components/owner/LeadsPlusPanel";
 import { verticalAllowsLeadForms, hasLeadsPlus } from "@/lib/leads-plus";
 import { getPlanInfo } from "@/lib/plan-info";
@@ -117,6 +118,7 @@ export default async function OwnerDashboardPage({ params, searchParams }: Props
       {lpSuccess && <UpgradeSuccessNotice plan={successPlan} />}
       <OwnerDashboard
         listing={listing}
+        hostOffer={{ leadsPlus: verticalAllowsLeadForms(), website: TIER_ORDER.some((id) => id.startsWith("website")) }}
         leadsPlus={lpDash}
         reviewSlot={reviewSlot}
         healthSlot={healthSlot}

@@ -155,19 +155,21 @@ export function getTierDisplayName(
 }
 
 /**
- * Upgrade-path helper. Returns the next tier slug up, or null if already top.
- * seed → reviews, free → reviews, reviews → website, website → growth, growth → null.
- * Unknown/error tiers default to reviews (encourage upgrade after resolution).
+ * Upgrade-path helper (billing-ledger-and-nexttier-fix-v1). A free / claimed listing's next tier is what THIS host sells a
+ * NEW customer: Leads Plus where the host's Leads Plus gate is open, else the cheapest Website plan its upgrade modal sells,
+ * else none (no upgrade link). Never Reviews Plus — it is retired for new customers (R11 / TDL #1374).
+ * Paid tiers (grandfathered owners) are unchanged: reviews_plus → website, website → growth, growth → null.
+ * `offer` comes from the owner page (server side, the same gates checkout uses); omitted ⇒ nothing is known to be on sale.
  */
+export type HostOffer = { leadsPlus: boolean; website: boolean; leadsPlusHref?: string };
+export type NextTier = TierSlug | "leads_plus";
+
 export function getNextTier(
-  currentTier: TierSlug | string | null | undefined
-): TierSlug | null {
+  currentTier: TierSlug | string | null | undefined,
+  offer: HostOffer = { leadsPlus: false, website: false }
+): NextTier | null {
   const ct = TIER_ALIASES[currentTier as string] || currentTier;
   switch (ct) {
-    case "seed":
-    case "free":
-    case "payment_error_review":
-      return "reviews_plus";
     case "reviews_plus":
       return "website";
     case "website":
@@ -175,8 +177,14 @@ export function getNextTier(
     case "growth":
       return null;
     default:
-      return "reviews_plus";
+      // seed / free / claimed / payment_error_review / unknown — a new customer.
+      return offer.leadsPlus ? "leads_plus" : offer.website ? "website" : null;
   }
+}
+
+/** Label for a getNextTier result ("leads_plus" is not a stored tier, so getTierDisplayName would alias it to Reviews Plus). */
+export function getNextTierLabel(t: NextTier): string {
+  return t === "leads_plus" ? "Leads Plus" : getTierDisplayName(t);
 }
 
 /**
