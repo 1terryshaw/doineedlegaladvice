@@ -7,6 +7,7 @@ export const CLAIM_SRC_ALLOWLIST = new Set<string>([
   "header_cta",
   "claim_hub_existing",
   "detail_unlock_preview",
+  "detail_unlock_v2",       // organic-unlock-v2 experiment treatment arm (2026-11-04)
   "gbp_helper",
   "direct_claim",
   "add_business",
