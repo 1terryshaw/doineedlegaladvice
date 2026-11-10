@@ -140,11 +140,11 @@ export function getEffectiveTier(
  */
 export function getTierDisplayName(
   tier: TierSlug | string | null | undefined
-): "Free" | "Reviews Plus" | "Website" | "Growth" {
+): "Free" | "Leads Plus" | "Website" | "Growth" {
   const t = TIER_ALIASES[tier as string] || tier;
   switch (t) {
     case "reviews_plus":
-      return "Reviews Plus";
+      return "Leads Plus";
     case "website":
       return "Website";
     case "growth":

@@ -41,7 +41,7 @@ async function POST_owner(request: NextRequest) {
   }
   if (!can(listing.tier || listing.subscription_tier, "reviews_display")) {
     return NextResponse.json(
-      { error: "Hero cover image is a Reviews Plus feature" },
+      { error: "Hero cover image is a Leads Plus feature" },
       { status: 403 }
     );
   }

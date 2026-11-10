@@ -75,7 +75,7 @@ export function computeListingHealth(
       label: "5 or more Google reviews",
       met: reviewCount >= 5,
       points: 2,
-      hint: "Ask recent customers for Google reviews — see your Welcome to Reviews Plus guide.",
+      hint: "Ask recent customers for Google reviews — see your Welcome to Leads Plus guide.",
     },
     {
       label: "Updated in the last 90 days",

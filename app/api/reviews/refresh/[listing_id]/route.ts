@@ -362,7 +362,7 @@ export async function POST(
       detail: `tier=${listing.tier ?? "?"} subscription_tier=${listing.subscription_tier ?? "?"}`,
     });
     return NextResponse.json(
-      { error: "Reviews refresh is a Reviews Plus feature.", outcome: "refused_not_entitled" },
+      { error: "Reviews refresh is a Leads Plus feature.", outcome: "refused_not_entitled" },
       { status: 403 }
     );
   }
