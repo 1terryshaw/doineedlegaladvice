@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import verticalConfig from "@/lib/vertical.config";
-import { SITE_URL } from "@/lib/seo";
+import { SITE_URL, OG_DEFAULT_IMAGE } from "@/lib/seo";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Disclaimer from "@/components/Disclaimer";
@@ -19,6 +19,16 @@ export const metadata: Metadata = {
   description: verticalConfig.description,
   icons: {
     icon: { url: "/favicon.svg", type: "image/svg+xml" },
+  },
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: verticalConfig.name,
+    images: [{ url: OG_DEFAULT_IMAGE, width: 1200, height: 630, alt: verticalConfig.name }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: [OG_DEFAULT_IMAGE],
   },
 };
 
