@@ -24,5 +24,14 @@ const nextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: "/list-your-business",
+        destination: "/claim",
+        permanent: true,
+      },
+    ];
+  },
 };
 module.exports = withBotId(nextConfig);

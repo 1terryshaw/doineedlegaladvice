@@ -37,7 +37,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     const pageSuffix = page > 1 ? ` (Page ${page})` : "";
     return {
       title: `Lawyers in ${provName}${pageSuffix}`,
-      description: `Find the best lawyers in ${provName}. Browse verified listings on ${verticalConfig.name}.`,
+      description: `Find the best lawyers in ${provName}. Browse listings on ${verticalConfig.name}.`,
       alternates: { canonical },
     };
   }
