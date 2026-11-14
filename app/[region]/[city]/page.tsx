@@ -47,7 +47,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const provinceName = PROVINCES[region.toUpperCase()] ?? region;
   return {
     title: `Professionals in ${cityName}, ${provinceName}`,
-    description: `Find professionals in ${cityName}, ${provinceName}. Browse our directory of trusted professionals.`,
+    description: `Find professionals in ${cityName}, ${provinceName}. Browse our directory of professionals.`,
     alternates: { canonical: `/${region}/${city}` },
   };
 }
