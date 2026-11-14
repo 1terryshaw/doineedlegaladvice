@@ -10,7 +10,7 @@ interface Props {
 
 const SUBTITLE_BY_VERTICAL: Record<string, string> = {
   realestate: "Find a real estate agent in your area",
-  plumber: "Find a trusted plumber in your area",
+  plumber: "Find a plumber in your area",
   caterer: "Find a caterer in your area",
   electrician: "Find a licensed electrician in your area",
   hvac: "Find an HVAC technician in your area",

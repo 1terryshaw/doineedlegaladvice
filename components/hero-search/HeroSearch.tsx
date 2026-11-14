@@ -27,18 +27,18 @@ interface Props {
 }
 
 const TRUST_DEFAULTS: Record<string, string> = {
-  realestate: "Trusted by thousands of homeowners and homebuyers",
-  plumber: "Trusted by thousands of homeowners",
-  caterer: "Trusted by event hosts",
-  electrician: "Trusted by thousands of homeowners",
-  hvac: "Trusted by thousands of homeowners",
-  landscaper: "Trusted by homeowners and property managers",
-  roofer: "Trusted by thousands of homeowners",
-  mechanic: "Trusted by drivers",
-  florist: "Trusted by event planners and gift-givers",
-  photographer: "Trusted by couples, families, and businesses",
-  dentist: "Trusted by families",
-  chiropractor: "Trusted by patients",
+  realestate: "For homeowners and homebuyers",
+  plumber: "For homeowners",
+  caterer: "For event hosts",
+  electrician: "For homeowners",
+  hvac: "For homeowners",
+  landscaper: "For homeowners and property managers",
+  roofer: "For homeowners",
+  mechanic: "For drivers",
+  florist: "For event planners and gift-givers",
+  photographer: "For couples, families, and businesses",
+  dentist: "For families",
+  chiropractor: "For patients",
 };
 
 export default function HeroSearch({
@@ -87,7 +87,7 @@ export default function HeroSearch({
   };
 
   const trust =
-    trustCopy ?? TRUST_DEFAULTS[vertical] ?? "Trusted by professionals across the directory";
+    trustCopy ?? TRUST_DEFAULTS[vertical] ?? "Browse professionals across the directory";
 
   return (
     <section className="bg-gray-50 border-b border-gray-200 py-8 px-4" data-testid="hero-search">
