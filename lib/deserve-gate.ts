@@ -64,7 +64,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import verticalConfig from "@/lib/vertical.config";
 
-export const DESERVE_GATE_VERSION = "1.1.0";
+export const DESERVE_GATE_VERSION = "1.2.0";
 
 // Matches EXACTLY the listing-detail routes: /directory/<slug> and /uk/directory/<slug>.
 // Nothing else on the site is gated.
@@ -126,6 +126,9 @@ export async function deserveGate(req: NextRequest): Promise<NextResponse | null
   if (!url || !anon) return null; // fail open -> page still 404s de-served rows
 
   let deserved = false;
+  // v1.2.0 (S173, Terry GO t1536u 2026-11-21): 400ms AbortSignal. Middleware wall clock is
+  // ~25s; an unbounded RPC under DB contention held the whole request until the platform
+  // kill. Timeout -> fail open (null); the page's getListing() still 404s de-served rows.
   try {
     const res = await fetch(`${url}/rest/v1/rpc/is_deserved_listing`, {
       method: "POST",
@@ -136,11 +139,12 @@ export async function deserveGate(req: NextRequest): Promise<NextResponse | null
       },
       body: JSON.stringify({ p_table: LISTINGS_TABLE, p_slug: slug }),
       cache: "no-store",
+      signal: AbortSignal.timeout(400),
     });
     if (!res.ok) return null; // fail open
     deserved = (await res.json()) === true;
   } catch {
-    return null; // fail open
+    return null; // fail open (includes AbortError / TimeoutError / invalid JSON)
   }
 
   if (!deserved) return null;
