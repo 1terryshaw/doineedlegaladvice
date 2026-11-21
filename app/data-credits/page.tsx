@@ -158,7 +158,7 @@ export default function DataCreditsPage() {
 
       <p className="text-xs text-gray-500 mt-10">
         Source manifest: <code>data-sources.json</code> in {dataSourcesRepo}. Spotted something
-        wrong? <Link href="/claim" className="underline">Tell us</Link>.
+        wrong? <Link href="/claim" rel="nofollow" className="underline">Tell us</Link>.
       </p>
     </main>
   );

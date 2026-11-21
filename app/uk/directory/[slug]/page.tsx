@@ -190,7 +190,7 @@ export default async function UkFirmPage({ params }: Props) {
                   Claim this listing to confirm your ownership and manage your details.
                 </p>
                 <Link
-                  href={`/uk/claim/${slug}`}
+                  href={`/uk/claim/${slug}`} rel="nofollow"
                   className="inline-block mt-3 px-4 py-2 rounded-lg text-white text-sm font-medium"
                   style={{ backgroundColor: verticalConfig.primaryColor }}
                 >

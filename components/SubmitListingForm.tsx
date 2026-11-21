@@ -76,7 +76,7 @@ export default function SubmitListingForm() {
         */}
         <p style={{ margin: "10px 0 18px", lineHeight: 1.6 }}>{handoff.copy.body}</p>
         <a
-          href={handoff.url}
+          href={handoff.url} rel="nofollow"
           style={{ display: "inline-block", background: LANE_ACCENT, color: "#fff", borderRadius: 6, padding: "10px 18px", fontWeight: 600, textDecoration: "none" }}
         >
           {handoff.copy.cta}

@@ -71,7 +71,7 @@ export default function Header() {
     <Link
       key={item.href}
       href={item.href}
-      {...(/^https?:\/\//.test(item.href) ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+      {...(/^https?:\/\//.test(item.href) ? { target: "_blank", rel: "noopener noreferrer" } : item.href.startsWith("/claim") ? { rel: "nofollow" } : {})}
       className={item.primary
         ? `${HEADER_FOCUS_RING} no-underline whitespace-nowrap ${mobile ? "block text-center" : ""} px-4 py-2 rounded-lg text-white font-semibold text-sm hover:opacity-90 transition-opacity ${item.active ? "ring-2 ring-gray-900 ring-offset-2" : ""}`
         : `${HEADER_FOCUS_RING} ${mobile ? "block" : "whitespace-nowrap"} text-gray-600 hover:text-gray-900 ${item.active ? HEADER_ACTIVE_LINK : ""}`}
@@ -142,6 +142,7 @@ export default function Header() {
             {primaryItem && (
               <Link
                 href={primaryItem.href}
+                rel={primaryItem.href.startsWith("/claim") ? "nofollow" : undefined}
                 className={`${HEADER_FOCUS_RING} no-underline whitespace-nowrap px-2.5 sm:px-3 py-1.5 max-md:inline-flex max-md:items-center max-md:min-h-11 rounded-lg text-white font-semibold text-xs sm:text-sm hover:opacity-90 transition-opacity`}
                 style={{ backgroundColor: (verticalConfig as { accentColor?: string }).accentColor || verticalConfig.primaryColor }}
                 aria-current={primaryItem.active ? "page" : undefined}

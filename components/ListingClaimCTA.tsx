@@ -42,7 +42,7 @@ export default function ListingClaimCTA({ listingSlug, listingClaimed }: Props) 
         <p className="font-semibold">Is this your business?</p>
         <p className="text-sm text-gray-600 mt-1">Claim this listing to manage it and connect with customers.</p>
         <Link
-          href={`/claim/${listingSlug}`}
+          href={`/claim/${listingSlug}`} rel="nofollow"
           className="inline-block mt-3 px-4 py-2 rounded-lg text-white text-sm font-medium"
           style={{ backgroundColor: verticalConfig.primaryColor }}
         >

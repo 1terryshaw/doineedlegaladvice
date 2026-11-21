@@ -32,9 +32,10 @@ import FaqSection from "@/components/FaqSection";
 import { detailBreadcrumbSchema, localizeFaqs, OG_DEFAULT_IMAGE } from "@/lib/seo";
 import { getRegionBySlug } from "@/lib/constants";
 import ListingClaimCTA from "@/components/ListingClaimCTA";
-import ClaimUnlockPreview from "@/components/ClaimUnlockPreview";
+import ListingOwnerClaimCard from "@/components/ListingOwnerClaimCard";
+import ListingImage from "@/components/ListingImage";
+import { listingPhotoUrl } from "@/lib/listing-photo-url";
 import { normalizeWebsiteUrl } from "@/lib/url-normalize";
-import PublicGbpClaimSidecar from "@/components/PublicGbpClaimSidecar";
 import { normalizeTierForPricing } from "@/lib/pricing-canonical";
 
 const LEGAL_DISCLAIMER =
@@ -115,11 +116,18 @@ export default async function ListingPage({ params }: Props) {
     lst.social_facebook,
     lst.social_linkedin,
   ].filter((u): u is string => Boolean(u && u.trim()));
-  const heroColumnUrl =
-    (listing as { hero_image_url?: string | null }).hero_image_url ?? null;
-  // Dedicated hero set -> all photos go to the gallery; else photos[0] is the hero.
-  const heroImageUrl = heroColumnUrl ?? photos[0]?.public_url ?? null;
-  const galleryPhotos = heroColumnUrl ? photos : photos.slice(1);
+  // Filter before assigning hero/gallery slots so invalid references never become img sources.
+  const safePhotos = photos.flatMap((photo) => {
+    const public_url = listingPhotoUrl(photo.public_url);
+    return public_url ? [{ ...photo, public_url }] : [];
+  });
+  const logoUrl = listingPhotoUrl(logo?.public_url);
+  const heroColumnUrl = listingPhotoUrl(
+    (listing as { hero_image_url?: string | null }).hero_image_url
+  );
+  // Dedicated valid hero -> all valid photos go to the gallery; else the first is hero.
+  const heroImageUrl = heroColumnUrl ?? safePhotos[0]?.public_url ?? null;
+  const galleryPhotos = heroColumnUrl ? safePhotos : safePhotos.slice(1);
 
 
   const tier = (listing.tier as string | null) ?? (listing.subscription_tier as string | null) ?? 'seed';
@@ -149,6 +157,18 @@ export default async function ListingPage({ params }: Props) {
   const lpOn = lp?.gate.ok === true;
   const lpKit = lpOn ? lp!.kit : null;
   const lpWebsite = lpOn && lp!.websiteOk ? (listing.website as string) : null;
+
+  const tel = listing.phone?.replace(/[^\d+]/g, "");
+  // Match TierBadge's Reviews verified predicate, including ownership.
+  const reviewsVerified = listing.claimed && Number(listing.google_rating) > 0;
+  const ownerClaimCard = !listing.claimed ? (
+    <ListingOwnerClaimCard
+      listingSlug={listing.slug}
+      businessName={listing.name}
+      reviewsVerified={reviewsVerified}
+      address={[streetPublic ? lstAddr.address : null, listing.city, listing.province_state, streetPublic ? lstAddr.postal_code : null, listing.country].filter(Boolean).join(", ")}
+    />
+  ) : null;
 
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
@@ -290,7 +310,7 @@ export default async function ListingPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
       />
-      <div className="max-w-4xl mx-auto px-4 py-12">
+      <div className="max-w-6xl mx-auto px-4 py-12">
         <div className="mb-6">
           <LegalDisclaimer />
         </div>
@@ -302,51 +322,25 @@ export default async function ListingPage({ params }: Props) {
         {/* leads-plus-canary-v1: mobile CTA above the fold (desktop gets the sidebar block). */}
         {lpOn && (
           <div className="md:hidden mb-5" data-testid="leads-plus-mobile-cta">
-            <p className="font-semibold text-lg mb-2">{listing.name}</p>
             <LeadsPlusButtons slug={listing.slug} mode={lp!.mode} phone={listing.phone ?? null}
               email={lp!.publicEmail} website={lpWebsite} whatsapp={lp!.whatsapp} variant="hero" />
           </div>
         )}
 
-        {heroImageUrl && (
-          <div className="mb-6 rounded-xl overflow-hidden bg-gray-100 max-h-[420px] sm:max-h-none [container-type:inline-size]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={heroImageUrl} alt={listing.name} className="w-full h-auto object-cover sm:max-h-[max(420px,56.25cqw)]" />
-          </div>
-        )}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className={`grid grid-cols-1 gap-8 ${listing.claimed ? "md:grid-cols-3" : "lg:grid-cols-3"}`}>
           {/* Main content */}
-          <div className="md:col-span-2">
+          <div className={listing.claimed ? "md:col-span-2" : "lg:col-span-2"}>
             {can(tier, 'featured') && (
               <div className="mb-3 inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400 to-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm" aria-label="Featured listing">
                 <span aria-hidden="true">★</span>
                 <span>FEATURED</span>
               </div>
             )}
-            <div className="flex items-start justify-between mb-4">
+            <div className="flex flex-wrap items-start gap-3 mb-3">
               <div className="flex items-center gap-3">
-                {logo && (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={logo.public_url} alt="" className="w-14 h-14 rounded-lg object-cover border" />
-                )}
+                {logoUrl && <ListingImage src={logoUrl} alt="" className="w-14 h-14 rounded-lg object-cover border" />}
                 <div>
                   <h1 className="text-3xl font-bold">{listing.name}</h1>
-                  {lst.year_established && (
-                    <p className="text-xs text-gray-500 mt-1">Established {lst.year_established}</p>
-                  )}
-                  {/* PUBLIC BUSINESS FACTS (Phase 1 fan, 2026-09-04). One line per fact, each
-                      rendered ONLY when its value is present, so an unfilled field emits no label
-                      and no empty element. The same values feed foundingDate / numberOfEmployees /
-                      paymentAccepted in the JSON-LD above — the page and the structured data are
-                      read off one row and cannot disagree. */}
-                  {napFacts.employee_count != null && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      {napFacts.employee_count} {napFacts.employee_count === 1 ? "employee" : "employees"}
-                    </p>
-                  )}
-                  {napFacts.payment_methods && napFacts.payment_methods.trim() && (
-                    <p className="text-xs text-gray-500 mt-1">Payment methods: {napFacts.payment_methods.trim()}</p>
-                  )}
                 </div>
               </div>
               <TierBadge
@@ -358,41 +352,53 @@ export default async function ListingPage({ params }: Props) {
                 <span className="bg-green-600 text-white text-xs font-medium px-2 py-0.5 rounded-full ml-2">Now Hiring</span>
               )}
             </div>
-            <p className="text-xs text-gray-400 mb-4">
-              We don&apos;t vet or endorse listed businesses.
-            </p>
+            <div className="mb-4 flex flex-wrap items-center gap-3 text-sm text-gray-600">
+              {(listing.city || listing.province_state) && (
+                <p>{[listing.city, listing.province_state].filter(Boolean).join(", ")}</p>
+              )}
+              {Number(listing.google_rating) > 0 && Number(listing.google_review_count) > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-gray-800">
+                  <span aria-hidden="true" className="text-amber-600">★</span>
+                  <span>{Number(listing.google_rating).toFixed(1)} ({listing.google_review_count} reviews)</span>
+                </span>
+              )}
+            </div>
+            {ownerClaimCard && <div className="mb-6 lg:hidden">{ownerClaimCard}</div>}
 
             {listing.now_hiring && (
               <p className="text-sm text-green-700 mb-3">This business is currently hiring. Contact them directly to inquire about opportunities.</p>
             )}
-            {/* NAP block (Phase 2 fleet fan, 2026-09-04). The public name/address pair.
-                The street lines render only when the owner's gate is on AND a street is stored,
-                so on a person/uncertain-grain vertical (default FALSE) this degrades to exactly
-                the city/region line it replaced — that expression is preserved verbatim below.
-                UNIFORM CODE: no grain branch, here or anywhere else in the fan. */}
-            {(listing.city || streetPublic) && (
+            {/* Street and postal code retain the existing address permission gate. */}
+            {streetPublic && lstAddr.address && (
               <address className="not-italic text-gray-500 mb-4">
-                <span className="block">{listing.name}</span>
-                {streetPublic && lstAddr.address && (
-                  <span className="block">{lstAddr.address}</span>
-                )}
-                {(listing.city) && (
-                  <span className="block">
-                    {listing.city}{listing.province_state ? `, ${listing.province_state}` : ""}
-                    {streetPublic && lstAddr.postal_code ? ` ${lstAddr.postal_code}` : ""}
-                  </span>
-                )}
+                <span className="block">{lstAddr.address}</span>
+                {lstAddr.postal_code && <span className="block">{lstAddr.postal_code}</span>}
               </address>
             )}
+            {lst.year_established && (
+              <p className="text-xs text-gray-500 mt-1">Established {lst.year_established}</p>
+            )}
+            {/* PUBLIC BUSINESS FACTS (Phase 1 fan, 2026-09-04). One line per fact, each
+                rendered ONLY when its value is present, so an unfilled field emits no label
+                and no empty element. The same values feed foundingDate / numberOfEmployees /
+                paymentAccepted in the JSON-LD above — the page and the structured data are
+                read off one row and cannot disagree. */}
+            {napFacts.employee_count != null && (
+              <p className="text-xs text-gray-500 mt-1">
+                {napFacts.employee_count} {napFacts.employee_count === 1 ? "employee" : "employees"}
+              </p>
+            )}
+            {napFacts.payment_methods && napFacts.payment_methods.trim() && (
+              <p className="text-xs text-gray-500 mt-1">Payment methods: {napFacts.payment_methods.trim()}</p>
+            )}
 
-            {listing.google_rating && (
-              <div className="flex items-center gap-1 text-sm text-gray-600 mb-6">
-                <span className="text-yellow-500">&#9733;</span>
-                <span>{listing.google_rating}</span>
-                {listing.google_review_count && (
-                  <span>({listing.google_review_count} reviews)</span>
-                )}
-              </div>
+            {heroImageUrl && (
+              <ListingImage
+                src={heroImageUrl}
+                alt={listing.name}
+                wrapperClassName="my-6 rounded-xl overflow-hidden bg-gray-100 max-h-[420px] sm:max-h-none [container-type:inline-size]"
+                className="w-full h-auto object-cover sm:max-h-[max(420px,56.25cqw)]"
+              />
             )}
 
             <div className="prose max-w-none">
@@ -467,29 +473,32 @@ export default async function ListingPage({ params }: Props) {
               />
             )}
 
-            {/* Photo gallery */}
-            {galleryPhotos.length > 0 && (
-              <div className="mt-8 border-t pt-6">
-                <h3 className="font-semibold mb-3">Photos</h3>
-                <ListingGallery
-                  photos={galleryPhotos.map((p) => ({ id: p.id, public_url: p.public_url }))}
-                />
-              </div>
-            )}
+            <ListingGallery
+              photos={galleryPhotos.map(({ id, public_url }) => ({ id, public_url }))}
+              businessName={listing.name}
+              showHeading
+            />
             {/* Contact info */}
             <div className="mt-8 border-t pt-6 space-y-2">
               <h3 className="font-semibold mb-3">Contact Information</h3>
               {listing.phone && <p className="text-sm"><span className="text-gray-500">Phone:</span> {listing.phone}</p>}
               {publicEmail && <p className="text-sm"><span className="text-gray-500">Email:</span> {publicEmail}</p>}
-              {websiteHref && (
-                <p className="text-sm">
-                  <span className="text-gray-500">Website:</span>{" "}
-                  <a href={websiteHref} target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: verticalConfig.primaryColor }}>
-                    {listing.website}
+              <div className="flex flex-wrap items-center gap-3">
+                {tel && (
+                  <a href={`tel:${tel}`} className="inline-flex min-h-11 items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white" style={{ backgroundColor: verticalConfig.primaryColor }}>
+                    Call {listing.phone}
                   </a>
-                </p>
-              )}
-            
+                )}
+                {websiteHref && (
+                  <p className="text-sm">
+                    <span className="text-gray-500">Website:</span>{" "}
+                    <a href={websiteHref} target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: verticalConfig.primaryColor }}>
+                      {listing.website}
+                    </a>
+                  </p>
+                )}
+              </div>
+
               {lst.gbp_url && (
                 <div className="pt-3">
                   <a
@@ -522,33 +531,17 @@ export default async function ListingPage({ params }: Props) {
                   )}
                 </div>
               )}
-</div>
+            </div>
 
-            {/* Claim CTA — UNCLAIMED: server-rendered unlock-preview (visible JS-off,
-                no client auth hook). CLAIMED: keep ListingClaimCTA for the owner's
-                "Edit My Listing" affordance (anon sees nothing on claimed pages). */}
-            <>{listing.claimed ? (
-              <ListingClaimCTA
-                listingSlug={listing.slug}
-                listingClaimed={listing.claimed}
-              />
-            ) : (
-              <ClaimUnlockPreview
-                listingSlug={listing.slug}
-                hasReviews={Number(listing.google_review_count) > 0}
-              />
+            {/* Claimed listings retain the owner's Edit My Listing affordance. */}
+            {listing.claimed && (
+              <ListingClaimCTA listingSlug={listing.slug} listingClaimed={listing.claimed} />
             )}
-            </>
-            <PublicGbpClaimSidecar
-              listingSlug={listing.slug}
-              listingName={listing.name}
-              address={[streetPublic ? (lst as { address?: string | null }).address : null, listing.city, listing.province_state, streetPublic ? (lst as { postal_code?: string | null }).postal_code : null, listing.country].filter(Boolean).join(", ")}
-              listingClaimed={listing.claimed}
-            />
           </div>
 
           {/* Sidebar */}
-          <div className="md:col-span-1 space-y-6">
+          <div className={listing.claimed ? "md:col-span-1 space-y-6" : "hidden lg:block lg:col-span-1"}>
+            {ownerClaimCard && <div className="sticky top-24">{ownerClaimCard}</div>}
             {/* NO FREE LEADS (leads-plus-canary-v1 addendum A): the legacy free InquiryForm is gone. Only a Leads
                Plus listing (gate above) gets an inquiry form; everyone else gets the claim/edit CTA. */}
             {lpOn && (
@@ -571,6 +564,9 @@ export default async function ListingPage({ params }: Props) {
         faqs={localizeFaqs(verticalConfig.faqs, listing.city)}
         disclaimer={LEGAL_DISCLAIMER}
       />
+      <p className="max-w-6xl mx-auto px-4 pb-8 text-xs text-gray-400">
+        We don&apos;t vet or endorse listed businesses.
+      </p>
       <UpgradeModal
         listingSlug={listing.slug}
         priceIds={{
