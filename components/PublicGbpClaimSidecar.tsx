@@ -1,8 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import verticalConfig from "@/lib/vertical.config";
+import { FormEvent, useEffect, useId, useRef, useState } from "react";
 import { emitEvent } from "@/components/AnalyticsTracker";
 
 type Props = { listingSlug: string; listingName: string; address: string; listingClaimed: boolean };
@@ -12,6 +10,8 @@ export default function PublicGbpClaimSidecar({ listingSlug, listingName, addres
   const [url, setUrl] = useState("");
   const [state, setState] = useState<State>("idle");
   const [message, setMessage] = useState("");
+  // The responsive card has two copies, only one visible at a time.
+  const instanceId = useId();
   const statusRef = useRef<HTMLParagraphElement>(null);
   const searchUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([listingName, address].filter(Boolean).join(", "))}`;
 
@@ -40,22 +40,22 @@ export default function PublicGbpClaimSidecar({ listingSlug, listingName, addres
   }
 
   return (
-    <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby={`gbp-sidecar-${listingSlug}`}>
+    <section className="mt-3 rounded-lg bg-white p-4 text-slate-900" aria-labelledby={`gbp-sidecar-${instanceId}`}>
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Optional</p>
-      <h2 id={`gbp-sidecar-${listingSlug}`} className="mt-1 text-lg font-semibold text-slate-900">Confirm your Google profile</h2>
+      <h3 id={`gbp-sidecar-${instanceId}`} className="sr-only">Confirm your Google profile</h3>
       <p className="mt-2 text-sm leading-6 text-slate-600">This step is optional. Find your Google Maps profile, then continue with the normal claim process.</p>
       <a href={searchUrl} target="_blank" rel="noopener noreferrer" onClick={() => emitEvent({ surface: "directory", event_type: "listing_clicked", listing_slug: listingSlug, outbound_url: "https://www.google.com/maps/search/", payload: { feature: "public_gbp_sidecar", action: "maps_opened" } })} className="mt-4 inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">Find on Google Maps <span className="ml-1" aria-hidden="true">↗</span></a>
       <p className="mt-2 text-xs leading-5 text-slate-500">Open your profile, choose Share, and copy the Google Maps link back here.</p>
       <form className="mt-4" onSubmit={resolve}>
-        <label htmlFor={`gbp-url-${listingSlug}`} className="block text-sm font-medium text-slate-800">Google Maps link</label>
-        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-          <input id={`gbp-url-${listingSlug}`} type="url" inputMode="url" autoComplete="url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Paste your Google Maps share link" aria-describedby={`gbp-help-${listingSlug}`} className="min-h-11 min-w-0 flex-1 rounded-lg border border-slate-300 px-3 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" />
+        <label htmlFor={`gbp-url-${instanceId}`} className="block text-sm font-medium text-slate-800">Google Maps link</label>
+        <div className="mt-2 flex flex-col gap-2">
+          <input id={`gbp-url-${instanceId}`} type="url" inputMode="url" autoComplete="url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Paste your Google Maps share link" aria-describedby={`gbp-help-${instanceId}`} className="min-h-11 min-w-0 flex-1 rounded-lg border border-slate-300 px-3 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" />
           <button type="submit" disabled={state === "loading"} className="min-h-11 rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">{state === "loading" ? "Checking…" : "Use this Google profile"}</button>
         </div>
-        <p id={`gbp-help-${listingSlug}`} className="mt-2 text-xs text-slate-500">We only check whether the link identifies a Google profile. It is not saved or connected.</p>
+        <p id={`gbp-help-${instanceId}`} className="mt-2 text-xs text-slate-500">We only check whether the link identifies a Google profile. It is not saved or connected.</p>
       </form>
       <p ref={statusRef} tabIndex={-1} role="status" aria-live="polite" className={`mt-4 text-sm leading-5 focus-visible:outline-none ${state === "success" ? "text-emerald-700" : state === "error" ? "text-rose-700" : "text-slate-600"}`}>{message}</p>
-      <div className="mt-4 border-t border-slate-100 pt-4"><p className="text-sm font-medium text-slate-900">{state === "success" ? "Google profile found" : "Ready to manage this business?"}</p>{state === "success" && <p className="mt-1 text-sm text-slate-600">This profile has not been connected yet. Continue to claim the listing.</p>}<Link href={`/claim/${listingSlug}?src=gbp_helper`} onClick={() => emitEvent({ surface: "directory", event_type: "listing_clicked", listing_slug: listingSlug, payload: { feature: "public_gbp_sidecar", action: "existing_claim_cta_clicked" } })} className="mt-2 inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">Claim This Listing</Link></div>
+      {state === "success" && <p className="mt-4 text-sm text-slate-600">This profile has not been connected yet. Continue to claim the listing.</p>}
     </section>
   );
 }

@@ -136,7 +136,7 @@ export default function PricingTable() {
                 </div>
               ) : isFree ? (
                 <Link
-                  href={claimHref}
+                  href={claimHref} rel="nofollow"
                   className="mt-8 w-full py-3 rounded-lg text-center font-medium border-2 hover:bg-gray-50 transition-colors"
                   style={{ borderColor: primary, color: primary }}
                 >
@@ -145,7 +145,7 @@ export default function PricingTable() {
               ) : (
                 <div className="mt-8 flex flex-col gap-2">
                   <Link
-                    href={tier.id === "reviews_plus" ? leadsPlusHref(tier.cta.mode) : upgradeHref}
+                    href={tier.id === "reviews_plus" ? leadsPlusHref(tier.cta.mode) : upgradeHref} rel="nofollow"
                     className="w-full py-3 rounded-lg text-white font-medium hover:opacity-90 transition-opacity text-center"
                     style={{ backgroundColor: anchored ? primary : "#374151" }}
                   >
@@ -155,7 +155,7 @@ export default function PricingTable() {
                   </Link>
                   {tier.secondaryCta && (
                     <Link
-                      href={tier.id === "reviews_plus" ? leadsPlusHref(tier.secondaryCta.mode) : upgradeHref}
+                      href={tier.id === "reviews_plus" ? leadsPlusHref(tier.secondaryCta.mode) : upgradeHref} rel="nofollow"
                       className="w-full text-center text-xs font-medium text-gray-500 underline hover:text-gray-700"
                     >
                       {yearly ? tier.secondaryCta.label.replace(/\$[0-9]+\/mo$/, () => `$${price}/yr`) : tier.secondaryCta.label}

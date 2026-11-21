@@ -34,7 +34,7 @@ export default function ClaimUnlockPreview({ listingSlug, hasReviews }: Props) {
   const v2 = unlockArm(listingSlug) === "v2";
   return (
     <Link
-      href={`/claim/${listingSlug}?src=${v2 ? "detail_unlock_v2" : "detail_unlock_preview"}`}
+      href={`/claim/${listingSlug}?src=${v2 ? "detail_unlock_v2" : "detail_unlock_preview"}`} rel="nofollow"
       className="mt-8 block rounded-lg border bg-gray-50 p-6 no-underline transition-colors hover:border-gray-400"
     >
       {v2 ? (

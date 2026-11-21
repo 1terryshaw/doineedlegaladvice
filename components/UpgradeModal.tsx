@@ -377,7 +377,7 @@ export default function UpgradeModal({ listingSlug, currentTier, currentCycle }:
             {error === PREVIEW_OWNER_ONLY && (
               <div style={{ marginTop: 8, display: "flex", gap: 16 }}>
                 <a href="/owner/login" style={{ color: "#991b1b", fontWeight: 600 }}>Owner login</a>
-                <a href="/claim" style={{ color: "#991b1b", fontWeight: 600 }}>Claim this listing</a>
+                <a href="/claim" rel="nofollow" style={{ color: "#991b1b", fontWeight: 600 }}>Claim this listing</a>
               </div>
             )}
           </div>
