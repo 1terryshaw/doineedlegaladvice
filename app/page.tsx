@@ -36,6 +36,7 @@ export default async function HomePage() {
       />
       {/* SECTION 1: Legal-help navigator (TDL #1402 — replaces the generative triage chat) */}
       <section
+        id="triage"
         className="py-16 px-4 relative overflow-hidden"
         style={{
           background: `linear-gradient(135deg, ${verticalConfig.heroGradientFrom}, ${verticalConfig.heroGradientVia}, ${verticalConfig.heroGradientTo})`,

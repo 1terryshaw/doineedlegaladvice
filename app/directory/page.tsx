@@ -17,35 +17,11 @@ import ListingCard from "@/components/ListingCard";
 import SearchBar from "@/components/SearchBar";
 import Pagination from "@/components/Pagination";
 import RegionHub, { type HubSection, type HubRegion } from "@/components/RegionHub";
-import { getUkAllTownHubs, getUkCounties } from "@/lib/uk-solicitors";
+import { detectPracticeTerm } from "@/lib/practice-search";
+import PracticeSearchNotice from "@/components/PracticeSearchNotice";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
-
-async function getUkSearchOptions() {
-  try {
-    const [counties, towns] = await Promise.all([
-      getUkCounties(),
-      getUkAllTownHubs(),
-    ]);
-
-    return {
-      ukCounties: counties.map((county) => ({
-        slug: county.county_slug,
-        name: county.county,
-        count: county.firm_count,
-      })),
-      ukTowns: towns.map((town) => ({
-        countySlug: town.county_slug,
-        slug: town.town_slug,
-        name: town.town,
-      })),
-    };
-  } catch (error) {
-    console.error("getUkSearchOptions failed; UK cascade omitted:", error);
-    return { ukCounties: [], ukTowns: [] };
-  }
-}
 
 export const metadata: Metadata = {
   title: "Find a Lawyer",
@@ -71,7 +47,6 @@ export default async function DirectoryPage({
   } catch (err) {
     console.error("getDirectoryRegions failed; falling back:", err);
   }
-  const ukOptions = await getUkSearchOptions();
 
   // ── Default view (no filters): browse-by-region hub. ──────────────────────
   if (!hasFilters) {
@@ -87,24 +62,9 @@ export default async function DirectoryPage({
     const byName = (a: HubRegion, b: HubRegion) => a.name.localeCompare(b.name);
     ca.sort(byName);
     us.sort(byName);
-    const uk: HubRegion[] = ukOptions.ukCounties
-      .map((county) => ({
-        slug: county.slug,
-        name: county.name,
-        count: county.count ?? 0,
-      }))
-      .sort(byName);
     const sections: HubSection[] = [];
     if (us.length) sections.push({ country: "US", label: "🇺🇸 United States", regions: us });
     if (ca.length) sections.push({ country: "CA", label: "🇨🇦 Canada", regions: ca });
-    if (uk.length) {
-      sections.push({
-        country: "UK",
-        label: "🇬🇧 United Kingdom",
-        regions: uk,
-        hrefPrefix: "/uk",
-      });
-    }
 
     return (
       <div className="max-w-7xl mx-auto px-4 py-12">
@@ -115,8 +75,6 @@ export default async function DirectoryPage({
           <SearchBar
             variant="directory"
             regions={runtimeRegions.length > 0 ? runtimeRegions : undefined}
-            ukCounties={ukOptions.ukCounties}
-            ukTowns={ukOptions.ukTowns}
           />
         </div>
         {sections.length === 0 ? (
@@ -142,6 +100,7 @@ export default async function DirectoryPage({
   const listings = hasNext ? fetched.slice(0, REGION_PAGE_SIZE) : fetched;
 
   const typeName = listingType ? LISTING_TYPES.find((t) => t.slug === listingType)?.name : null;
+  const practiceTerm = detectPracticeTerm(q);
   // HARDENED (Batch 4): use getRegionBySlug (constants.REGIONS) — shape-agnostic
   // across config-map AND explicit-array repos, and works when vertical.config
   // has no `regions` field. REGIONS.name is pre-normalized (name||label).
@@ -172,11 +131,10 @@ export default async function DirectoryPage({
           defaultRegion={region}
           defaultCity={cityFilter}
           regions={runtimeRegions.length > 0 ? runtimeRegions : undefined}
-          ukCounties={ukOptions.ukCounties}
-          ukTowns={ukOptions.ukTowns}
         />
       </div>
 
+      {practiceTerm && <PracticeSearchNotice term={practiceTerm} />}
 
       <div className="flex flex-wrap gap-2 mb-6">
         {q && (
