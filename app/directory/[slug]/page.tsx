@@ -37,6 +37,7 @@ import ListingImage from "@/components/ListingImage";
 import { listingPhotoUrl } from "@/lib/listing-photo-url";
 import { normalizeWebsiteUrl } from "@/lib/url-normalize";
 import { normalizeTierForPricing } from "@/lib/pricing-canonical";
+import ListingStatsBeacon from "@/components/ListingStatsBeacon";
 
 const LEGAL_DISCLAIMER =
   "The information here is for informational purposes only and is not legal advice. Consult a licensed attorney in your jurisdiction about your specific situation.";
@@ -310,6 +311,8 @@ export default async function ListingPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
       />
+      {/* proof-of-life-stats-email-v1 (connectors-pilot-v1 port): views + phone/website clicks, claimed listings only */}
+      {listing.claimed && <ListingStatsBeacon listingSlug={listing.slug} website={websiteHref} />}
       <div className="max-w-6xl mx-auto px-4 py-12">
         <div className="mb-6">
           <LegalDisclaimer />
