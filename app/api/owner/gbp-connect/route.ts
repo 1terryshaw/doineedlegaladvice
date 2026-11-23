@@ -36,6 +36,9 @@ async function handlePost(request: NextRequest) {
   const resolution = await resolveGoogleBusinessProfileUrl(body.gbpUrl);
   if (!resolution.ok) {
     // claimant-edit-ux-stamp-v1 (iii): every refusal carries the Share → Copy link hint.
+    if (resolution.code === "share_google_link") {
+      return NextResponse.json({ ok: false, error: resolution.code, message: GBP_OWNER_MESSAGES[resolution.code] }, { status: 400 });
+    }
     return NextResponse.json({ ok: false, error: resolution.code, message: GBP_OWNER_MESSAGES[resolution.code] + " Tip: on Google Maps, open your business, tap Share, then Copy link, and paste that link here." }, { status: 400 });
   }
 

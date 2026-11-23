@@ -12,7 +12,8 @@ export type GbpConnectorError =
   | "redirect_left_google"
   | "could_not_resolve_link"
   | "could_not_extract_place_id"
-  | "resolver_timeout";
+  | "resolver_timeout"
+  | "share_google_link";
 
 /**
  * The anchor carried by the redirect landing URL: the place's canonical NAME and
@@ -40,7 +41,7 @@ const PLACE_ID = /\b(ChIJ[A-Za-z0-9_-]{10,250})\b/;
 // lib/gbp-url.ts extract(). This is still pure URL parsing — no Places API call.
 const FEATURE_ID = /!1s(0x[0-9a-f]+:0x[0-9a-f]+)/i;
 const REDIRECT_STATUS = new Set([301, 302, 303, 307, 308]);
-const SHORT_HOSTS = new Set(["maps.app.goo.gl", "goo.gl", "g.co"]);
+const SHORT_HOSTS = new Set(["maps.app.goo.gl", "goo.gl", "g.co", "g.page"]);
 
 // An explicit Google registry, rather than a suffix match, prevents lookalikes such
 // as google.com.attacker.test. Short hosts are the only permitted redirect entrypoints.
@@ -87,6 +88,8 @@ function parseApprovedUrl(raw: string): { url?: URL; error?: GbpConnectorError }
     return { error: "invalid_url" };
   }
   if (url.protocol !== "https:" || url.username || url.password || url.port) return { error: "invalid_url" };
+  const hostLower = url.hostname.toLowerCase().replace(/\.$/, "");
+  if (hostLower === "share.google" || hostLower.endsWith(".share.google")) return { error: "share_google_link" };
   if (isIP(url.hostname) || !isApprovedGoogleHost(url.hostname)) return { error: "unsupported_google_link" };
   if (url.pathname.startsWith("/search") || (url.pathname === "/" && url.searchParams.has("q"))) {
     return { error: "unsupported_google_link" };
@@ -227,6 +230,7 @@ export const GBP_OWNER_MESSAGES: Record<GbpConnectorError, string> = {
   could_not_resolve_link: "We could not resolve that Google link. Please copy a new share link and try again.",
   could_not_extract_place_id: "We could not find a Google Place ID in that link. Please try a different Google share link.",
   resolver_timeout: "Google took too long to respond. Please try again.",
+  share_google_link: "That's a Google share link. Please open your business in Google Maps, tap Share, and paste that maps.app.goo.gl link.",
 };
 
 export const __testables__ = { isApprovedGoogleHost, isUnsafeAddress, literalPlaceId, normalizedStoredUrl, parseAnchor };

@@ -30,6 +30,16 @@ function isValid(value: string, kind: Kind): boolean {
   return isValidSocial(value, kind);
 }
 
+function isShareGoogleUrl(value: string): boolean {
+  if (!value.trim()) return false;
+  try {
+    const h = new URL(value.trim()).hostname.toLowerCase().replace(/\.$/, "");
+    return h === "share.google" || h.endsWith(".share.google");
+  } catch {
+    return false;
+  }
+}
+
 export default function UrlInput({ label, value, onChange, kind, placeholder, hint, helpSlot }: Props) {
   const inputId = useId(); // owner-journey-friction-fix-v1: label tied to the input
   const showWarning = !isValid(value, kind);
@@ -51,7 +61,9 @@ export default function UrlInput({ label, value, onChange, kind, placeholder, hi
       {hint && !showWarning && <small className="block text-xs text-gray-500 mt-1">{hint}</small>}
       {showWarning && (
         <small className="block text-xs text-amber-700 mt-1">
-          This doesn&apos;t look like a {label} URL. Double-check before saving.
+          {kind === "gbp" && isShareGoogleUrl(value)
+            ? "That's a Google share link. Please open your business in Google Maps, tap Share, and paste that maps.app.goo.gl link."
+            : <>This doesn&apos;t look like a {label} URL. Double-check before saving.</>}
         </small>
       )}
     </div>

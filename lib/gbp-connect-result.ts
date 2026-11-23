@@ -61,6 +61,9 @@ export function gbpConnectResult(
     return { outcome: "temporarily_cant_check", message: "Google didn't answer in time. Nothing was changed — please try again in a few minutes." };
   }
   if (status === 400) {
+    if (d.error === "share_google_link") {
+      return { outcome: "couldnt_read_link", message: typeof d.message === "string" && d.message ? d.message : "That's a Google share link. Please open your business in Google Maps, tap Share, and paste that maps.app.goo.gl link." };
+    }
     const base = typeof d.message === "string" && d.message ? d.message.split(" Tip:")[0] : "We couldn't read that link.";
     return { outcome: "couldnt_read_link", message: `${base} ${GBP_PASTE_HINT}` };
   }
