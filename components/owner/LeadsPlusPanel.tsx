@@ -4,6 +4,7 @@
 // (leads_plus_enabled). Real owners stay OFF until Terry says go.
 //   not entitled → "Get Leads Plus — $19/mo" (pay first; the kit opens on return)
 //   entitled     → leads inbox · tap counts · test lead · settings · content kit · share · plan line
+import { pricingLabel } from "@/lib/pricing-label";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import verticalConfig from "@/lib/vertical.config";
@@ -33,9 +34,9 @@ function Copy({ text, label }: { text: string; label: string }) {
 }
 
 export default function LeadsPlusPanel({
-  slug, businessName, listingUrl, phone, openKit,
+  slug, country, businessName, listingUrl, phone, openKit,
 }: {
-  slug: string; businessName: string; listingUrl: string; phone: string | null; openKit: boolean;
+  slug: string; country?: string | null; businessName: string; listingUrl: string; phone: string | null; openKit: boolean;
 }) {
   const router = useRouter();
   const [data, setData] = useState<Data | null>(null);
@@ -89,7 +90,7 @@ export default function LeadsPlusPanel({
     return (
       <section className="border-2 rounded-lg p-6" style={{ borderColor: primary }} data-testid="leads-plus-buy">
         <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: primary }}>New</p>
-        <h2 className="text-xl font-bold mt-1">Leads Plus — $19 USD/mo</h2>
+        <h2 className="text-xl font-bold mt-1">Leads Plus — {pricingLabel("$19 USD/mo", country)}</h2>
         <ul className="mt-3 space-y-1.5 text-sm text-gray-700">
           <li>✓ Turns this listing page into a page that collects customer inquiries — same web address</li>
           <li>✓ Inquiries are emailed to you instantly; reply straight from your email</li>
@@ -101,7 +102,7 @@ export default function LeadsPlusPanel({
             {busy ? "Opening checkout…" : "Start 30-Day Free Trial"}
           </button>
           <button type="button" onClick={() => buy("direct")} disabled={busy} className="text-sm underline disabled:opacity-50" data-testid="lp-direct">
-            Skip trial, pay now — $19/mo
+            Skip trial, pay now — {pricingLabel("$19/mo", country)}
           </button>
         </div>
         <p className="text-xs text-gray-500 mt-2">Monthly. Cancel anytime. Your inquiry form and content kit unlock as soon as you start.</p>

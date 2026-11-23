@@ -571,6 +571,7 @@ export default async function ListingPage({ params }: Props) {
         We don&apos;t vet or endorse listed businesses.
       </p>
       <UpgradeModal
+        country={listing.country}
         listingSlug={listing.slug}
         priceIds={{
           reviews_plus_monthly: process.env.STRIPE_PRICE_REVIEWS_MONTHLY || "",

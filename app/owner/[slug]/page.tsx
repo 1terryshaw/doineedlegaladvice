@@ -114,7 +114,7 @@ export default async function OwnerDashboardPage({ params, searchParams }: Props
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
-      {launch && <UpgradeIntentLauncher listingSlug={listing.slug} mode={launch.mode} skip={hasLeadsPlus(listing)} />}
+      {launch && <UpgradeIntentLauncher country={listing.country} listingSlug={listing.slug} mode={launch.mode} skip={hasLeadsPlus(listing)} />}
       {lpSuccess && <UpgradeSuccessNotice plan={successPlan} />}
       <OwnerDashboard
         listing={listing}
@@ -130,6 +130,7 @@ export default async function OwnerDashboardPage({ params, searchParams }: Props
             {/* leads-plus-canary-v1: listings with leads_plus_enabled only. */}
             {row.leads_plus_enabled === true && verticalAllowsLeadForms() && (
               <LeadsPlusPanel
+                country={listing.country}
                 slug={listing.slug}
                 businessName={String(row.name || listing.slug)}
                 listingUrl={`${SITE_URL}/directory/${listing.slug}`}

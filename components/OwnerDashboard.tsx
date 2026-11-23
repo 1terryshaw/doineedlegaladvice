@@ -2,6 +2,7 @@
 // pricing-version: 2026-05-12-usd-v2
 "use client";
 
+import { pricingLabel } from "@/lib/pricing-label";
 import { useState, useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -41,10 +42,10 @@ function tierPillStyle(tier: string): TierPillColors {
   }
 }
 
-function formatPrice(tier: TierSlug | null): string {
+function formatPrice(tier: TierSlug | null, country?: string | null): string {
   // reviews_plus without a Stripe-read plan = a legacy $9 Reviews Plus sub (R11 repriced only NEW checkouts).
-  if (tier === "reviews_plus") return "$9 USD/mo";
-  return tier === "website" ? `${TIERS.website.priceMonthlyUSD} USD/mo` : "";
+  if (tier === "reviews_plus") return pricingLabel("$9 USD/mo", country);
+  return tier === "website" ? pricingLabel(`${TIERS.website.priceMonthlyUSD} USD/mo`, country) : "";
 }
 
 // leads-plus-canary-v1 dashboard fix: present ONLY for a leads_plus_enabled listing that holds the
@@ -55,7 +56,7 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
   const tier = (listing.tier || listing.subscription_tier || "free") as TierSlug;
   const lpPlan = leadsPlus?.plan ?? null;
   const tierLabel = lpPlan ? lpPlan.name : leadsPlus ? "Leads Plus" : getTierDisplayName(tier);
-  const priceLabel = lpPlan ? formatCharge(lpPlan) : formatPrice(tier);
+  const priceLabel = lpPlan ? formatCharge(lpPlan) : formatPrice(tier, listing.country);
   const nextTier = getNextTier(tier, hostOffer);
   const pill = tierPillStyle(tier);
 
@@ -206,7 +207,7 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
       {(tier === "free" || tier === "seed") && (
         <div className="border-2 border-blue-300 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6">
           <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Upgrade</p>
-          <h2 className="text-xl font-bold mt-1">Unlock {TIERS.reviews_plus.name} — ${TIERS.reviews_plus.priceMonthlyUSD} USD/mo</h2>
+          <h2 className="text-xl font-bold mt-1">Unlock {TIERS.reviews_plus.name} — {pricingLabel(`$${TIERS.reviews_plus.priceMonthlyUSD} USD/mo`, listing.country)}</h2>
           <ul className="mt-3 space-y-1.5 text-sm text-gray-700">
             {TIERS.reviews_plus.visibleFeatures.map((f, i) => (
               <li key={i}>✓ {f}</li>
@@ -225,7 +226,7 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
       {/* leads-plus-canary-v1: ONE upsell line for Leads Plus owners — Mode A (no website) only; Mode B gets none. */}
       {leadsPlus && leadsPlus.mode !== "B" && (
         <div className="border rounded-lg p-4 flex flex-wrap items-center justify-between gap-3" data-testid="lp-upsell">
-          <p className="text-sm font-medium">Make this your own website — $49 USD/mo</p>
+          <p className="text-sm font-medium">Make this your own website — {pricingLabel("$49 USD/mo", listing.country)}</p>
           <WebsitePreviewButton slug={listing.slug} />
         </div>
       )}
@@ -234,7 +235,7 @@ export default function OwnerDashboard({ listing, reviewSlot, healthSlot, nextSt
       {tier === "reviews_plus" && !leadsPlus && (
         <div className="border-2 border-purple-300 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-6">
           <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Upgrade</p>
-          <h2 className="text-xl font-bold mt-1">Unlock Website tier — ${TIERS.website.priceMonthlyUSD} USD/mo</h2>
+          <h2 className="text-xl font-bold mt-1">Unlock Website tier — {pricingLabel(`$${TIERS.website.priceMonthlyUSD} USD/mo`, listing.country)}</h2>
           <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
             <ul className="space-y-1.5 text-sm text-gray-700">
               {TIERS.website.visibleFeatures.map((f, i) => (

@@ -1,6 +1,7 @@
 // pricing-version: 2026-05-17-reviews-plus-canonical
 "use client";
 
+import { pricingLabel } from "@/lib/pricing-label";
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import verticalConfig from "@/lib/vertical.config";
@@ -10,6 +11,7 @@ type BillingCycle = "monthly" | "annual";
 
 type Props = {
   listingSlug: string;
+  country?: string | null;
   /** @deprecated Stripe price IDs now live in lib/pricing-canonical.ts.
    *  Kept optional so existing call sites compile without edits. */
   priceIds?: Record<string, string>;
@@ -21,7 +23,7 @@ const NEUTRAL_BORDER = "#e5e7eb";
 const PREVIEW_OWNER_ONLY =
   "Free website previews are for this listing's owner. Log in to your owner account first — or claim this listing if you haven't yet.";
 
-export default function UpgradeModal({ listingSlug, currentTier, currentCycle }: Props) {
+export default function UpgradeModal({ listingSlug, country, currentTier, currentCycle }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -239,8 +241,8 @@ export default function UpgradeModal({ listingSlug, currentTier, currentCycle }:
                     <span style={{ fontSize: 32, fontWeight: 700 }}>Free</span>
                   ) : (
                     <>
-                      <span style={{ fontSize: 32, fontWeight: 700 }}>${price}</span>
-                      <span style={{ color: "#666", fontSize: 14 }}>{`/${unit} USD`}</span>
+                      <span style={{ fontSize: 32, fontWeight: 700 }}>{pricingLabel(`$${price}`, country)}</span>
+                      <span style={{ color: "#666", fontSize: 14 }}>{country === "CA" ? `/${unit}` : `/${unit} USD`}</span>
                     </>
                   )}
                 </div>
@@ -321,7 +323,7 @@ export default function UpgradeModal({ listingSlug, currentTier, currentCycle }:
                       {busy(tier.cta.mode)
                         ? tier.cta.mode === "preview" ? "One moment..." : "Starting checkout..."
                         : tier.cta.mode === "direct" && !isFree
-                          ? `${tier.cta.label} — $${price}/${unit}`
+                          ? pricingLabel(`${tier.cta.label} — $${price}/${unit}`, country)
                           : tier.cta.label}
                     </button>
 
@@ -345,7 +347,7 @@ export default function UpgradeModal({ listingSlug, currentTier, currentCycle }:
                       >
                         {busy(tier.secondaryCta.mode)
                           ? "Starting checkout..."
-                          : tier.secondaryCta.label.replace(/\$[0-9]+\/mo$/, () => `$${price}/${unit}`)}
+                          : pricingLabel(tier.secondaryCta.label.replace(/\$[0-9]+\/mo$/, () => `$${price}/${unit}`), country)}
                       </button>
                     )}
                   </div>

@@ -10,6 +10,7 @@ type OwnerAuth = {
   primaryListingSlug?: string;
   slug: string | null;
   tier: string | null;
+  country: string | null;
   loading: boolean;
   refresh: () => void;
 };
@@ -18,7 +19,7 @@ const LOGGED_OUT: OwnerDisplayState = { authenticated: false };
 
 export type OwnerContextState =
   | { authenticated: false }
-  | { authenticated: true; slug: string; tier: string | null };
+  | { authenticated: true; slug: string; tier: string | null; country?: string | null };
 
 const LOGGED_OUT_CONTEXT: OwnerContextState = { authenticated: false };
 
@@ -27,13 +28,13 @@ export function ownerContextStateFromPayload(data: unknown): OwnerContextState {
     return LOGGED_OUT_CONTEXT;
   }
 
-  const response = data as { slug?: unknown; tier?: unknown };
+  const response = data as { slug?: unknown; tier?: unknown; country?: unknown };
   if (typeof response.slug !== "string" || response.slug.length === 0) {
     return LOGGED_OUT_CONTEXT;
   }
 
   return typeof response.tier === "string" || response.tier === null
-    ? { authenticated: true, slug: response.slug, tier: response.tier }
+    ? { authenticated: true, slug: response.slug, tier: response.tier, country: typeof response.country === "string" ? response.country : null }
     : LOGGED_OUT_CONTEXT;
 }
 
@@ -85,6 +86,7 @@ export function useOwnerAuth({ context = false, listingSlug }: OwnerAuthOptions 
     primaryListingSlug: displayState.authenticated ? displayState.primaryListingSlug : undefined,
     slug: contextState.authenticated ? contextState.slug : null,
     tier: contextState.authenticated ? contextState.tier : null,
+    country: contextState.authenticated ? contextState.country ?? null : null,
     loading: context ? contextLoading : false,
     refresh,
   };

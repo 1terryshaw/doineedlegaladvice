@@ -4,10 +4,11 @@
 // claiming / logging in — same /api/billing-redirect call the upgrade modal makes. One shot: the remembered choice is cleared
 // first and the intent params are stripped from the URL, so Back from Stripe or a reload never re-opens it.
 // `skip` (already on Leads Plus or above) only clears the remembered choice.
+import { pricingLabel } from "@/lib/pricing-label";
 import { useEffect, useRef, useState } from "react";
 import { UPGRADE_INTENT_COOKIE } from "@/lib/upgrade-intent";
 
-export default function UpgradeIntentLauncher({ listingSlug, mode, skip = false }: { listingSlug: string; mode: "trial" | "direct"; skip?: boolean }) {
+export default function UpgradeIntentLauncher({ listingSlug, country, mode, skip = false }: { listingSlug: string; country?: string | null; mode: "trial" | "direct"; skip?: boolean }) {
   const started = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,7 +38,7 @@ export default function UpgradeIntentLauncher({ listingSlug, mode, skip = false 
   if (skip) return null;
   return (
     <div role="status" data-testid="lp-intent-launcher" data-mode={mode} className="mb-6 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-      {error ?? (mode === "trial" ? "Opening your Leads Plus free 30-day trial checkout…" : "Opening your Leads Plus checkout ($19 USD/mo)…")}
+      {error ?? (mode === "trial" ? "Opening your Leads Plus free 30-day trial checkout…" : pricingLabel("Opening your Leads Plus checkout ($19 USD/mo)…", country))}
     </div>
   );
 }

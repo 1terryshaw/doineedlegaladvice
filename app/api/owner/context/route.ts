@@ -24,8 +24,8 @@ export async function GET(request: Request) {
   }
 
   const listing = await getAuthorizedOwnerListing<{
-    slug: string; tier: string | null; subscription_tier: string | null;
-  }>(auth, "slug, tier, subscription_tier, owner_auth_token, owner_auth_token_expires_at, claimed");
+    country: string | null; slug: string; tier: string | null; subscription_tier: string | null;
+  }>(auth, "country, slug, tier, subscription_tier, owner_auth_token, owner_auth_token_expires_at, claimed");
   if (!listing) {
     return loggedOut();
   }
@@ -33,6 +33,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     authenticated: true,
     slug: listing.slug,
+    country: listing.country,
     // getAuthorizedOwnerListing gates .eq(claimed,true), so this listing is always claimed → pass true.
     tier: normalizeTierForPricing(listing.tier || listing.subscription_tier || null, true),
   }, { headers: NO_CACHE_HEADERS });
