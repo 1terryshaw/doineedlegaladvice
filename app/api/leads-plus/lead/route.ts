@@ -10,6 +10,7 @@ import {
 } from "@/lib/leads-plus";
 import { getGateRow, sendLeadNotification, isAddressUndeliverable } from "@/lib/leads-plus-server";
 import { isValidEmail } from "@/lib/inquiry-guard";
+import { logLeadDrop, silentDropReason } from "@/lib/lead-drop";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -28,6 +29,7 @@ export async function POST(req: NextRequest) {
 
   // Spam layer 1: honeypot / sub-2.5s submit → silent success, nothing stored or sent.
   if (shouldSilentDrop({ honeypot: body.honeypot, renderedAt: body.renderedAt })) {
+    await logLeadDrop(silentDropReason(body.honeypot)); // aggregate count only (lib/lead-drop.ts)
     return NextResponse.json({ success: true });
   }
 
@@ -70,6 +72,7 @@ export async function POST(req: NextRequest) {
       supabaseAdmin.from(LEADS_TABLE).select("id", { count: "exact", head: true }).eq("ip_hash", ipHash).gte("created_at", daySince),
     ]);
     if ((shortN ?? 0) >= RATE_LIMIT.shortMax || (dayN ?? 0) >= RATE_LIMIT.dayMax) {
+      await logLeadDrop("rate_limited");
       return NextResponse.json({ error: "Too many requests — please try again later, or call the business." }, { status: 429 });
     }
   }
